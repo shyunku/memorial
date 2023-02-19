@@ -7,6 +7,6 @@ const persistConfig = {
   storage,
 };
 
-const rootReducers = combineReducers({});
+// const rootReducers = combineReducers({});
 
-export default persistReducer(persistConfig, rootReducers);
+export default persistReducer(persistConfig, () => {});

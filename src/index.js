@@ -10,6 +10,10 @@ import AxiosMiddleware from "middlewares/axios.middleware";
 import rootReducer from "store/rootReducer";
 import reportWebVitals from "./reportWebVitals";
 
+// Import styles
+import "styles/reset.scss";
+import "styles/index.scss";
+
 const store = configureStore({
   reducer: rootReducer,
   middleware: (defaultMiddleware) => defaultMiddleware({ serializableCheck: false }),
