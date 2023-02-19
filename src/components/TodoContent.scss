@@ -14,6 +14,7 @@
 
   color: $std-color;
   overflow-y: overlay;
+  overflow-x: hidden;
 
   & > .header {
     display: flex;
@@ -211,12 +212,30 @@
       display: flex;
       margin-top: 20px;
       width: 100%;
-      border: 2px solid rgb(52, 77, 106);
+      // border: 2px solid transparent;
       border-radius: 3px;
       overflow: hidden;
-      background-color: $todo-item-color;
+      // background-color: $todo-item-color;
+      transition: 0.3s;
+      background-color: rgb(20, 21, 23);
 
-      input {
+      &.focused {
+        // border: 2px solid rgb(52, 77, 106);
+        background-color: rgb(12, 13, 14);
+
+        & > input {
+          color: rgb(153, 181, 211);
+        }
+      }
+
+      &.hidden {
+        .options {
+          opacity: 0;
+          visibility: hidden;
+        }
+      }
+
+      & > input {
         height: 50px;
         flex: 1;
         box-sizing: border-box;
@@ -229,11 +248,6 @@
         &::placeholder {
           color: rgba($std-color, 0.6);
         }
-
-        &:focus {
-          background-color: rgb(20, 21, 23);
-          color: rgb(153, 181, 211);
-        }
       }
 
       & > .options {
@@ -241,6 +255,8 @@
         height: 100%;
         align-items: center;
         font-size: 20px;
+        opacity: 1;
+        transition: 0.15s linear;
 
         & > .option {
           display: flex;
@@ -248,10 +264,9 @@
           justify-content: center;
           width: 30px;
           height: 30px;
-          overflow: hidden;
           border-radius: 50%;
+          overflow: hidden;
           margin: 0 10px;
-          // font-size: 20px;
           cursor: pointer;
 
           &:hover {
@@ -259,8 +274,18 @@
             background-color: rgba($std-color, 0.3);
           }
 
-          input {
-            display: none;
+          &.active {
+            color: $highlight-color;
+          }
+
+          .icon-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          #todo_item_context_menu {
+            z-index: 30;
           }
         }
       }
