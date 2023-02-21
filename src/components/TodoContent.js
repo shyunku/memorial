@@ -1,13 +1,20 @@
 import { IoCalendarOutline } from "react-icons/io5";
 import "./TodoContent.scss";
-import { createRef, useRef, useState } from "react";
+import { createRef, useMemo, useRef, useState } from "react";
 import JsxUtil from "utils/JsxUtil";
-import { ContextMenu, useContextMenu } from "./CustomContextMenu";
+import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
 import moment from "moment/moment";
-import DatePicker from "./CustomDatePicker";
+import DatePicker from "molecules/CustomDatePicker";
+import SubTaskProgressBar from "./SubTaskProgressBar";
 
 const TodoContent = () => {
   const [newTodoItemFocused, setNewTodoItemFocused] = useState(false);
+
+  // main objects
+  const [taskList, setTaskList] = useState([]);
+  const todoList = useMemo(() => {
+    return taskList.filter((task) => !task.done);
+  }, [taskList]);
 
   const [newTodoItemContent, setNewTodoItemContent] = useState("");
   const [newTodoItemDate, setNewTodoItemDate] = useState(null);
@@ -16,6 +23,26 @@ const TodoContent = () => {
     preventCloseIdList: ["new_todo_date_picker"],
   });
   const [datePickerRef, openDatePicker, closeDatePicker] = useContextMenu({});
+
+  // handlers
+  const onTodoItemAdd = () => {
+    if (newTodoItemContent.length === 0) {
+      return;
+    }
+
+    const newTodoItem = {
+      title: newTodoItemContent,
+      done: false,
+      dueDate: newTodoItemDate,
+    };
+
+    setTaskList((list) => {
+      return [...list, newTodoItem];
+    });
+
+    setNewTodoItemContent("");
+    setNewTodoItemDate(null);
+  };
 
   return (
     <div className="todo-content">
@@ -44,17 +71,27 @@ const TodoContent = () => {
           <div className="todo-item-group">
             <div className="title">해야할 일 (15)</div>
             <div className="todo-list">
-              {Array(15)
+              {todoList.map((todo, index) => {
+                return (
+                  <div className="todo-item" key={index}>
+                    <div className="title">{todo.title}</div>
+                    <SubTaskProgressBar total={todo.subTaskTotal} fulfilled={todo.subTaskFulfilled} />
+                    <div className="due-date">
+                      {todo.dueDate ? moment(todo.dueDate).format("YY년 M월 D일") : "기한 없음"}
+                    </div>
+                  </div>
+                );
+              })}
+              {Array(10)
                 .fill(0)
                 .map((_, index) => {
+                  const randomSubTask = Math.floor(Math.random() * 20);
+                  const randomSubTaskDone = Math.floor(Math.random() * randomSubTask);
                   return (
                     <div className="todo-item" key={index}>
-                      {/* <div className="todo-item-checkbox"></div> */}
                       <div className="title">할일 {index + 1}</div>
-                      <div className="process-rate">
-                        <div className="process-rate-bar" style={{ width: `${100 * Math.random()}%` }}></div>
-                      </div>
-                      <div className="due-date">2023년 8월 1일</div>
+                      <SubTaskProgressBar total={randomSubTask} fulfilled={randomSubTaskDone} />
+                      <div className="due-date">23년 8월 13일</div>
                     </div>
                   );
                 })}
@@ -91,6 +128,11 @@ const TodoContent = () => {
             onBlur={(e) => setNewTodoItemFocused(false)}
             onFocus={(e) => setNewTodoItemFocused(true)}
             onChange={(e) => setNewTodoItemContent(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                onTodoItemAdd();
+              }
+            }}
             value={newTodoItemContent}
           />
           <div className="options">
@@ -100,10 +142,9 @@ const TodoContent = () => {
                   <IoCalendarOutline />
                 </div>
                 {newTodoItemDate != null && (
-                  <div className="summary">{moment(newTodoItemDate).format("YYYY년 MM월 DD일")}</div>
+                  <div className="summary">{moment(newTodoItemDate).format("YY년 M월 D일 (ddd)")}</div>
                 )}
               </div>
-
               <ContextMenu className={"menus"} reference={contextMenuRef}>
                 <div
                   className="menu-option"

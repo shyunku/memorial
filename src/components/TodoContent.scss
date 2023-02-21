@@ -6,20 +6,23 @@
   width: 100%;
   height: 100%;
 
-  $std-color: rgb(102, 121, 154);
+  $std-color: rgb(131, 145, 171);
   $highlight-color: rgb(93, 152, 255);
   $todo-item-color: rgb(39, 41, 45);
   $todo-item-process-color: rgb(63, 84, 122);
   $todo-item-hover-color: rgb(44, 52, 67);
+  $header-footer-color: rgba($main-bg-color, 0.5);
 
   color: $std-color;
   overflow-y: overlay;
   overflow-x: hidden;
 
+  position: relative;
+
   & > .header {
     display: flex;
     flex-direction: column;
-    background-color: rgba($main-bg-color, 0.6);
+    background-color: $header-footer-color;
     backdrop-filter: blur(10px);
     position: sticky;
     padding: 70px 90px 0px;
@@ -122,7 +125,7 @@
     flex-direction: column;
     margin-top: 50px;
     flex: 1;
-    padding: 0 90px;
+    padding: 0 90px 150px;
 
     & > .todo-item-groups {
       display: flex;
@@ -152,7 +155,7 @@
             align-items: center;
             background-color: $todo-item-color;
             border-radius: 3px;
-            padding: 0 15px;
+            padding: 0 25px;
             // justify-content: space-between;
             transition: 0.1s;
             position: relative;
@@ -190,6 +193,8 @@
             }
 
             & > .due-date {
+              min-width: 90px;
+              text-align: center;
               font-size: 13px;
             }
           }
@@ -200,12 +205,16 @@
 
   & > .todo-item-add-section {
     display: flex;
-    position: sticky;
+    position: fixed;
+    // left: 0;
     bottom: 0;
+    // left: 0;
     z-index: 5;
+    width: calc(100% - $left-sidebar-width);
     padding: 0 90px 70px;
+    box-sizing: border-box;
 
-    background-color: rgba($main-bg-color, 0.8);
+    background-color: $header-footer-color;
     backdrop-filter: blur(10px);
 
     & > .input-wrapper {

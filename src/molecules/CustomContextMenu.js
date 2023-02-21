@@ -71,7 +71,6 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, preventCloseIdList = 
     e.stopPropagation();
 
     if (e.currentTarget != e.target) {
-      console.log("asfasdf");
       // if ancestor has autoclose attribute and it's not false, close context menu
       let foundAutoClose = false;
       let parent = e.target.parentElement;

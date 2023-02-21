@@ -5,7 +5,8 @@ $std-text-color: rgb(128, 146, 184);
 .component.left-sidebar {
   display: flex;
   flex-direction: column;
-  width: 260px;
+  min-width: $left-sidebar-width;
+  width: $left-sidebar-width;
   background-color: $left-sidebar-color;
   overflow: hidden;
 

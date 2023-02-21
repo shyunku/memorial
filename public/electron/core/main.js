@@ -107,65 +107,6 @@ app.on("ready", async () => {
       window.close();
     }
 
-    micPermissionStatus = systemPreferences.getMediaAccessStatus("microphone");
-    console.debug(`Current microphone permission: ${micPermissionStatus}`);
-    camPermissionStatus = systemPreferences.getMediaAccessStatus("camera");
-    console.debug(`Current camera permission: ${micPermissionStatus}`);
-
-    if (isBuildMode && requestPermission) {
-      switch (micPermissionStatus) {
-        case "not-determined":
-          if (isMacOS) {
-            console.debug(`Waiting for microphone access permission request...`);
-            systemPreferences.askForMediaAccess("microphone").then((mediaAccessResult) => {
-              console.debug(`Microphone access permission result: ` + mediaAccessResult);
-
-              if (!mediaAccessResult) {
-                console.error(`Microphone permission not granted even after request!`);
-              }
-            });
-          } else {
-            console.error(`Not handled error: microphone access not granted (${micPermissionStatus})`);
-          }
-          break;
-        case "granted":
-          console.info(`Microphone permission is already granted.`);
-          break;
-        case "denied":
-          console.warn(`User already denied microphone permission!`);
-          break;
-        default:
-          console.error(`Unhandled permission error: microphone permission state: ${micPermissionStatus}`);
-          break;
-      }
-
-      switch (camPermissionStatus) {
-        case "not-determined":
-          if (isMacOS) {
-            console.debug(`Waiting for camera access permission request...`);
-            systemPreferences.askForMediaAccess("camera").then((mediaAccessResult) => {
-              console.debug(`Camera access permission result: ` + mediaAccessResult);
-
-              if (!mediaAccessResult) {
-                console.error(`Camera permission not granted even after request!`);
-              }
-            });
-          } else {
-            console.error(`Not handled error: camera access not granted (${camPermissionStatus})`);
-          }
-          break;
-        case "granted":
-          console.info(`Camera permission is already granted.`);
-          break;
-        case "denied":
-          console.warn(`User already denied camera permission!`);
-          break;
-        default:
-          console.error(`Unhandled permission error: camera permission state: ${camPermissionStatus}`);
-          break;
-      }
-    }
-
     // TODO :: check utility of this command
     // powerSaveBlocker.start('prevent-app-suspension');
     // app.commandLine.appendSwitch('webrtc-max-cpu-consumption-percentage', '100');
