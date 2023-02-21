@@ -1,11 +1,10 @@
 import { IoCalendarOutline } from "react-icons/io5";
 import "./TodoContent.scss";
-import DatePicker from "react-datepicker";
 import { createRef, useRef, useState } from "react";
-import "react-datepicker/dist/react-datepicker.css";
 import JsxUtil from "utils/JsxUtil";
-import "react-contexify/dist/ReactContexify.css";
-import { ContextMenu, useContextMenu } from "./ContextMenu";
+import { ContextMenu, useContextMenu } from "./CustomContextMenu";
+import moment from "moment/moment";
+import DatePicker from "./CustomDatePicker";
 
 const TodoContent = () => {
   const [newTodoItemFocused, setNewTodoItemFocused] = useState(false);
@@ -13,7 +12,10 @@ const TodoContent = () => {
   const [newTodoItemContent, setNewTodoItemContent] = useState("");
   const [newTodoItemDate, setNewTodoItemDate] = useState(null);
 
-  const [contextMenuRef, onContextMenuHandler] = useContextMenu({});
+  const [contextMenuRef, openMenu, closeMenu] = useContextMenu({
+    preventCloseIdList: ["new_todo_date_picker"],
+  });
+  const [datePickerRef, openDatePicker, closeDatePicker] = useContextMenu({});
 
   return (
     <div className="todo-content">
@@ -46,7 +48,7 @@ const TodoContent = () => {
                 .fill(0)
                 .map((_, index) => {
                   return (
-                    <div className="todo-item">
+                    <div className="todo-item" key={index}>
                       {/* <div className="todo-item-checkbox"></div> */}
                       <div className="title">할일 {index + 1}</div>
                       <div className="process-rate">
@@ -65,7 +67,7 @@ const TodoContent = () => {
                 .fill(0)
                 .map((_, index) => {
                   return (
-                    <div className="todo-item">
+                    <div className="todo-item" key={index}>
                       {/* <div className="todo-item-checkbox"></div> */}
                       <div className="title">할일 {index + 1}</div>
                       <div className="due-date">2023년 8월 1일</div>
@@ -91,36 +93,69 @@ const TodoContent = () => {
             onChange={(e) => setNewTodoItemContent(e.target.value)}
             value={newTodoItemContent}
           />
-
           <div className="options">
-            <div
-              className={"option" + JsxUtil.classByCondition(newTodoItemDate != null, "active")}
-              onClick={onContextMenuHandler}
-            >
-              <div className="icon-wrapper">
-                <IoCalendarOutline />
+            <div className={"option" + JsxUtil.classByCondition(newTodoItemDate != null, "active")}>
+              <div className="visible" onClick={openMenu}>
+                <div className="icon-wrapper">
+                  <IoCalendarOutline />
+                </div>
+                {newTodoItemDate != null && (
+                  <div className="summary">{moment(newTodoItemDate).format("YYYY년 MM월 DD일")}</div>
+                )}
               </div>
 
-              {/* <DatePicker
-                ref={datePickerRef}
-                onFocus={(e) => console.log(e)}
-                onChange={(date) => setNewTodoItemDate(new Date(date))}
-                customInput={
-                  <div className="icon-wrapper">
-                    <IoCalendarOutline />
-                  </div>
-                }
-              /> */}
+              <ContextMenu className={"menus"} reference={contextMenuRef}>
+                <div
+                  className="menu-option"
+                  onClick={(e) => {
+                    setNewTodoItemDate(Date.now());
+                    closeMenu();
+                  }}
+                >
+                  오늘로 설정
+                </div>
+                <div
+                  className="menu-option"
+                  onClick={(e) => {
+                    setNewTodoItemDate(Date.now() + 86400 * 1000);
+                    closeMenu();
+                  }}
+                >
+                  내일로 설정
+                </div>
+                <div className="spliter"></div>
+                <div id="set_custom_date_for_new_todo" className="menu-option" onClick={(e) => openDatePicker(e)}>
+                  직접 설정
+                </div>
+                {newTodoItemDate != null && (
+                  <>
+                    <div className="spliter"></div>
+                    <div
+                      className="menu-option delete"
+                      onClick={(e) => {
+                        setNewTodoItemDate(null);
+                        closeMenu();
+                      }}
+                    >
+                      기한 제거
+                    </div>
+                  </>
+                )}
+              </ContextMenu>
+              <DatePicker
+                id="new_todo_date_picker"
+                autoclose="false"
+                datePickerRef={datePickerRef}
+                onSelect={(e) => {
+                  setNewTodoItemDate(e.getTime());
+                  closeDatePicker();
+                }}
+              />
             </div>
           </div>
         </div>
       </div>
-      <ContextMenu reference={contextMenuRef}>
-        <div className="menu-option">오늘로 설정</div>
-        <div className="menu-option">내일로 설정</div>
-        <div className="menu-option">직접 설정</div>
-        <div className="menu-option">기한 제거</div>
-      </ContextMenu>
+      <DatePicker />
     </div>
   );
 };
