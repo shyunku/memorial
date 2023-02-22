@@ -24,20 +24,18 @@ const SubTaskFinalCircle = ({ fulfilled = false }) => {
 const SubTaskProgressBar = ({ fulfilled = 0, total = 0, done = false }) => {
   return (
     <div className="subtask-progress-bar-wrapper">
-      {total > 0 && (
-        <div className="subtask-progress">
-          {fulfilled}/{total}
-        </div>
-      )}
       <div className="subtask-progress-bar">
         <div className="filler" style={{ width: `${(100 * fulfilled) / (total + 1)}%` }}></div>
         <div className="subtask-circles">
           {total <= maxVisibleCircleCount &&
             [...Array(total + 1)].map((_, index) => (
-              <SubTaskCircle index={index} total={total} fulfilled={fulfilled} />
+              <SubTaskCircle index={index} total={total} fulfilled={fulfilled} key={index} />
             ))}
           <SubTaskFinalCircle fulfilled={done} />
         </div>
+      </div>
+      <div className="subtask-progress">
+        {fulfilled}/{total}
       </div>
     </div>
   );

@@ -1,11 +1,13 @@
 import { IoCalendarOutline } from "react-icons/io5";
 import "./TodoContent.scss";
-import { createRef, useMemo, useRef, useState } from "react";
+import { createRef, useEffect, useMemo, useRef, useState } from "react";
 import JsxUtil from "utils/JsxUtil";
 import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
+import * as uuid from "uuid";
 import moment from "moment/moment";
+import TodoItem from "./TodoItem";
 import DatePicker from "molecules/CustomDatePicker";
-import SubTaskProgressBar from "./SubTaskProgressBar";
+import Task from "objects/Task";
 
 const TodoContent = () => {
   const [newTodoItemFocused, setNewTodoItemFocused] = useState(false);
@@ -15,6 +17,7 @@ const TodoContent = () => {
   const todoList = useMemo(() => {
     return taskList.filter((task) => !task.done);
   }, [taskList]);
+  const [selectedTodoItemId, setSelectedTodoItemId] = useState(null);
 
   const [newTodoItemContent, setNewTodoItemContent] = useState("");
   const [newTodoItemDate, setNewTodoItemDate] = useState(null);
@@ -44,10 +47,28 @@ const TodoContent = () => {
     setNewTodoItemDate(null);
   };
 
+  useEffect(() => {
+    for (let i = 0; i < 10; i++) {
+      const randomSubTask = Math.floor(Math.random() * 13);
+      const randomSubTaskDone = Math.floor(Math.random() * randomSubTask);
+      const randomDate = new Date(Date.now() + Math.floor(Math.random() * 10000000000));
+
+      let newTodo = new Task(`할 일 ${i + 1}`, null, randomDate);
+      for (let j = 0; j < randomSubTask; j++) {
+        let subtask = newTodo.addSubtask(`서브 할 일 ${j + 1}`);
+        if (j < randomSubTaskDone) subtask.fulfilled();
+      }
+
+      setTaskList((tasks) => {
+        return [...tasks, newTodo];
+      });
+    }
+  }, []);
+
   return (
     <div className="todo-content">
       <div className="header">
-        <div className="title">모든 할일 (15)</div>
+        <div className="title">모든 할일 ({taskList.length})</div>
         <div className="metadata">
           <div className="last-modified">마지막 수정: 3분전</div>
         </div>
@@ -71,30 +92,14 @@ const TodoContent = () => {
           <div className="todo-item-group">
             <div className="title">해야할 일 (15)</div>
             <div className="todo-list">
-              {todoList.map((todo, index) => {
-                return (
-                  <div className="todo-item" key={index}>
-                    <div className="title">{todo.title}</div>
-                    <SubTaskProgressBar total={todo.subTaskTotal} fulfilled={todo.subTaskFulfilled} />
-                    <div className="due-date">
-                      {todo.dueDate ? moment(todo.dueDate).format("YY년 M월 D일") : "기한 없음"}
-                    </div>
-                  </div>
-                );
-              })}
-              {Array(10)
-                .fill(0)
-                .map((_, index) => {
-                  const randomSubTask = Math.floor(Math.random() * 20);
-                  const randomSubTaskDone = Math.floor(Math.random() * randomSubTask);
-                  return (
-                    <div className="todo-item" key={index}>
-                      <div className="title">할일 {index + 1}</div>
-                      <SubTaskProgressBar total={randomSubTask} fulfilled={randomSubTaskDone} />
-                      <div className="due-date">23년 8월 13일</div>
-                    </div>
-                  );
-                })}
+              {todoList.map((todo, index) => (
+                <TodoItem
+                  selected={selectedTodoItemId == todo.id}
+                  key={index}
+                  todo={todo}
+                  onClick={(e) => setSelectedTodoItemId(todo.id)}
+                />
+              ))}
             </div>
           </div>
           <div className="todo-item-group">
@@ -105,7 +110,6 @@ const TodoContent = () => {
                 .map((_, index) => {
                   return (
                     <div className="todo-item" key={index}>
-                      {/* <div className="todo-item-checkbox"></div> */}
                       <div className="title">할일 {index + 1}</div>
                       <div className="due-date">2023년 8월 1일</div>
                     </div>
