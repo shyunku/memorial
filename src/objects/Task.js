@@ -15,10 +15,18 @@ class Task {
     this.subtasks = [];
   }
 
-  addSubtask(title) {
-    const subtask = new Subtask(title);
+  fulfilled() {
+    this.done = true;
+  }
+
+  addSubtask(title, endDate) {
+    const subtask = new Subtask(title, endDate);
     this.subtasks.push(subtask);
     return subtask;
+  }
+
+  getSubTaskList() {
+    return this.subtasks;
   }
 
   getSubTaskCount() {
@@ -27,6 +35,18 @@ class Task {
 
   getFulfilledSubTaskCount() {
     return this.subtasks.filter((subtask) => subtask.done === true).length;
+  }
+
+  static fromObject(obj) {
+    const ctx = new Task();
+    for (let key in obj) {
+      if (key === "subtasks") {
+        ctx[key] = obj[key].map((subtask) => Subtask.fromObject(subtask));
+      } else {
+        ctx[key] = obj[key];
+      }
+    }
+    return ctx;
   }
 }
 

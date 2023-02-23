@@ -1,53 +1,30 @@
 import { IoCalendarOutline } from "react-icons/io5";
 import "./TodoContent.scss";
 import { createRef, useEffect, useMemo, useRef, useState } from "react";
-import JsxUtil from "utils/JsxUtil";
-import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
-import * as uuid from "uuid";
-import moment from "moment/moment";
+
 import TodoItem from "./TodoItem";
-import DatePicker from "molecules/CustomDatePicker";
+
 import Task from "objects/Task";
+import TodoItemAddSection from "./TodoItemAddSection";
+import TaskList from "./TaskList";
 
 const TodoContent = () => {
-  const [newTodoItemFocused, setNewTodoItemFocused] = useState(false);
-
   // main objects
   const [taskList, setTaskList] = useState([]);
-  const todoList = useMemo(() => {
-    return taskList.filter((task) => !task.done);
-  }, [taskList]);
   const [selectedTodoItemId, setSelectedTodoItemId] = useState(null);
 
-  const [newTodoItemContent, setNewTodoItemContent] = useState("");
-  const [newTodoItemDate, setNewTodoItemDate] = useState(null);
+  const [doneTaskList, notDoneTaskList] = useMemo(() => {
+    const doneTasks = [];
+    const notDoneTasks = [];
 
-  const [contextMenuRef, openMenu, closeMenu] = useContextMenu({
-    preventCloseIdList: ["new_todo_date_picker"],
-  });
-  const [datePickerRef, openDatePicker, closeDatePicker] = useContextMenu({});
-
-  // handlers
-  const onTodoItemAdd = () => {
-    if (newTodoItemContent.length === 0) {
-      return;
+    for (let task of taskList) {
+      (task.done ? doneTasks : notDoneTasks).push(task);
     }
-
-    const newTodoItem = {
-      title: newTodoItemContent,
-      done: false,
-      dueDate: newTodoItemDate,
-    };
-
-    setTaskList((list) => {
-      return [...list, newTodoItem];
-    });
-
-    setNewTodoItemContent("");
-    setNewTodoItemDate(null);
-  };
+    return [doneTasks, notDoneTasks];
+  }, [taskList]);
 
   useEffect(() => {
+    if (taskList.length > 0) return;
     for (let i = 0; i < 10; i++) {
       const randomSubTask = Math.floor(Math.random() * 13);
       const randomSubTaskDone = Math.floor(Math.random() * randomSubTask);
@@ -59,11 +36,117 @@ const TodoContent = () => {
         if (j < randomSubTaskDone) subtask.fulfilled();
       }
 
+      if (Math.random() < 0.2) newTodo.fulfilled();
+
       setTaskList((tasks) => {
         return [...tasks, newTodo];
       });
     }
   }, []);
+
+  // handlers
+  const addTodoItemHandler = (task) => {
+    if (!(task instanceof Task)) {
+      return;
+    }
+
+    setTaskList((list) => {
+      return [...list, task];
+    });
+  };
+
+  const onTaskTitleChange = (tid, title) => {
+    setTaskList((list) => {
+      return list.map((t) => {
+        if (t.id === tid) {
+          t.title = title;
+        }
+        return t;
+      });
+    });
+  };
+
+  const onTaskDone = (tid, done) => {
+    setTaskList((list) => {
+      return list.map((t) => {
+        if (t.id === tid) {
+          t.done = done;
+        }
+        return t;
+      });
+    });
+  };
+
+  const onTaskDelete = (tid) => {
+    setTaskList((list) => {
+      return list.filter((t) => t.id !== tid);
+    });
+  };
+
+  const onTaskTitleEndDateChange = (tid, endDate) => {
+    setTaskList((list) => {
+      return list.map((t) => {
+        if (t.id === tid) {
+          t.endDate = endDate;
+        }
+        return t;
+      });
+    });
+  };
+
+  const onSubtaskAdded = (tid, subtask) => {
+    setTaskList((list) => {
+      return list.map((t) => {
+        if (t.id === tid) {
+          t.addSubtask(subtask.title, subtask.endDate);
+        }
+        return t;
+      });
+    });
+  };
+
+  const onSubtaskTitleChange = (tid, sid, title) => {
+    setTaskList((list) => {
+      return list.map((t) => {
+        if (t.id === tid) {
+          t.getSubTaskList().map((s) => {
+            if (s.id === sid) {
+              s.title = title;
+            }
+            return s;
+          });
+        }
+        return t;
+      });
+    });
+  };
+
+  const onSubtaskDone = (tid, sid, done) => {
+    setTaskList((list) => {
+      return list.map((t) => {
+        if (t.id === tid) {
+          t.getSubTaskList().map((s) => {
+            if (s.id === sid) {
+              s.done = done;
+            }
+            return s;
+          });
+        }
+        return t;
+      });
+    });
+  };
+
+  const onSubtaskDelete = (tid, sid) => {
+    setTaskList((list) => {
+      return list.map((t) => {
+        if (t.id === tid) {
+          t.subtasks = t.getSubTaskList().filter((s) => s.id !== sid);
+        }
+        return t;
+      });
+    });
+  };
 
   return (
     <div className="todo-content">
@@ -90,117 +173,44 @@ const TodoContent = () => {
       <div className="body">
         <div className="todo-item-groups">
           <div className="todo-item-group">
-            <div className="title">해야할 일 (15)</div>
+            <div className="title">해야할 일 ({notDoneTaskList.length})</div>
             <div className="todo-list">
-              {todoList.map((todo, index) => (
-                <TodoItem
-                  selected={selectedTodoItemId == todo.id}
-                  key={index}
-                  todo={todo}
-                  onClick={(e) => setSelectedTodoItemId(todo.id)}
-                />
-              ))}
+              <TaskList
+                list={notDoneTaskList}
+                selectedId={selectedTodoItemId}
+                selectTodoItemHandler={setSelectedTodoItemId}
+                onTaskTitleChange={onTaskTitleChange}
+                onTaskDone={onTaskDone}
+                onSubtaskAdded={onSubtaskAdded}
+                onSubtaskTitleChange={onSubtaskTitleChange}
+                onTaskTitleEndDateChange={onTaskTitleEndDateChange}
+                onSubtaskDone={onSubtaskDone}
+                onTaskDelete={onTaskDelete}
+                onSubtaskDelete={onSubtaskDelete}
+              />
             </div>
           </div>
           <div className="todo-item-group">
-            <div className="title">완료됨 (20)</div>
+            <div className="title">완료됨 ({doneTaskList.length})</div>
             <div className="todo-list">
-              {Array(20)
-                .fill(0)
-                .map((_, index) => {
-                  return (
-                    <div className="todo-item" key={index}>
-                      <div className="title">할일 {index + 1}</div>
-                      <div className="due-date">2023년 8월 1일</div>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="todo-item-add-section">
-        <div
-          className={
-            "input-wrapper" +
-            JsxUtil.classByCondition(newTodoItemFocused, "focused") +
-            JsxUtil.classByCondition(newTodoItemContent.length == 0, "hidden")
-          }
-        >
-          <input
-            placeholder="할 일 또는 이벤트 추가"
-            onBlur={(e) => setNewTodoItemFocused(false)}
-            onFocus={(e) => setNewTodoItemFocused(true)}
-            onChange={(e) => setNewTodoItemContent(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                onTodoItemAdd();
-              }
-            }}
-            value={newTodoItemContent}
-          />
-          <div className="options">
-            <div className={"option" + JsxUtil.classByCondition(newTodoItemDate != null, "active")}>
-              <div className="visible" onClick={openMenu}>
-                <div className="icon-wrapper">
-                  <IoCalendarOutline />
-                </div>
-                {newTodoItemDate != null && (
-                  <div className="summary">{moment(newTodoItemDate).format("YY년 M월 D일 (ddd)")}</div>
-                )}
-              </div>
-              <ContextMenu className={"menus"} reference={contextMenuRef}>
-                <div
-                  className="menu-option"
-                  onClick={(e) => {
-                    setNewTodoItemDate(Date.now());
-                    closeMenu();
-                  }}
-                >
-                  오늘로 설정
-                </div>
-                <div
-                  className="menu-option"
-                  onClick={(e) => {
-                    setNewTodoItemDate(Date.now() + 86400 * 1000);
-                    closeMenu();
-                  }}
-                >
-                  내일로 설정
-                </div>
-                <div className="spliter"></div>
-                <div id="set_custom_date_for_new_todo" className="menu-option" onClick={(e) => openDatePicker(e)}>
-                  직접 설정
-                </div>
-                {newTodoItemDate != null && (
-                  <>
-                    <div className="spliter"></div>
-                    <div
-                      className="menu-option delete"
-                      onClick={(e) => {
-                        setNewTodoItemDate(null);
-                        closeMenu();
-                      }}
-                    >
-                      기한 제거
-                    </div>
-                  </>
-                )}
-              </ContextMenu>
-              <DatePicker
-                id="new_todo_date_picker"
-                autoclose="false"
-                datePickerRef={datePickerRef}
-                onSelect={(e) => {
-                  setNewTodoItemDate(e.getTime());
-                  closeDatePicker();
-                }}
+              <TaskList
+                list={doneTaskList}
+                selectedId={selectedTodoItemId}
+                selectTodoItemHandler={setSelectedTodoItemId}
+                onTaskTitleChange={onTaskTitleChange}
+                onTaskDone={onTaskDone}
+                onSubtaskAdded={onSubtaskAdded}
+                onSubtaskTitleChange={onSubtaskTitleChange}
+                onTaskTitleEndDateChange={onTaskTitleEndDateChange}
+                onSubtaskDone={onSubtaskDone}
+                onTaskDelete={onTaskDelete}
+                onSubtaskDelete={onSubtaskDelete}
               />
             </div>
           </div>
         </div>
       </div>
-      <DatePicker />
+      <TodoItemAddSection addTodoItemHandler={addTodoItemHandler} />
     </div>
   );
 };

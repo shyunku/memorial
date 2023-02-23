@@ -13,15 +13,19 @@ const SubTaskCircle = ({ index, total, fulfilled }) => {
   );
 };
 
-const SubTaskFinalCircle = ({ fulfilled = false }) => {
+const SubTaskFinalCircle = ({ fulfilled = false, doneHandler }) => {
   return (
-    <div className={"subtask-circle final" + JsxUtil.classByCondition(fulfilled, "fulfilled")} style={{ left: `100%` }}>
-      <div className="complete">완료!</div>
+    <div
+      className={"subtask-circle final" + JsxUtil.classByCondition(fulfilled, "fulfilled")}
+      style={{ left: `100%` }}
+      onClick={(e) => doneHandler?.(!fulfilled)}
+    >
+      <div className="complete">{fulfilled ? "취소" : "완료!"}</div>
     </div>
   );
 };
 
-const SubTaskProgressBar = ({ fulfilled = 0, total = 0, done = false }) => {
+const SubTaskProgressBar = ({ fulfilled = 0, total = 0, done = false, doneHandler }) => {
   return (
     <div className="subtask-progress-bar-wrapper">
       <div className="subtask-progress-bar">
@@ -31,7 +35,7 @@ const SubTaskProgressBar = ({ fulfilled = 0, total = 0, done = false }) => {
             [...Array(total + 1)].map((_, index) => (
               <SubTaskCircle index={index} total={total} fulfilled={fulfilled} key={index} />
             ))}
-          <SubTaskFinalCircle fulfilled={done} />
+          <SubTaskFinalCircle fulfilled={done} doneHandler={doneHandler} />
         </div>
       </div>
       <div className="subtask-progress">

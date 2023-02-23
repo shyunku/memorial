@@ -69,6 +69,7 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, preventCloseIdList = 
   const onContextMenuOpenHandler = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    console.log(e.currentTarget, e.target);
 
     if (e.currentTarget != e.target) {
       // if ancestor has autoclose attribute and it's not false, close context menu
@@ -139,7 +140,7 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, preventCloseIdList = 
           }
           parent = parent.parentElement;
         }
-        console.log("closed with outside handler");
+        // console.log("closed with outside handler");
         setVisibility(false);
       }
     };

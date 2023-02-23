@@ -4,6 +4,7 @@
 
   $fill-color: rgb(22, 24, 26);
   $fulfilled-color: rgb(49, 104, 193);
+  $cancel-fulfill-color: rgb(255, 104, 104);
 
   & > .subtask-progress {
     display: flex;
@@ -81,6 +82,12 @@
           align-items: center;
           justify-content: center;
           transition: 0.5s background-color, 0.3s width, 0.3s height;
+
+          &.fulfilled:hover {
+            background-color: $fill-color;
+            color: $cancel-fulfill-color;
+            border: 3px solid $cancel-fulfill-color;
+          }
 
           & > .complete {
             display: flex;
