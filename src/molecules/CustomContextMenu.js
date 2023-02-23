@@ -73,12 +73,27 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
   const onContextMenuOpenHandler = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log(e.currentTarget, e.target);
+    // console.log(e.currentTarget, e.target);
 
     if (e.currentTarget != e.target) {
+      // if ancestor of e.target is contextMenu, don't close context menu
+      let foundContextMenu = false;
+      let parent = e.target.parentElement;
+      while (parent != null) {
+        if (parent.classList.contains("context-menu")) {
+          foundContextMenu = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+
+      if (foundContextMenu) {
+        return;
+      }
+
       // if ancestor has autoclose attribute and it's not false, close context menu
       let foundAutoClose = false;
-      let parent = e.target.parentElement;
+      parent = e.target.parentElement;
       while (parent != null) {
         if (parent.getAttribute("autoclose") != null && parent.getAttribute("autoclose") != "false") {
           foundAutoClose = true;
@@ -88,6 +103,7 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
       }
 
       if (!foundAutoClose) {
+        console.log("closed with autoclose handler");
         setVisibility(false);
       }
     } else {
@@ -135,7 +151,7 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
       // check if children has this context menu
       // children that doesn't have this context would have "pointer-events: none"
       for (let i = 0; i < children.length; i++) {
-        if (!children[i].contains(contextMenuRef.current)) {
+        if (!children[i].classList.contains("context-menu")) {
           children[i].style.pointerEvents = "none";
         } else {
         }
@@ -148,7 +164,8 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
       if (
         contextMenuRef.current != null &&
         !contextMenuRef.current.contains(e.target) &&
-        e.target != recentActivatedElement.current
+        e.target != recentActivatedElement.current &&
+        visiblity == true
       ) {
         // check if clicked element's ancestor is in preventCloseIdList
         let parent = e.target.parentElement;
@@ -156,9 +173,10 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
           if (preventCloseIdList.includes(parent.id)) {
             return;
           }
+
           parent = parent.parentElement;
         }
-        // console.log("closed with outside handler");
+        console.log("closed with outside handler");
         setVisibility(false);
       }
     };
@@ -203,7 +221,7 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
         let rect = clickedTargetBoundary;
 
         if (rect.left < midX) {
-          contextMenuRef.current.style.left = `0px`;
+          contextMenuRef.current.style.left = `${rect.left}px`;
         } else {
           contextMenuRef.current.style.right = `${width - rect.left}px`;
         }

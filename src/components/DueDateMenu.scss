@@ -8,8 +8,11 @@
     color: $highlight-color !important;
   }
 
-  & > * {
+  & > *:not(.context-menu) {
     cursor: initial;
+  }
+  & > .context-menu {
+    cursor: auto;
   }
 
   & > .visible {

@@ -1,13 +1,18 @@
 import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
 import DatePicker from "molecules/CustomDatePicker";
 import moment from "moment/moment";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { IoCalendarOutline } from "react-icons/io5";
 import JsxUtil from "utils/JsxUtil";
+import { v4 } from "uuid";
 import "./DueDateMenu.scss";
 
 const DueDateMenu = ({ date, setDate, stickRefTo }) => {
-  const [contextMenuRef, openerRef, openMenu, closeMenu] = useContextMenu({ stickRefTo });
+  const [dateMenuId] = useState(`due_date_menu_${v4()}`);
+  const [contextMenuRef, openerRef, openMenu, closeMenu] = useContextMenu({
+    stickRefTo,
+    preventCloseIdList: [dateMenuId],
+  });
   const [datePickerRef, _, openDatePicker, closeDatePicker] = useContextMenu({});
 
   return (
@@ -61,7 +66,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
         )}
       </ContextMenu>
       <DatePicker
-        id="new_todo_date_picker_x"
+        id={dateMenuId}
         autoclose="false"
         datePickerRef={datePickerRef}
         onSelect={(e) => {
