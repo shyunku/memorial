@@ -28,7 +28,7 @@ const TodoContent = () => {
     for (let i = 0; i < 10; i++) {
       const randomSubTask = Math.floor(Math.random() * 13);
       const randomSubTaskDone = Math.floor(Math.random() * randomSubTask);
-      const randomDate = new Date(Date.now() + Math.floor(Math.random() * 10000000000));
+      const randomDate = new Date(Date.now() + Math.floor(Math.random() * 1000000000));
 
       let newTodo = new Task(`할 일 ${i + 1}`, null, randomDate);
       for (let j = 0; j < randomSubTask; j++) {

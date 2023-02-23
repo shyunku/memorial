@@ -11,6 +11,7 @@ import JsxUtil from "utils/JsxUtil";
 import DueDateMenu from "./DueDateMenu";
 import Subtask from "objects/Subtask";
 import { VscChromeClose } from "react-icons/vsc";
+import { fastInterval } from "utils/Common";
 
 const TodoItem = ({
   todo,
@@ -30,13 +31,15 @@ const TodoItem = ({
   const expandableRef = useRef();
   const titleRef = useRef();
 
+  const [counter, setCounter] = useState(0);
+
   const [editedTitle, setEditedTitle] = useState(todo.title);
   const [taskEndDate, setTaskEndDate] = useState(todo.endDate);
   const [newSubtaskDate, setNewSubtaskDate] = useState(null);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
+  const todoCtx = Task.fromObject(todo);
   const subTaskList = useMemo(() => {
-    const todoCtx = Task.fromObject(todo);
     return todoCtx.getSubTaskList() ?? [];
   });
   const [subTaskTitleInputMap, setSubTaskTitleInputMap] = useState(
@@ -45,6 +48,16 @@ const TodoItem = ({
       return map;
     }, {})
   );
+
+  useEffect(() => {
+    const counterId = fastInterval(() => {
+      setCounter((c) => c + 1);
+    }, 1000);
+
+    return () => {
+      clearInterval(counterId);
+    };
+  }, []);
 
   useEffect(() => {
     if (!(todo instanceof Task)) {
@@ -75,12 +88,30 @@ const TodoItem = ({
     titleRef.current.blur();
   };
 
+  const onTitleEdit = () => {
+    if (editedTitle.length === 0) return;
+    onTaskTitleChange?.(todo.id, editedTitle);
+    setEditedTitle(todo.title);
+  };
+
   const onNewSubtaskTitleKeyDown = (e) => {
     if (e.key !== "Enter") return;
     if (newSubtaskTitle.length === 0) return;
     onSubtaskAdded?.(todo.id, new Subtask(newSubtaskTitle, newSubtaskDate));
     setNewSubtaskTitle("");
     setNewSubtaskDate(null);
+  };
+
+  const onSubtaskTitleDecision = (subtask, titleInput) => {
+    if (titleInput.length === 0) {
+      setSubTaskTitleInputMap((original) => {
+        const newMap = { ...original };
+        newMap[subtask.id] = subtask.title;
+        return newMap;
+      });
+      return;
+    }
+    onSubtaskTitleChange(todo.id, subtask.id, titleInput);
   };
 
   return (
@@ -123,6 +154,7 @@ const TodoItem = ({
               value={editedTitle}
               onKeyDown={onTitleEditKeyDown}
               onChange={(e) => setEditedTitle(e.target.value)}
+              onBlur={onTitleEdit}
             ></input>
             <div className="options">
               <DueDateMenu
@@ -132,6 +164,12 @@ const TodoItem = ({
                   setTaskEndDate(todo.endDate);
                 }}
               />
+            </div>
+          </div>
+          <div className="section summary">
+            <div className="progress-bar">
+              <div className="percent">{(100 * todoCtx.getTimeProgress()).toFixed(3)}%</div>
+              <div className="progress-bar-inner" style={{ width: `${100 * todoCtx.getTimeProgress()}%` }}></div>
             </div>
           </div>
           <div className="section sub-tasks">
@@ -168,20 +206,18 @@ const TodoItem = ({
                         value={titleInput}
                         onBlur={(e) => {
                           if (titleInput === subtask.title) return;
-                          if (titleInput.length === 0) {
-                            setSubTaskTitleInputMap((original) => {
-                              const newMap = { ...original };
-                              newMap[subtask.id] = subtask.title;
-                              return newMap;
-                            });
-                            return;
-                          }
-                          onSubtaskTitleChange(todo.id, subtask.id, titleInput);
+                          onSubtaskTitleDecision(subtask, titleInput);
                         }}
                         onChange={(e) => {
                           const newMap = { ...subTaskTitleInputMap };
                           newMap[subtask.id] = e.target.value;
                           setSubTaskTitleInputMap(newMap);
+                        }}
+                        onKeyDown={(e) => {
+                          onSubtaskTitleDecision(subtask, titleInput);
+                          if (e.key === "Enter") {
+                            e.target.blur();
+                          }
                         }}
                       />
                     </div>

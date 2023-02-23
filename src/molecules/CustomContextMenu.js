@@ -1,17 +1,20 @@
 import { createRef, useEffect, useMemo, useRef, useState } from "react";
+import { v4 } from "uuid";
 
 const direction = ["left", "right", "top", "bottom"];
 
 const ContextMenuStyle = {
-  position: "absolute",
+  position: "fixed",
   opacity: "1",
   visibility: "hidden",
   zIndex: "1000",
 };
 
 export const ContextMenu = ({ className = "", reference, children, sticky = false, ...rest }) => {
+  const [contextMenuId] = useState(v4());
   return (
     <div
+      id={contextMenuId}
       ref={reference}
       className={"context-menu " + className}
       style={ContextMenuStyle}
@@ -23,12 +26,13 @@ export const ContextMenu = ({ className = "", reference, children, sticky = fals
   );
 };
 
-export const useContextMenu = ({ offsetX = 5, offsetY = 5, preventCloseIdList = [] }) => {
+export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCloseIdList = [] }) => {
   const [visiblity, setVisibility] = useState(false);
   const [contextMenuX, setContextMenuX] = useState(0);
   const [contextMenuY, setContextMenuY] = useState(0);
   const [clickedTargetBoundary, setClickedTargetBoundary] = useState({});
 
+  const openerRef = useRef();
   const contextMenuRef = useRef();
   const recentActivatedElement = useRef();
 
@@ -90,7 +94,7 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, preventCloseIdList = 
       if (sticky) {
         // set context menu position to proper position
         // set clicked target boundary
-        let rect = e.target.getBoundingClientRect();
+        let rect = (stickRefTo?.current ?? e.target).getBoundingClientRect();
         setClickedTargetBoundary({
           left: rect.left,
           right: rect.right,
@@ -124,6 +128,20 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, preventCloseIdList = 
 
     setVisibility(false);
   };
+
+  useEffect(() => {
+    if (openerRef?.current != null) {
+      const children = openerRef.current.children;
+      // check if children has this context menu
+      // children that doesn't have this context would have "pointer-events: none"
+      for (let i = 0; i < children.length; i++) {
+        if (!children[i].contains(contextMenuRef.current)) {
+          children[i].style.pointerEvents = "none";
+        } else {
+        }
+      }
+    }
+  }, [openerRef]);
 
   useEffect(() => {
     const onOutsideClick = (e) => {
@@ -185,13 +203,13 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, preventCloseIdList = 
         let rect = clickedTargetBoundary;
 
         if (rect.left < midX) {
-          contextMenuRef.current.style.left = `${rect.right}px`;
+          contextMenuRef.current.style.left = `0px`;
         } else {
           contextMenuRef.current.style.right = `${width - rect.left}px`;
         }
 
         if (rect.top < midY) {
-          contextMenuRef.current.style.top = `0`;
+          contextMenuRef.current.style.top = `${rect.bottom + (rect.top - rect.bottom)}px`;
         } else {
           contextMenuRef.current.style.bottom = `${height - rect.top + (rect.top - rect.bottom)}px`;
         }
@@ -211,7 +229,7 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, preventCloseIdList = 
     }
   }, [contextMenuRef, contextMenuX, contextMenuY, visiblity, recentActivatedElement]);
 
-  return [contextMenuRef, onContextMenuOpenHandler, onContextMenuCloseHandler];
+  return [contextMenuRef, openerRef, onContextMenuOpenHandler, onContextMenuCloseHandler];
 };
 
 export default {};

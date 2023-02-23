@@ -19,6 +19,20 @@ class Task {
     this.done = true;
   }
 
+  getTimeProgress() {
+    if (!this.createdAt || !this.endDate) {
+      return 0;
+    }
+
+    const endDate = new Date(this.endDate);
+    const createdAt = new Date(this.createdAt);
+
+    const now = new Date();
+    const total = endDate.getTime() - createdAt.getTime();
+    const passed = now.getTime() - createdAt.getTime();
+    return passed / total;
+  }
+
   addSubtask(title, endDate) {
     const subtask = new Subtask(title, endDate);
     this.subtasks.push(subtask);
