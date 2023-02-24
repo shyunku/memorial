@@ -94,6 +94,15 @@ const TodoContent = () => {
     });
   };
 
+  const onTaskCreatedTo = (task, prevTaskId) => {
+    setTaskList((list) => {
+      const newList = [...list];
+      const prevTaskIndex = newList.findIndex((t) => t.id === prevTaskId);
+      newList.splice(prevTaskIndex + 1, 0, task);
+      return newList;
+    });
+  };
+
   const onSubtaskAdded = (tid, subtask) => {
     setTaskList((list) => {
       return list.map((t) => {
@@ -174,39 +183,35 @@ const TodoContent = () => {
         <div className="todo-item-groups">
           <div className="todo-item-group">
             <div className="title">해야할 일 ({notDoneTaskList.length})</div>
-            <div className="todo-list">
-              <TaskList
-                list={notDoneTaskList}
-                selectedId={selectedTodoItemId}
-                selectTodoItemHandler={setSelectedTodoItemId}
-                onTaskTitleChange={onTaskTitleChange}
-                onTaskDone={onTaskDone}
-                onSubtaskAdded={onSubtaskAdded}
-                onSubtaskTitleChange={onSubtaskTitleChange}
-                onTaskTitleEndDateChange={onTaskTitleEndDateChange}
-                onSubtaskDone={onSubtaskDone}
-                onTaskDelete={onTaskDelete}
-                onSubtaskDelete={onSubtaskDelete}
-              />
-            </div>
+            <TaskList
+              list={notDoneTaskList}
+              selectedId={selectedTodoItemId}
+              selectTodoItemHandler={setSelectedTodoItemId}
+              onTaskTitleChange={onTaskTitleChange}
+              onTaskDone={onTaskDone}
+              onSubtaskAdded={onSubtaskAdded}
+              onSubtaskTitleChange={onSubtaskTitleChange}
+              onTaskTitleEndDateChange={onTaskTitleEndDateChange}
+              onSubtaskDone={onSubtaskDone}
+              onTaskDelete={onTaskDelete}
+              onSubtaskDelete={onSubtaskDelete}
+            />
           </div>
           <div className="todo-item-group">
             <div className="title">완료됨 ({doneTaskList.length})</div>
-            <div className="todo-list">
-              <TaskList
-                list={doneTaskList}
-                selectedId={selectedTodoItemId}
-                selectTodoItemHandler={setSelectedTodoItemId}
-                onTaskTitleChange={onTaskTitleChange}
-                onTaskDone={onTaskDone}
-                onSubtaskAdded={onSubtaskAdded}
-                onSubtaskTitleChange={onSubtaskTitleChange}
-                onTaskTitleEndDateChange={onTaskTitleEndDateChange}
-                onSubtaskDone={onSubtaskDone}
-                onTaskDelete={onTaskDelete}
-                onSubtaskDelete={onSubtaskDelete}
-              />
-            </div>
+            <TaskList
+              list={doneTaskList}
+              selectedId={selectedTodoItemId}
+              selectTodoItemHandler={setSelectedTodoItemId}
+              onTaskTitleChange={onTaskTitleChange}
+              onTaskDone={onTaskDone}
+              onSubtaskAdded={onSubtaskAdded}
+              onSubtaskTitleChange={onSubtaskTitleChange}
+              onTaskTitleEndDateChange={onTaskTitleEndDateChange}
+              onSubtaskDone={onSubtaskDone}
+              onTaskDelete={onTaskDelete}
+              onSubtaskDelete={onSubtaskDelete}
+            />
           </div>
         </div>
       </div>

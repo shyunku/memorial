@@ -1,0 +1,9 @@
+.draggable-div {
+  &.dragging {
+    // height: 20px !important;
+    opacity: 0 !important;
+    cursor: dragging !important;
+    // position: fixed !important;
+    // display: none;
+  }
+}
