@@ -1,3 +1,4 @@
+import useThrottle from "hooks/UseThrottle";
 import { useCallback, useEffect, useState } from "react";
 import JsxUtil from "utils/JsxUtil";
 import { v4 } from "uuid";
@@ -13,6 +14,7 @@ export const DraggableDiv = ({
   const [draggableDivId, _] = useState(`draggable_div_${v4()}`);
   const [dragging, setDragging] = useState(false);
   const [originalStyles, setOriginalStyles] = useState({});
+  const [lastDragPos, setLastDragPos] = useState([]);
 
   const originalize = useCallback(
     (draggableDiv) => {
@@ -63,28 +65,36 @@ export const DraggableDiv = ({
   //     return;
   //   };
 
-  const onDrag = (e) => {
+  const onDrag = useThrottle((e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    // console.log("x", x, "y", y);
+
+    if (lastDragPos[0] == x && lastDragPos[1] == y) return;
+    setLastDragPos([x, y]);
 
     const draggableDiv = e.currentTarget;
-    const id = dropPredictHandler(e);
-    // console.log(id);
-    const prevItem = id ? document.getElementById(id) : null;
+    const predictResult = dropPredictHandler(e);
+    const id = predictResult?.[0];
+    const isFirst = predictResult?.[1];
+    const closeItem = id ? document.getElementById(id) : null;
 
-    if (prevItem) {
+    if (closeItem) {
       //   console.log(id);
       // move the draggable div element to next of the prev item
-      prevItem.parentNode.insertBefore(e.currentTarget, prevItem.nextSibling);
+      if (isFirst) {
+        closeItem.parentNode.insertBefore(e.currentTarget, closeItem);
+      } else {
+        closeItem.parentNode.insertBefore(e.currentTarget, closeItem.nextSibling);
+      }
+
       originalize(e.currentTarget);
     } else {
       draggableDiv.style.position = "fixed";
       draggableDiv.style.left = x + "px";
       draggableDiv.style.top = y + "px";
     }
-  };
+  }, 50);
 
   return (
     <div

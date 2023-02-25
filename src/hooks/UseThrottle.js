@@ -1,16 +1,21 @@
 import { useState } from "react";
 
 const useThrottle = (fn, limit = 0, saveLastValue = false) => {
-  const [lock, setLock] = useState(false);
-  const [lastValue, setLastValue] = useState(null);
+  let lock = false,
+    lastValue;
+  // const [lock, setLock] = useState(false);
+  // const [lastValue, setLastValue] = useState(null);
 
   return (...args) => {
-    console.log("locked");
     if (lock) return saveLastValue ? lastValue : null;
-    setLock(true);
-    setTimeout(setLock(false), limit);
+    // setLock(true);
+    lock = true;
+    setTimeout(() => {
+      lock = false;
+    }, limit);
     let newVal = fn(...args);
-    setLastValue(newVal);
+    // setLastValue(newVal);
+    lastValue = newVal;
     return newVal;
   };
 };

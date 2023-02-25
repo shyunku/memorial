@@ -5,59 +5,35 @@ import TodoItem from "./TodoItem";
 
 const TaskList = ({ list = [], selectedId, selectTodoItemHandler = () => {}, ...rest }) => {
   const todoListRef = useRef();
-  const onTaskDropPredict = useThrottle(
-    (e, task) => {
-      console.log("calc");
-      // find the closest todo item that center position is higher than the drop position
-      const todoItemWrappers = todoListRef.current.querySelectorAll(".todo-item-wrapper");
-      const dropPosition = e.clientY;
-      let closestTodoItem = null;
-      let closestTodoItemCenter = 0;
+  const onTaskDropPredict = (e, task) => {
+    // find the closest todo item that center position is higher than the drop position
+    const todoItemWrappers = todoListRef.current.querySelectorAll(".todo-item-wrapper");
+    const dropPosition = e.clientY;
+    let closestPrevTodoItem = null;
+    let closestPrevTodoItemCenter = null;
+    let closestNextTodoItem = null;
+    let closestNextTodoItemCenter = null;
 
-      // sort by center position
-      // let sortedWrappers = Array.from(todoItemWrappers).sort((a, b) => {
-      //   const aRect = a.getBoundingClientRect();
-      //   const bRect = b.getBoundingClientRect();
-      //   const aCenter = aRect.top + aRect.height / 2;
-      //   const bCenter = bRect.top + bRect.height / 2;
-      //   return aCenter - bCenter;
-      // });
+    // find linear search
+    for (let i = 0; i < todoItemWrappers.length; i++) {
+      if (task.id == todoItemWrappers[i].id) continue; // skip the task itself
+      const todoItemWrapper = todoItemWrappers[i];
+      const todoItemWrapperRect = todoItemWrapper.getBoundingClientRect();
+      const todoItemWrapperCenter = todoItemWrapperRect.top + todoItemWrapperRect.height / 2;
 
-      // // find closest by binary search
-      // let left = 0;
-      // let right = sortedWrappers.length - 1;
-      // while (left <= right) {
-      //   const mid = Math.floor((left + right) / 2);
-      //   const todoItemWrapper = sortedWrappers[mid];
-      //   const todoItemWrapperRect = todoItemWrapper.getBoundingClientRect();
-      //   const todoItemWrapperCenter = todoItemWrapperRect.top + todoItemWrapperRect.height / 2;
-      //   if (todoItemWrapperCenter < dropPosition) {
-      //     left = mid + 1;
-      //     closestTodoItem = todoItemWrapper;
-      //     closestTodoItemCenter = todoItemWrapperCenter;
-      //   } else {
-      //     right = mid - 1;
-      //   }
-      // }
-
-      // find linear search
-      for (let i = 0; i < todoItemWrappers.length; i++) {
-        if (task.id == todoItemWrappers[i].id) continue; // skip the task itself (if it is in the list
-        const todoItemWrapper = todoItemWrappers[i];
-        const todoItemWrapperRect = todoItemWrapper.getBoundingClientRect();
-        const todoItemWrapperCenter = todoItemWrapperRect.top + todoItemWrapperRect.height / 2;
-        if (todoItemWrapperCenter < dropPosition) {
-          closestTodoItem = todoItemWrapper;
-          closestTodoItemCenter = todoItemWrapperCenter;
-          // break;
-        }
+      if (todoItemWrapperCenter < dropPosition) {
+        if (closestPrevTodoItemCenter && closestPrevTodoItemCenter > todoItemWrapperCenter) continue;
+        closestPrevTodoItem = todoItemWrapper;
+        closestPrevTodoItemCenter = todoItemWrapperCenter;
+      } else {
+        if (closestNextTodoItemCenter && closestNextTodoItemCenter < todoItemWrapperCenter) continue;
+        closestNextTodoItem = todoItemWrapper;
+        closestNextTodoItemCenter = todoItemWrapperCenter;
       }
+    }
 
-      return closestTodoItem?.id;
-    },
-    1000,
-    true
-  );
+    return [closestPrevTodoItem?.id ?? closestNextTodoItem?.id, closestPrevTodoItem?.id == null];
+  };
 
   const onTaskDropHandler = (e, task) => {
     return false;
