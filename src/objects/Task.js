@@ -1,61 +1,76 @@
 import { v4 } from "uuid";
+import Mutatable from "./Mutatable";
 import Subtask from "./Subtask";
 
-class Task {
-  constructor(title, startDate, endDate) {
+class Task extends Mutatable {
+  constructor(title, dueDate) {
+    super({
+      tid: "id",
+      created_at: "createdAt",
+      due_date: "dueDate",
+      title: "title",
+      memo: "memo",
+      done: "done",
+      done_at: "doneAt",
+    });
+
     this.id = v4();
     this.createdAt = new Date();
+    this.doneAt = null;
+    this.dueDate = dueDate;
 
     this.title = title;
+    this.memo = "";
+
     this.done = false;
 
-    this.startDate = startDate;
-    this.endDate = endDate;
-
-    this.subtasks = [];
+    this.subtasks = {};
   }
 
   fulfilled() {
     this.done = true;
   }
 
+  addSubtask(subtask) {
+    if (!(subtask instanceof Subtask)) {
+      console.error("invalid subtask", subtask);
+      return;
+    }
+    this.subtasks[subtask.id] = subtask;
+  }
+
+  deleteSubtask(sid) {
+    delete this.subtasks[sid];
+  }
+
   getTimeProgress() {
-    if (!this.createdAt || !this.endDate) {
+    if (!this.createdAt || !this.dueDate) {
       return 0;
     }
 
-    const endDate = new Date(this.endDate);
+    const dueDate = new Date(this.dueDate);
     const createdAt = new Date(this.createdAt);
 
     const now = new Date();
-    const total = endDate.getTime() - createdAt.getTime();
+    const total = dueDate.getTime() - createdAt.getTime();
     const passed = now.getTime() - createdAt.getTime();
-    return passed / total;
-  }
-
-  addSubtask(title, endDate) {
-    const subtask = new Subtask(title, endDate);
-    this.subtasks.push(subtask);
-    return subtask;
-  }
-
-  getSubTaskList() {
-    return this.subtasks;
+    let prog = passed / total;
+    return prog > 1 || prog < 0 ? 1 : prog;
   }
 
   getSubTaskCount() {
-    return this.subtasks.length;
+    return Object.keys(this.subtasks).length;
   }
 
   getFulfilledSubTaskCount() {
-    return this.subtasks.filter((subtask) => subtask.done === true).length;
+    return Object.values(this.subtasks).filter((subtask) => subtask.done).length;
   }
 
   static fromObject(obj) {
     const ctx = new Task();
     for (let key in obj) {
       if (key === "subtasks") {
-        ctx[key] = obj[key].map((subtask) => Subtask.fromObject(subtask));
+        ctx.subtasks = { ...obj?.subtasks };
       } else {
         ctx[key] = obj[key];
       }

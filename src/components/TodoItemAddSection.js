@@ -7,14 +7,14 @@ import Task from "objects/Task";
 import { IoCalendarOutline } from "react-icons/io5";
 import DueDateMenu from "./DueDateMenu";
 
-const TodoItemAddSection = ({ addTodoItemHandler }) => {
+const TodoItemAddSection = ({ onTaskAdd }) => {
   const [newTodoItemFocused, setNewTodoItemFocused] = useState(false);
   const [newTodoItemContent, setNewTodoItemContent] = useState("");
   const [newTodoItemDate, setNewTodoItemDate] = useState(null);
 
   const onAddTodoItem = () => {
     if (newTodoItemContent.length == 0) return;
-    addTodoItemHandler(new Task(newTodoItemContent, null, newTodoItemDate));
+    onTaskAdd(new Task(newTodoItemContent, newTodoItemDate));
     setNewTodoItemContent("");
     setNewTodoItemDate(null);
   };

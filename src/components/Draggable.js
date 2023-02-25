@@ -15,6 +15,7 @@ export const DraggableDiv = ({
   const [dragging, setDragging] = useState(false);
   const [originalStyles, setOriginalStyles] = useState({});
   const [lastDragPos, setLastDragPos] = useState([]);
+  const [droppingInfo, setDroppingInfo] = useState({});
 
   const originalize = useCallback(
     (draggableDiv) => {
@@ -30,7 +31,32 @@ export const DraggableDiv = ({
 
   const onDragStart = (e) => {
     e.stopPropagation();
-    console.log("drag start", e);
+    // console.log("drag start", e);
+
+    const isDragZone = e.currentTarget.classList.contains("draggable-zone");
+    console.log(isDragZone);
+    if (!isDragZone) {
+      // exclude if point is not on dragging zone
+      const dragZones = e.currentTarget.querySelectorAll(".draggable-zone");
+      if (dragZones.length == 0) {
+        e.preventDefault();
+        return;
+      }
+
+      for (let i = 0; i < dragZones.length; i++) {
+        const rect = dragZones[i].getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+          break;
+        }
+        if (i == dragZones.length - 1) {
+          e.preventDefault();
+          return;
+        }
+      }
+    }
+
     setDragging(true);
     setOriginalStyles({
       position: e.currentTarget.style.position,
@@ -38,14 +64,12 @@ export const DraggableDiv = ({
       top: e.currentTarget.style.top,
       transition: e.currentTarget.style.transition,
     });
-
-    // e.currentTarget.style.transition = "none";
   };
 
   const onDragEnd = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("drag end", e);
+    // console.log("drag end", e);
     setDragging(false);
 
     // drag end failed, return to original status
@@ -56,16 +80,16 @@ export const DraggableDiv = ({
   const onDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("drop", draggableDivId, e);
+    // console.log("drop", draggableDivId, e);
   };
 
-  //   const onDragOver = (e) => {
-  //     e.preventDefault();
-  //     e.stopPropagation();
-  //     return;
-  //   };
+  const onDragOver = (e) => {
+    e.preventDefault();
+  };
 
   const onDrag = useThrottle((e) => {
+    e.preventDefault();
+
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -79,7 +103,10 @@ export const DraggableDiv = ({
     const isFirst = predictResult?.[1];
     const closeItem = id ? document.getElementById(id) : null;
 
+    // console.log(id, isFirst);
+
     if (closeItem) {
+      if (droppingInfo.id == id && droppingInfo.isFirst == isFirst) return;
       //   console.log(id);
       // move the draggable div element to next of the prev item
       if (isFirst) {
@@ -94,7 +121,9 @@ export const DraggableDiv = ({
       draggableDiv.style.left = x + "px";
       draggableDiv.style.top = y + "px";
     }
-  }, 50);
+
+    setDroppingInfo({ id, isFirst });
+  }, 20);
 
   return (
     <div
@@ -104,7 +133,7 @@ export const DraggableDiv = ({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onDrop={onDrop}
-      //   onDragOver={onDragOver}
+      onDragOver={onDragOver}
       onDrag={onDrag}
       {...rest}
     >
@@ -113,9 +142,9 @@ export const DraggableDiv = ({
   );
 };
 
-export const DroppableDiv = ({ children, ...rest }) => {
+export const DraggableZone = ({ children, className = "", ...rest }) => {
   return (
-    <div className="droppable-div" {...rest}>
+    <div className={"draggable-zone " + className} {...rest}>
       {children}
     </div>
   );

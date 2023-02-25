@@ -79,7 +79,8 @@ module.exports = {
   },
   getContext: function () {
     return {
-      get: (query, params = []) => {
+      get: (query, ...args) => {
+        let params = Array.isArray(args?.[0]) ? args[0] : args;
         return new Promise((resolve, reject) => {
           db.get(query, params, (err, row) => {
             if (err) reject(err);
@@ -87,7 +88,8 @@ module.exports = {
           });
         });
       },
-      run: (query, params = []) => {
+      run: (query, ...args) => {
+        let params = Array.isArray(args?.[0]) ? args[0] : args;
         return new Promise((resolve, reject) => {
           db.run(query, params, (err) => {
             if (err) reject(err);
@@ -95,7 +97,8 @@ module.exports = {
           });
         });
       },
-      all: (query, params = []) => {
+      all: (query, ...args) => {
+        let params = Array.isArray(args?.[0]) ? args[0] : args;
         return new Promise((resolve, reject) => {
           db.all(query, params, (err, row) => {
             if (err) reject(err);

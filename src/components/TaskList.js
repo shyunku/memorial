@@ -1,13 +1,18 @@
 import useThrottle from "hooks/UseThrottle";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { debounce } from "utils/Common";
 import TodoItem from "./TodoItem";
 
-const TaskList = ({ list = [], selectedId, selectTodoItemHandler = () => {}, ...rest }) => {
+const TaskList = ({ tasks = {}, selectedId, selectTodoItemHandler = () => {}, ...rest }) => {
   const todoListRef = useRef();
+  const taskList = useMemo(() => Object.values(tasks), [tasks]);
+
   const onTaskDropPredict = (e, task) => {
     // find the closest todo item that center position is higher than the drop position
     const todoItemWrappers = todoListRef.current.querySelectorAll(".todo-item-wrapper");
+
+    if (e.clientY === 0) return [];
+
     const dropPosition = e.clientY;
     let closestPrevTodoItem = null;
     let closestPrevTodoItemCenter = null;
@@ -16,7 +21,8 @@ const TaskList = ({ list = [], selectedId, selectTodoItemHandler = () => {}, ...
 
     // find linear search
     for (let i = 0; i < todoItemWrappers.length; i++) {
-      if (task.id == todoItemWrappers[i].id) continue; // skip the task itself
+      if (task.id == todoItemWrappers[i].getAttribute("todo-id")) continue; // skip the task itself
+      // console.log(todoItemWrappers[i].id, task.id);
       const todoItemWrapper = todoItemWrappers[i];
       const todoItemWrapperRect = todoItemWrapper.getBoundingClientRect();
       const todoItemWrapperCenter = todoItemWrapperRect.top + todoItemWrapperRect.height / 2;
@@ -41,7 +47,7 @@ const TaskList = ({ list = [], selectedId, selectTodoItemHandler = () => {}, ...
 
   return (
     <div className="todo-list" ref={todoListRef}>
-      {list.map((todo) => (
+      {taskList.map((todo) => (
         <TodoItem
           selected={selectedId == todo.id}
           key={todo.id}

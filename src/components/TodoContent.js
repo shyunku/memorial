@@ -1,176 +1,290 @@
 import { IoCalendarOutline } from "react-icons/io5";
 import "./TodoContent.scss";
-import { createRef, useEffect, useMemo, useRef, useState } from "react";
+import React, { createRef, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import TodoItem from "./TodoItem";
+import { TODO_MENU_TYPE } from "components/LeftSidebar";
 
 import Task from "objects/Task";
 import TodoItemAddSection from "./TodoItemAddSection";
 import TaskList from "./TaskList";
+import { useOutletContext } from "react-router-dom";
+import TaskListView from "views/TaskListView";
+import JsxUtil from "utils/JsxUtil";
+import IpcSender from "utils/IpcSender";
+import Subtask from "objects/Subtask";
+import { printf } from "utils/Common";
+import moment from "moment";
+
+const TASK_VIEW_MODE = {
+  LIST: "리스트",
+  CARD: "카드",
+  CALENDAR: "캘린더",
+  TIMELINE: "타임라인",
+  DASHBOARD: "대시보드",
+};
 
 const TodoContent = () => {
+  const props = useOutletContext();
+  const { selectedTodoMenuType } = props;
+
+  console.log(selectedTodoMenuType);
+
   // main objects
-  const [taskList, setTaskList] = useState([]);
+  const [taskMap, setTaskMap] = useState({});
   const [selectedTodoItemId, setSelectedTodoItemId] = useState(null);
-
-  const [doneTaskList, notDoneTaskList] = useMemo(() => {
-    const doneTasks = [];
-    const notDoneTasks = [];
-
-    for (let task of taskList) {
-      (task.done ? doneTasks : notDoneTasks).push(task);
-    }
-    return [doneTasks, notDoneTasks];
-  }, [taskList]);
+  const [taskViewMode, setTaskViewMode] = useState(TASK_VIEW_MODE.LIST);
 
   useEffect(() => {
-    if (taskList.length > 0) return;
-    for (let i = 0; i < 10; i++) {
-      const randomSubTask = Math.floor(Math.random() * 13);
-      const randomSubTaskDone = Math.floor(Math.random() * randomSubTask);
-      const randomDate = new Date(Date.now() + Math.floor(Math.random() * 1000000000));
-
-      let newTodo = new Task(`할 일 ${i + 1}`, null, randomDate);
-      for (let j = 0; j < randomSubTask; j++) {
-        let subtask = newTodo.addSubtask(`서브 할 일 ${j + 1}`);
-        if (j < randomSubTaskDone) subtask.fulfilled();
+    IpcSender.req.task.getTaskList(({ success, data }) => {
+      if (success) {
+        // covert to Task objects
+        setTaskMap((taskMap) => {
+          const newTaskMap = {};
+          for (let i = 0; i < data.length; i++) {
+            const task = Task.fromEntity(data[i]);
+            newTaskMap[task.id] = task;
+          }
+          return { ...taskMap, ...newTaskMap };
+        });
+      } else {
+        console.error("failed to get task list");
       }
 
-      if (Math.random() < 0.2) newTodo.fulfilled();
-
-      setTaskList((tasks) => {
-        return [...tasks, newTodo];
+      // fetch all subtasks
+      IpcSender.req.task.getSubtaskList(({ success, data }) => {
+        if (success) {
+          setTaskMap((taskMap) => {
+            const newTaskMap = {};
+            for (let i = 0; i < data.length; i++) {
+              const subtaskEntity = data[i];
+              const subtask = Subtask.fromEntity(subtaskEntity);
+              const taskId = subtaskEntity.tid;
+              if (taskMap[taskId]) {
+                taskMap[taskId].addSubtask(subtask);
+              }
+            }
+            return { ...taskMap, ...newTaskMap };
+          });
+        } else {
+          console.error("failed to get subtask list");
+        }
       });
-    }
+    });
   }, []);
 
+  printf("taskMap", taskMap);
+
   // handlers
-  const addTodoItemHandler = (task) => {
+  const onTaskAdd = (task) => {
     if (!(task instanceof Task)) {
       return;
     }
-
-    setTaskList((list) => {
-      return [...list, task];
-    });
-  };
-
-  const onTaskTitleChange = (tid, title) => {
-    setTaskList((list) => {
-      return list.map((t) => {
-        if (t.id === tid) {
-          t.title = title;
-        }
-        return t;
-      });
-    });
-  };
-
-  const onTaskDone = (tid, done) => {
-    setTaskList((list) => {
-      return list.map((t) => {
-        if (t.id === tid) {
-          t.done = done;
-        }
-        return t;
-      });
+    IpcSender.req.task.addTask(task.toEntity(), ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          return { ...taskMap, [task.id]: task };
+        });
+      } else {
+        console.error("failed to add task");
+      }
     });
   };
 
   const onTaskDelete = (tid) => {
-    setTaskList((list) => {
-      return list.filter((t) => t.id !== tid);
+    IpcSender.req.task.deleteTask(tid, ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const newTaskMap = { ...taskMap };
+          delete newTaskMap[tid];
+          return newTaskMap;
+        });
+      } else {
+        console.error("failed to delete task");
+      }
     });
   };
 
-  const onTaskTitleEndDateChange = (tid, endDate) => {
-    setTaskList((list) => {
-      return list.map((t) => {
-        if (t.id === tid) {
-          t.endDate = endDate;
-        }
-        return t;
-      });
+  const onTaskTitleChange = (tid, title) => {
+    IpcSender.req.task.updateTaskTitle(tid, title, ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.title = title;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update task title");
+      }
     });
   };
 
-  const onTaskCreatedTo = (task, prevTaskId) => {
-    setTaskList((list) => {
-      const newList = [...list];
-      const prevTaskIndex = newList.findIndex((t) => t.id === prevTaskId);
-      newList.splice(prevTaskIndex + 1, 0, task);
-      return newList;
+  const onTaskDueDateChange = (tid, dueDate) => {
+    IpcSender.req.task.updateTaskDueDate(tid, dueDate, ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.dueDate = dueDate;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update task due date");
+      }
+    });
+  };
+
+  const onTaskMemoChange = (tid, memo) => {
+    IpcSender.req.task.updateTaskMemo(tid, memo, ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.memo = memo;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update task memo");
+      }
+    });
+  };
+
+  const onTaskDone = (tid, done) => {
+    const now = new Date();
+    IpcSender.req.task.updateTaskDone(tid, done, now.getTime(), ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.done = done;
+          task.doneAt = now;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update task done");
+      }
     });
   };
 
   const onSubtaskAdded = (tid, subtask) => {
-    setTaskList((list) => {
-      return list.map((t) => {
-        if (t.id === tid) {
-          t.addSubtask(subtask.title, subtask.endDate);
-        }
-        return t;
-      });
-    });
-  };
+    if (!(subtask instanceof Subtask)) {
+      return;
+    }
 
-  const onSubtaskTitleChange = (tid, sid, title) => {
-    setTaskList((list) => {
-      return list.map((t) => {
-        if (t.id === tid) {
-          t.getSubTaskList().map((s) => {
-            if (s.id === sid) {
-              s.title = title;
-            }
-            return s;
-          });
-        }
-        return t;
-      });
-    });
-  };
-
-  const onSubtaskDone = (tid, sid, done) => {
-    setTaskList((list) => {
-      return list.map((t) => {
-        if (t.id === tid) {
-          t.getSubTaskList().map((s) => {
-            if (s.id === sid) {
-              s.done = done;
-            }
-            return s;
-          });
-        }
-        return t;
-      });
+    IpcSender.req.task.addSubtask(subtask.toEntity(), tid, ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.addSubtask(subtask);
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to add subtask");
+      }
     });
   };
 
   const onSubtaskDelete = (tid, sid) => {
-    setTaskList((list) => {
-      return list.map((t) => {
-        if (t.id === tid) {
-          t.subtasks = t.getSubTaskList().filter((s) => s.id !== sid);
-        }
-        return t;
-      });
+    IpcSender.req.task.deleteSubtask(tid, sid, ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.deleteSubtask(sid);
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to delete subtask");
+      }
     });
   };
+
+  const onSubtaskTitleChange = (tid, sid, title) => {
+    IpcSender.req.task.updateSubtaskTitle(sid, title, ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          const subtask = task.subtasks[sid];
+          if (subtask == null) {
+            console.error("subtask is null", tid, sid, title);
+            return taskMap;
+          }
+          subtask.title = title;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update subtask title");
+      }
+    });
+  };
+
+  const onSubtaskDueDateChange = (tid, sid, dueDate) => {
+    IpcSender.req.task.updateSubtaskDueDate(sid, dueDate, ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          const subtask = task.subtasks[sid];
+          if (subtask == null) {
+            console.error("subtask is null", tid, sid, dueDate);
+            return taskMap;
+          }
+          subtask.dueDate = dueDate;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update subtask due date");
+      }
+    });
+  };
+
+  const onSubtaskDone = (tid, sid, done) => {
+    const now = new Date();
+    IpcSender.req.task.updateSubtaskDone(sid, done, now.getTime(), ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          const subtask = task.subtasks[sid];
+          if (subtask == null) {
+            console.error("subtask is null", tid, sid, done, now);
+            return taskMap;
+          }
+          subtask.done = done;
+          subtask.doneAt = now;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update subtask done");
+      }
+    });
+  };
+
+  const outerFilter = useCallback(() => {
+    switch (selectedTodoMenuType) {
+      case TODO_MENU_TYPE.ALL:
+        return () => true;
+      case TODO_MENU_TYPE.TODAY:
+        return (task) => task.dueDate != null && moment(task.dueDate).isSame(moment(), "day");
+      default:
+        return () => true;
+    }
+  }, [selectedTodoMenuType]);
 
   return (
     <div className="todo-content">
       <div className="header">
-        <div className="title">모든 할일 ({taskList.length})</div>
+        <div className="title">모든 할일 ({Object.keys(taskMap).length})</div>
         <div className="metadata">
           <div className="last-modified">마지막 수정: 3분전</div>
         </div>
         <div className="options">
           <div className="view-modes">
-            <div className="view-mode selected">리스트</div>
-            <div className="view-mode">카드</div>
-            <div className="view-mode">캘린더</div>
-            <div className="view-mode">타임라인</div>
-            <div className="view-mode">대시보드</div>
+            {Object.keys(TASK_VIEW_MODE).map((mode) => {
+              const curTaskViewMode = TASK_VIEW_MODE[mode];
+              return (
+                <div
+                  key={mode}
+                  className={`view-mode` + JsxUtil.classByEqual(curTaskViewMode, taskViewMode, "selected")}
+                  onClick={(e) => setTaskViewMode(curTaskViewMode)}
+                >
+                  {curTaskViewMode}
+                </div>
+              );
+            })}
           </div>
           <div className="filter-options">
             <div className="filter-option activated">중요도 순</div>
@@ -180,42 +294,26 @@ const TodoContent = () => {
         <div className="spliter"></div>
       </div>
       <div className="body">
-        <div className="todo-item-groups">
-          <div className="todo-item-group">
-            <div className="title">해야할 일 ({notDoneTaskList.length})</div>
-            <TaskList
-              list={notDoneTaskList}
-              selectedId={selectedTodoItemId}
-              selectTodoItemHandler={setSelectedTodoItemId}
-              onTaskTitleChange={onTaskTitleChange}
-              onTaskDone={onTaskDone}
-              onSubtaskAdded={onSubtaskAdded}
-              onSubtaskTitleChange={onSubtaskTitleChange}
-              onTaskTitleEndDateChange={onTaskTitleEndDateChange}
-              onSubtaskDone={onSubtaskDone}
-              onTaskDelete={onTaskDelete}
-              onSubtaskDelete={onSubtaskDelete}
-            />
-          </div>
-          <div className="todo-item-group">
-            <div className="title">완료됨 ({doneTaskList.length})</div>
-            <TaskList
-              list={doneTaskList}
-              selectedId={selectedTodoItemId}
-              selectTodoItemHandler={setSelectedTodoItemId}
-              onTaskTitleChange={onTaskTitleChange}
-              onTaskDone={onTaskDone}
-              onSubtaskAdded={onSubtaskAdded}
-              onSubtaskTitleChange={onSubtaskTitleChange}
-              onTaskTitleEndDateChange={onTaskTitleEndDateChange}
-              onSubtaskDone={onSubtaskDone}
-              onTaskDelete={onTaskDelete}
-              onSubtaskDelete={onSubtaskDelete}
-            />
-          </div>
-        </div>
+        <TaskListView
+          key={selectedTodoMenuType}
+          taskMap={taskMap}
+          outerFilter={(task) => outerFilter()(task)}
+          selectedId={selectedTodoItemId}
+          selectTodoItemHandler={setSelectedTodoItemId}
+          onTaskDelete={onTaskDelete}
+          onTaskDone={onTaskDone}
+          onTaskTitleChange={onTaskTitleChange}
+          onTaskDueDateChange={onTaskDueDateChange}
+          onTaskMemoChange={onTaskMemoChange}
+          onSubtaskAdded={onSubtaskAdded}
+          onSubtaskDelete={onSubtaskDelete}
+          onSubtaskTitleChange={onSubtaskTitleChange}
+          onSubtaskDueDateChange={onSubtaskDueDateChange}
+          onSubtaskDone={onSubtaskDone}
+        />
       </div>
-      <TodoItemAddSection addTodoItemHandler={addTodoItemHandler} />
+
+      <TodoItemAddSection onTaskAdd={onTaskAdd} />
     </div>
   );
 };

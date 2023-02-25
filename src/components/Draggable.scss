@@ -2,8 +2,12 @@
   &.dragging {
     // height: 20px !important;
     opacity: 0 !important;
-    cursor: dragging !important;
+    cursor: grabbing !important;
     // position: fixed !important;
     // display: none;
+
+    &:active {
+      cursor: grabbing !important;
+    }
   }
 }

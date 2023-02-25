@@ -1,16 +1,27 @@
 import "./LeftSidebar.scss";
 import ProfileImage from "./ProfileImage";
 
-const LeftSidebar = () => {
+export const TODO_MENU_TYPE = {
+  ALL: "모든 할일",
+  TODAY: "오늘의 할일",
+};
+
+const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
   return (
     <div className="component left-sidebar">
       <div className="todo-menu-groups">
         <div className="todo-menu-group standard">
           <div className="title">일반</div>
           <div className="todo-menus">
-            <div className="todo-menu selected">모든 할일</div>
-            <div className="todo-menu">오늘의 할일</div>
-            <div className="todo-menu">중요한 일</div>
+            {Object.values(TODO_MENU_TYPE).map((menuType) => (
+              <div
+                key={menuType}
+                className={`todo-menu ${selectedTodoMenuType === menuType ? "selected" : ""}`}
+                onClick={() => setSelectedTodoMenuType(menuType)}
+              >
+                {menuType}
+              </div>
+            ))}
           </div>
         </div>
         <div className="todo-menu-group custom">

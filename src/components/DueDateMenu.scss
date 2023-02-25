@@ -1,16 +1,23 @@
 .due-date-menu {
   $std-color: rgb(131, 145, 171);
-  $highlight-color: rgb(93, 152, 255);
+  $highlight-color: rgb(79, 133, 226);
   $hover-highlight-color: rgb(131, 177, 255);
   cursor: pointer;
+  transition: 0.2s linear;
 
-  &.active {
+  &.active > .visible,
+  &:hover > .visible {
     color: $highlight-color !important;
+  }
+
+  &.overdue {
+    color: rgb(206, 69, 69) !important;
   }
 
   & > *:not(.context-menu) {
     cursor: initial;
   }
+
   & > .context-menu {
     cursor: auto;
   }
@@ -21,6 +28,7 @@
     height: 100%;
     align-items: center;
     justify-content: center;
+    color: rgba($std-color, 0.5);
 
     & * {
       pointer-events: none;
@@ -37,7 +45,7 @@
       font-size: 13px;
       font-weight: 400;
       margin-left: 10px;
-      color: rgba($highlight-color, 0.8);
+      // color: rgba($highlight-color, 0.8);
       white-space: nowrap;
     }
   }
@@ -62,7 +70,7 @@
       display: flex;
       align-items: center;
       padding: 12px 18px;
-      width: 120px;
+      width: 130px;
       font-size: 15px;
       transition: 0.15s linear;
       color: $std-color;

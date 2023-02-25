@@ -44,6 +44,13 @@ input {
   color: inherit;
 }
 
+textarea {
+  background-color: inherit;
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+
 *::selection {
   background-color: rgba(44, 102, 188, 0.413);
 }

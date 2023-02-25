@@ -1,4 +1,5 @@
 const {ipcMain, webContents, app, BrowserWindow, screen, remote, Menu} = require('electron');
+const electronRemote = require('@electron/remote/main');
 const { WindowType } = require('../modules/constants');
 const url = require('url');
 const path = require('path');
@@ -47,6 +48,7 @@ const __window__ = {
             .backgroundThrottling(false)
             .build();
         mainWindow = __window__.invokeWindow('/', windowProperty);
+        electronRemote.enable(mainWindow.webContents);
         return mainWindow;
     },
     createModalWindow: (browserId, url, windowProperty, parameter) => {
@@ -170,16 +172,16 @@ const __window__ = {
     },
     setWindowStateChangeListener: (window, Ipc) => {
         window.on('minimize', e => {
-            Ipc.sender('win_state_changed', true, 'minimize');
+            Ipc.sender('win_state_changed', null, true, 'minimize');
         });
         window.on('maximize', e => {
-            Ipc.sender('win_state_changed', true, 'maximize');
+            Ipc.sender('win_state_changed', null, true, 'maximize');
         });
         window.on('unmaximize', e => {
-            Ipc.sender('win_state_changed', true, 'unmaximize');
+            Ipc.sender('win_state_changed', null, true, 'unmaximize');
         });
         window.on('restore', e => {
-            Ipc.sender('win_state_changed', true, 'restore');
+            Ipc.sender('win_state_changed', null, true, 'restore');
         });
     }
 }

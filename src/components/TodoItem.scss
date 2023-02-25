@@ -32,7 +32,7 @@
       opacity: 0.5;
     }
 
-    & > .todo-item {
+    .todo-item {
       background-color: $todo-item-hover-color;
     }
   }
@@ -40,6 +40,22 @@
   &.selected {
     border: 2px solid rgb(52, 90, 166);
     opacity: 1;
+  }
+
+  &.overdue {
+    & > div > .todo-item {
+      & > .title {
+        color: rgb(211, 84, 84) !important;
+      }
+      & > .due-date {
+        color: rgb(187, 78, 78) !important;
+      }
+    }
+    & > div > .expandable-options {
+      .progress-bar-inner {
+        background-color: rgb(79, 36, 36) !important;
+      }
+    }
   }
 
   & > div {
@@ -70,8 +86,6 @@
       display: flex;
       height: 50px;
       align-items: center;
-
-      // overflow: hidden;
 
       padding: 0 25px;
       transition: 0.1s;
@@ -107,6 +121,13 @@
         min-width: 90px;
         text-align: center;
         font-size: 13px;
+        color: rgb(66, 81, 106);
+        transition: 0.15s linear;
+        margin-right: 5px;
+
+        &.active {
+          color: rgb(91, 136, 220);
+        }
       }
     }
 
@@ -118,6 +139,7 @@
         display: flex;
         flex-direction: column;
         padding: 15px 25px;
+        height: 100%;
 
         & > .section {
           display: flex;
@@ -150,7 +172,7 @@
 
           & > .progress-bar {
             display: flex;
-            height: 25px;
+            height: 20px;
             width: 100%;
             background-color: rgb(16, 17, 18);
             border-radius: 3px;
@@ -163,168 +185,197 @@
               left: 50%;
               transform: translate(-50%, -50%);
               font-size: 12px;
-              color: rgba(98, 124, 156, 0.649);
+              font-weight: 400;
+              color: rgba(121, 153, 199, 0.56);
             }
 
             & > .progress-bar-inner {
-              background-color: rgb(25, 60, 124);
+              background-color: rgb(30, 64, 137);
               height: 100%;
               transition: 0.5s ease;
             }
           }
         }
 
-        & > .sub-tasks {
+        & > .sub-tasks-wrapper {
           display: flex;
+          width: 100%;
           margin-top: 15px;
           margin-bottom: 10px;
-          align-items: flex-start;
+          // align-items: stretch;
 
-          & > .sub-task-dependency-graph {
+          & > .sub-tasks {
             display: flex;
-            flex-direction: column;
-            width: 30px;
+            flex: 1;
             height: 100%;
 
-            & > .dependency-node {
+            & > .sub-task-dependency-graph {
               display: flex;
-              height: 36px;
-              position: relative;
+              flex-direction: column;
+              width: 30px;
+              height: 100%;
 
-              &:not(:last-child) {
-                margin-bottom: 10px;
-              }
+              & > .dependency-node {
+                display: flex;
+                height: 36px;
+                position: relative;
 
-              &.fulfilled {
-                & > .grabber:hover {
-                  .circle {
-                    box-shadow: 0 0 8px 1px rgb(56, 206, 146) !important;
+                &:not(:last-child) {
+                  margin-bottom: 10px;
+                }
+
+                &.fulfilled {
+                  & > .grabber:hover {
+                    .circle {
+                      box-shadow: 0 0 8px 1px rgb(56, 206, 146) !important;
+                    }
                   }
-                }
-                .circle {
-                  width: 100%;
-                  height: 100%;
-                  border: 1px solid rgb(56, 206, 146) !important;
-                  background: rgb(56, 206, 146) !important;
-                }
-              }
-
-              & > .grabber {
-                position: absolute;
-                left: 50%;
-                top: 50%;
-                transform: translate(-50%, -50%);
-
-                width: 14px;
-                height: 14px;
-                border-radius: 50%;
-                cursor: pointer;
-
-                &:hover {
-                  & > .circle {
+                  .circle {
                     width: 100%;
                     height: 100%;
-                    background: rgb(183, 213, 255);
+                    border: 1px solid rgb(56, 206, 146) !important;
+                    background: rgb(56, 206, 146) !important;
                   }
                 }
 
-                & > .circle {
+                & > .grabber {
                   position: absolute;
                   left: 50%;
                   top: 50%;
                   transform: translate(-50%, -50%);
-                  width: 8px;
-                  height: 8px;
-                  box-sizing: border-box;
+
+                  width: 14px;
+                  height: 14px;
                   border-radius: 50%;
-                  border: 1px solid rgb(154, 196, 255);
+                  cursor: pointer;
+
+                  &:hover {
+                    & > .circle {
+                      width: 100%;
+                      height: 100%;
+                      background: rgb(183, 213, 255);
+                    }
+                  }
+
+                  & > .circle {
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 8px;
+                    height: 8px;
+                    box-sizing: border-box;
+                    border-radius: 50%;
+                    border: 1px solid rgb(154, 196, 255);
+                    transition: 0.2s ease;
+                  }
+                }
+              }
+            }
+
+            & > .sub-task-list {
+              display: flex;
+              flex-direction: column;
+              flex: 1;
+
+              & > *:not(:last-child) {
+                margin-bottom: 10px;
+              }
+
+              .sub-task {
+                display: flex;
+                background-color: rgb(31, 37, 45);
+                padding: 8px 15px;
+                font-size: 15px;
+                border-radius: 2px;
+                height: 36px;
+                box-sizing: border-box;
+                align-items: center;
+                position: relative;
+
+                &:hover {
+                  & > .delete-button {
+                    opacity: 0.5;
+                  }
+                }
+
+                & > .delete-button {
+                  position: absolute;
+                  left: 100%;
+                  top: 0;
+                  // width: 10px;
+                  // height: 10px;
+                  transform: translate(-50%, -50%) scale(0.8);
+                  background-color: rgb(166, 31, 31);
+                  opacity: 0;
+                  z-index: 11;
+                  color: white;
+                  cursor: pointer;
+                  font-size: 12px;
+                  border-radius: 50%;
+                  padding: 3px;
+                  transition: 0.2s;
+
+                  &:hover {
+                    transform: translate(-50%, -50%) scale(1.1);
+                    opacity: 1;
+                  }
+                }
+
+                & > .sub-task-title {
+                  flex: 1;
+                  margin-right: 15px;
+
+                  input {
+                    width: 100%;
+                  }
+                }
+              }
+
+              & > .sub-task-add-section {
+                display: flex;
+
+                &.hidden {
+                  .subtask-options {
+                    opacity: 0;
+                    visibility: hidden;
+                  }
+                }
+
+                input {
+                  width: 100%;
+                  padding: 3px 0;
+                }
+
+                & > .subtask-options {
+                  display: flex;
                   transition: 0.2s ease;
+
+                  & > .option {
+                    cursor: pointer;
+                  }
                 }
               }
             }
           }
 
-          & > .sub-task-list {
+          & > .memo {
             display: flex;
-            flex-direction: column;
-            flex: 1;
+            width: 400px;
+            height: 100%;
+            margin-left: 20px;
+            // align-items: stretch;
 
-            & > *:not(:last-child) {
-              margin-bottom: 10px;
-            }
-
-            .sub-task {
-              display: flex;
-              background-color: rgb(31, 37, 45);
-              padding: 8px 15px;
-              font-size: 15px;
-              border-radius: 2px;
-              height: 36px;
+            textarea {
+              width: 100%;
+              height: 100%;
+              background-color: rgb(32, 37, 46);
+              color: rgb(135, 160, 198);
+              resize: none;
+              padding: 10px;
               box-sizing: border-box;
-              align-items: center;
-              position: relative;
-
-              &:hover {
-                & > .delete-button {
-                  opacity: 0.5;
-                }
-              }
-
-              & > .delete-button {
-                position: absolute;
-                left: 100%;
-                top: 0;
-                // width: 10px;
-                // height: 10px;
-                transform: translate(-50%, -50%) scale(0.8);
-                background-color: rgb(166, 31, 31);
-                opacity: 0;
-                z-index: 11;
-                color: white;
-                cursor: pointer;
-                font-size: 12px;
-                border-radius: 50%;
-                padding: 3px;
-                transition: 0.2s;
-
-                &:hover {
-                  transform: translate(-50%, -50%) scale(1.1);
-                  opacity: 1;
-                }
-              }
-
-              & > .sub-task-title {
-                flex: 1;
-
-                input {
-                  width: 100%;
-                }
-              }
-            }
-
-            & > .sub-task-add-section {
-              display: flex;
-
-              &.hidden {
-                .subtask-options {
-                  opacity: 0;
-                  visibility: hidden;
-                }
-              }
-
-              input {
-                width: 100%;
-                padding: 3px 0;
-              }
-
-              & > .subtask-options {
-                display: flex;
-                transition: 0.2s ease;
-
-                & > .option {
-                  cursor: pointer;
-                }
-              }
+              min-height: 120px;
+              // font-weight: 100;
             }
           }
         }

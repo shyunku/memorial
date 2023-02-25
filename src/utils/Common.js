@@ -4,15 +4,19 @@ export function fastInterval(callback, interval) {
   return id;
 }
 
-export function debounce(callback, interval, resolve) {
-  let timeout = null;
-  return function (...args) {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      resolve(callback.apply(this, args));
-      timeout = null;
-    }, interval);
-  };
-}
+export const colorize = {
+  red: (text) => `\x1b[31m${text}\x1b[0m`,
+  green: (text) => `\x1b[32m${text}\x1b[0m`,
+  yellow: (text) => `\x1b[33m${text}\x1b[0m`,
+  blue: (text) => `\x1b[34m${text}\x1b[0m`,
+  magenta: (text) => `\x1b[35m${text}\x1b[0m`,
+  cyan: (text) => `\x1b[36m${text}\x1b[0m`,
+  white: (text) => `\x1b[37m${text}\x1b[0m`,
+  gray: (text) => `\x1b[90m${text}\x1b[0m`,
+};
+
+export const printf = (varName, variable) => {
+  console.log(`${colorize.green(varName)}`, variable);
+};
 
 export default {};

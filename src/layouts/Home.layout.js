@@ -1,16 +1,19 @@
-import LeftSidebar from "components/LeftSidebar";
+import LeftSidebar, { TODO_MENU_TYPE } from "components/LeftSidebar";
 import TopBar from "components/TopBar";
-import { Outlet } from "react-router-dom";
+import React, { useState } from "react";
+import { Outlet, useOutlet } from "react-router-dom";
 
 import "./Home.layout.scss";
 
 const HomeLayout = () => {
+  const [selectedTodoMenuType, setSelectedTodoMenuType] = useState(TODO_MENU_TYPE.ALL);
+
   return (
     <div className="home-layout">
       <TopBar />
       <div className="home-layout__content">
-        <LeftSidebar />
-        <Outlet />
+        <LeftSidebar setSelectedTodoMenuType={setSelectedTodoMenuType} selectedTodoMenuType={selectedTodoMenuType} />
+        <Outlet context={{ selectedTodoMenuType }} />
       </div>
     </div>
   );
