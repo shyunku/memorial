@@ -19,4 +19,8 @@ export const printf = (varName, variable) => {
   console.log(`${colorize.green(varName)}`, variable);
 };
 
+export const errorf = (varName, variable) => {
+  console.error(`${colorize.red(varName)}`, variable);
+};
+
 export default {};

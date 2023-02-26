@@ -19,7 +19,7 @@ const TodoItem = ({
   className = "",
   selected,
   blurHandler,
-  onTaskDropHandler,
+  onTaskDragEndHandler,
   onTaskDropPredict,
   onTaskTitleChange,
   onTaskDueDateChange,
@@ -157,9 +157,15 @@ const TodoItem = ({
 
   // printf("todo", todo);
 
+  const linkedListTestJsx = (
+    <div className="title">
+      {todo.prev ? `${todo.prev.id} <- ` : ""}[{todo.id}]{todo.next ? ` -> ${todo.next.id}` : ""}
+    </div>
+  );
+
   return (
     <DraggableDiv
-      id={`todo-item-${todo.id}`}
+      id={`todo_item_${todo.id}`}
       className={
         "todo-item-wrapper " +
         className +
@@ -168,7 +174,7 @@ const TodoItem = ({
         JsxUtil.classByCondition(isOverDue, "overdue")
       }
       dropPredictHandler={(e) => onTaskDropPredict(e, todo)}
-      dragEndHandler={(e) => onTaskDropHandler(e, todo)}
+      dragEndHandler={onTaskDragEndHandler}
       todo-id={todo.id}
     >
       <AutoBlurDiv blurHandler={blurHandler} reference={expandableRef} focused={selected} {...rest}>
@@ -176,6 +182,7 @@ const TodoItem = ({
           <VscChromeClose />
         </div>
         <DraggableZone className="todo-item">
+          {/* {linkedListTestJsx} */}
           <div className="title">{todo.title}</div>
           <div className={"due-date" + JsxUtil.classByCondition(todo.dueDate != null, "active")}>{dueDateText}</div>
           <SubTaskProgressBar

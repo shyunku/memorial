@@ -80,6 +80,12 @@ module.exports = {
   getContext: function () {
     return {
       get: (query, ...args) => {
+        console.system(
+          `IpcMain ${console.wrap(`<-[GET]->`, console.BLUE)} ${console.wrap(
+            "sqlite3: " + query,
+            console.YELLOW
+          )} ${args.join(", ")}`
+        );
         let params = Array.isArray(args?.[0]) ? args[0] : args;
         return new Promise((resolve, reject) => {
           db.get(query, params, (err, row) => {
@@ -89,20 +95,56 @@ module.exports = {
         });
       },
       run: (query, ...args) => {
+        console.system(
+          `IpcMain ${console.wrap(`<-[RUN]->`, console.BLUE)} ${console.wrap(
+            "sqlite3: " + query,
+            console.YELLOW
+          )} ${args.join(", ")}`
+        );
         let params = Array.isArray(args?.[0]) ? args[0] : args;
         return new Promise((resolve, reject) => {
-          db.run(query, params, (err) => {
+          db.run(query, params, function (err) {
             if (err) reject(err);
-            else resolve();
+            else resolve(this);
           });
         });
       },
       all: (query, ...args) => {
+        console.system(
+          `IpcMain ${console.wrap(`<-[ALL]->`, console.BLUE)} ${console.wrap(
+            "sqlite3: " + query,
+            console.YELLOW
+          )} ${args.join(", ")}`
+        );
         let params = Array.isArray(args?.[0]) ? args[0] : args;
         return new Promise((resolve, reject) => {
           db.all(query, params, (err, row) => {
             if (err) reject(err);
             else resolve(row);
+          });
+        });
+      },
+      begin: () => {
+        return new Promise((resolve, reject) => {
+          db.run("BEGIN", (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      },
+      commit: () => {
+        return new Promise((resolve, reject) => {
+          db.run("COMMIT", (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      },
+      rollback: () => {
+        return new Promise((resolve, reject) => {
+          db.run("ROLLBACK", (err) => {
+            if (err) reject(err);
+            else resolve();
           });
         });
       },

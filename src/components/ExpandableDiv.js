@@ -37,7 +37,7 @@ const ExpandableDiv = ({ children, expand, direction = VERTICAL, transition = 50
   }, [reference, expand, transition]);
 
   useEffect(() => {
-    if (expand) {
+    if (expand && reference.current?.style != null) {
       // expand
       // disable transition & calculate height/width
       reference.current.style[directionStyle] = "auto";
@@ -45,6 +45,7 @@ const ExpandableDiv = ({ children, expand, direction = VERTICAL, transition = 50
       reference.current.style[directionStyle] = "0px";
       // enable transition & set height/width
       setTimeout(() => {
+        if (reference.current?.style == null) return;
         reference.current.style.transition = `${directionStyle} ${transition}ms ease-in-out`;
         reference.current.style[directionStyle] = `${height}px`;
       }, 0);

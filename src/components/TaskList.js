@@ -3,9 +3,8 @@ import { useMemo, useRef } from "react";
 import { debounce } from "utils/Common";
 import TodoItem from "./TodoItem";
 
-const TaskList = ({ tasks = {}, selectedId, selectTodoItemHandler = () => {}, ...rest }) => {
+const TaskList = ({ taskList = [], selectedId, selectTodoItemHandler = () => {}, ...rest }) => {
   const todoListRef = useRef();
-  const taskList = useMemo(() => Object.values(tasks), [tasks]);
 
   const onTaskDropPredict = (e, task) => {
     // find the closest todo item that center position is higher than the drop position
@@ -41,10 +40,6 @@ const TaskList = ({ tasks = {}, selectedId, selectTodoItemHandler = () => {}, ..
     return [closestPrevTodoItem?.id ?? closestNextTodoItem?.id, closestPrevTodoItem?.id == null];
   };
 
-  const onTaskDropHandler = (e, task) => {
-    return false;
-  };
-
   return (
     <div className="todo-list" ref={todoListRef}>
       {taskList.map((todo) => (
@@ -56,7 +51,6 @@ const TaskList = ({ tasks = {}, selectedId, selectTodoItemHandler = () => {}, ..
             selectTodoItemHandler(todo.id);
           }}
           blurHandler={(e) => selectTodoItemHandler(null)}
-          onTaskDropHandler={onTaskDropHandler}
           onTaskDropPredict={onTaskDropPredict}
           {...rest}
         />

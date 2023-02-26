@@ -21,10 +21,11 @@ class Task extends Mutatable {
 
     this.title = title;
     this.memo = "";
-
     this.done = false;
-
     this.subtasks = {};
+
+    this.next = null;
+    this.prev = null;
   }
 
   fulfilled() {

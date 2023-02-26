@@ -97,6 +97,9 @@ const IpcSender = {
       deleteTask: (taskId, callback) => {
         sender("task/deleteTask", callback, taskId);
       },
+      updateTaskOrder: (taskId, targetTaskId, afterTarget, callback) => {
+        sender("task/updateTaskOrder", callback, taskId, targetTaskId, afterTarget);
+      },
       updateTaskTitle: (taskId, title, callback) => {
         sender("task/updateTaskTitle", callback, taskId, title);
       },

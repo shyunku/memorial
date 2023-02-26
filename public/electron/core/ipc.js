@@ -48,10 +48,10 @@ const sender = (topic, reqId, success, data = null) => {
 
   if (silentTopics.includes(topic)) return;
   console.system(
-    `IpcMain ${console.wrap(`--${reqIdTag(reqId)}->`, console.CYAN)} ${console.wrap(
-      topic,
-      console.MAGENTA
-    )} ${console.wrap(`(${sendeeCount})`, console.BLUE)} ${data}`
+    `IpcMain ${console.wrap(
+      `--${reqIdTag(reqId)}-${success ? ">" : "X"}`,
+      success ? console.CYAN : console.RED
+    )} ${console.wrap(topic, console.MAGENTA)} ${console.wrap(`(${sendeeCount})`, console.BLUE)} ${data}`
   );
 };
 
@@ -69,7 +69,6 @@ const emiter = (topic, reqId, data) => {
 };
 
 const fastSender = (topic, socketResponse) => {
-  let reqId = "FFFFFFFFFFFFF";
   let success = socketResponse.code === Request.ok;
   let data = socketResponse ? (success ? socketResponse.data : socketResponse.code) : null;
 
@@ -78,7 +77,7 @@ const fastSender = (topic, socketResponse) => {
 
   if (silentTopics.includes(topic)) return;
   console.system(
-    `IpcMain ${console.wrap(`--${reqIdTag(reqId)}->`, console.CYAN)} ${console.wrap(
+    `IpcMain ${console.wrap(`--${reqIdTag("NIL")}->`, console.CYAN)} ${console.wrap(
       topic,
       console.MAGENTA
     )} ${console.wrap(`(${sendeeCount})`, console.BLUE)} ${data}`
@@ -179,31 +178,164 @@ register("task/getAllSubtaskList", async (event, reqId) => {
   }
 });
 
+// 3 -> 5 (add 4)
+// 3.next = 4
 register("task/addTask", async (event, reqId, task) => {
   try {
-    let result = await db.run(
-      "INSERT INTO tasks (title, created_at, done_at, memo, done, due_date) VALUES (?, ?, ?, ?, ?, ?)",
-      task.title,
-      task.created_at,
-      task.done_at,
-      task.memo,
-      task.done,
-      task.due_date
-    );
-    sender("task/addTask", reqId, true, result);
+    // find tid is null
+    let lastTidList = await db.all("SELECT tid FROM tasks WHERE next IS NULL LIMIT 2;");
+    if (lastTidList.length > 1) {
+      console.log(lastTidList);
+      throw new Error(`tasks that ID is null is more than 1. (${lastTidList.length})`);
+    }
+
+    let [lastTask] = lastTidList;
+
+    // transaction
+    try {
+      await db.begin();
+    } catch (err) {
+      throw err;
+    }
+
+    try {
+      let result = await db.run(
+        "INSERT INTO tasks (title, created_at, done_at, memo, done, due_date) VALUES (?, ?, ?, ?, ?, ?)",
+        task.title,
+        task.created_at,
+        task.done_at,
+        task.memo,
+        task.done,
+        task.due_date
+      );
+
+      if (lastTask != null) {
+        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, result.lastID, lastTask.tid);
+      }
+
+      await db.commit();
+      sender("task/addTask", reqId, true, {
+        tid: result.lastID,
+        prevTaskId: lastTask ? lastTask.tid : null,
+      });
+    } catch (err) {
+      await db.rollback();
+      throw err;
+    }
   } catch (err) {
     sender("task/addTask", reqId, false);
     throw err;
   }
 });
 
+// 3 -> 4 -> 5 (delete 4)
+// 3.next = 5
 register("task/deleteTask", async (event, reqId, taskId) => {
   try {
-    let result = await db.run("DELETE FROM tasks WHERE tid = ?", taskId);
-    sender("task/deleteTask", reqId, true, result);
+    let prevTaskList = await db.all("SELECT * FROM tasks WHERE next = ?;", taskId);
+    if (prevTaskList.length > 1) {
+      console.log(prevTaskList);
+      throw new Error(`tasks that ID is null is more than 1. (${prevTaskList.length})`);
+    }
+
+    let [prevTask] = prevTaskList;
+
+    // transaction
+    try {
+      await db.begin();
+    } catch (err) {
+      throw err;
+    }
+
+    try {
+      // get next task
+      let [curTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", taskId);
+      let nextTaskId = curTask.next ?? null;
+
+      await db.run("DELETE FROM tasks WHERE tid = ?", taskId);
+
+      // update previous task's next
+      if (prevTask != null) {
+        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, prevTask.tid);
+      }
+
+      // delete subtasks
+      await db.run("DELETE FROM subtasks WHERE tid = ?", taskId);
+
+      await db.commit();
+      sender("task/deleteTask", reqId, true, {
+        tid: taskId,
+      });
+    } catch (err) {
+      await db.rollback();
+      throw err;
+    }
   } catch (err) {
     sender("task/deleteTask", reqId, false);
     throw err;
+  }
+});
+
+// 2 -> 3 -> 4 -> 5 (move 4 after 2)
+// 2.next = 4
+// 3.next = 5
+// 4.next = 3
+// 2 -> 3 -> 4 -> 5 (move 4 before 2)
+// 4.next = 2
+// 3.next = 5
+register("task/updateTaskOrder", async (event, reqId, taskId, targetTaskId, afterTarget) => {
+  try {
+    let prevTaskList = await db.all("SELECT * FROM tasks WHERE next = ?;", taskId);
+    if (prevTaskList.length > 1) {
+      console.log(prevTaskList);
+      throw new Error(`tasks that ID is null is more than 1. (${prevTaskList.length})`);
+    }
+
+    let [prevTask] = prevTaskList;
+
+    // transaction
+    await db.begin();
+
+    try {
+      // get next task
+      let [curTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", taskId);
+      let nextTaskId = curTask.next ?? null;
+
+      // delete current task's next
+      await db.run(`UPDATE tasks SET next = NULL WHERE tid = ?;`, taskId);
+
+      // update previous task's next
+      if (prevTask != null) {
+        // prev.next = current.next
+        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, prevTask.tid);
+      }
+
+      // update target task's next
+      if (afterTarget) {
+        let [targetTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", targetTaskId);
+        let targetNextTaskId = targetTask.next ?? null;
+
+        // target.next = current.id
+        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, taskId, targetTaskId);
+        // current.next = target.next.id
+        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, targetNextTaskId, taskId);
+        // console.log(targetTaskId, targetNextTaskId, prevTask.tid, taskId, nextTaskId);
+      } else {
+        // current.next = target.id
+        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, targetTaskId, taskId);
+      }
+
+      await db.commit();
+      sender("task/updateTaskOrder", reqId, true, {
+        tid: taskId,
+      });
+    } catch (err) {
+      await db.rollback();
+      throw err;
+    }
+  } catch (err) {
+    sender("task/updateTaskOrder", reqId, false);
+    console.error(err);
   }
 });
 

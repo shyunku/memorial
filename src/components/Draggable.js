@@ -8,14 +8,18 @@ export const DraggableDiv = ({
   children,
   className = "",
   dropPredictHandler = () => null,
-  dragEndHandler = () => false,
+  dragEndHandler = () => {},
   ...rest
 }) => {
   const [draggableDivId, _] = useState(`draggable_div_${v4()}`);
   const [dragging, setDragging] = useState(false);
   const [originalStyles, setOriginalStyles] = useState({});
   const [lastDragPos, setLastDragPos] = useState([]);
-  const [droppingInfo, setDroppingInfo] = useState({});
+  const [droppingInfo, setDroppingInfo] = useState({
+    targetId: null,
+    currentId: null,
+    afterTarget: true,
+  });
 
   const originalize = useCallback(
     (draggableDiv) => {
@@ -34,7 +38,6 @@ export const DraggableDiv = ({
     // console.log("drag start", e);
 
     const isDragZone = e.currentTarget.classList.contains("draggable-zone");
-    console.log(isDragZone);
     if (!isDragZone) {
       // exclude if point is not on dragging zone
       const dragZones = e.currentTarget.querySelectorAll(".draggable-zone");
@@ -72,9 +75,8 @@ export const DraggableDiv = ({
     // console.log("drag end", e);
     setDragging(false);
 
-    // drag end failed, return to original status
-    if (dragEndHandler(e) === true) return;
     originalize(e.currentTarget);
+    dragEndHandler(droppingInfo);
   };
 
   const onDrop = (e) => {
@@ -122,7 +124,9 @@ export const DraggableDiv = ({
       draggableDiv.style.top = y + "px";
     }
 
-    setDroppingInfo({ id, isFirst });
+    if (id) {
+      setDroppingInfo({ targetId: id, afterTarget: !isFirst, currentId: e.currentTarget.id });
+    }
   }, 20);
 
   return (

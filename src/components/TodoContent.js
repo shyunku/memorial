@@ -27,8 +27,6 @@ const TodoContent = () => {
   const props = useOutletContext();
   const { selectedTodoMenuType } = props;
 
-  console.log(selectedTodoMenuType);
-
   // main objects
   const [taskMap, setTaskMap] = useState({});
   const [selectedTodoItemId, setSelectedTodoItemId] = useState(null);
@@ -41,9 +39,21 @@ const TodoContent = () => {
         setTaskMap((taskMap) => {
           const newTaskMap = {};
           for (let i = 0; i < data.length; i++) {
-            const task = Task.fromEntity(data[i]);
+            const raw = data[i];
+            const task = Task.fromEntity(raw);
             newTaskMap[task.id] = task;
           }
+
+          // rearrange tasks and set next/prev nodes (linked list)
+          for (let rawTask of data) {
+            const nextTaskId = rawTask.next;
+            const nextTask = nextTaskId != null ? newTaskMap[nextTaskId] : null;
+            const curTask = newTaskMap[rawTask.tid];
+
+            if (curTask) curTask.next = nextTask;
+            if (nextTask) nextTask.prev = curTask;
+          }
+
           return { ...taskMap, ...newTaskMap };
         });
       } else {
@@ -81,8 +91,17 @@ const TodoContent = () => {
     }
     IpcSender.req.task.addTask(task.toEntity(), ({ success, data }) => {
       if (success) {
+        task.id = data.tid;
         setTaskMap((taskMap) => {
-          return { ...taskMap, [task.id]: task };
+          const updated = { ...taskMap };
+          let prevTask = taskMap[data.prevTaskId];
+          if (prevTask) {
+            prevTask.next = task;
+            updated[prevTask.id] = prevTask;
+          }
+          task.prev = prevTask;
+          updated[task.id] = task;
+          return updated;
         });
       } else {
         console.error("failed to add task");
@@ -93,15 +112,78 @@ const TodoContent = () => {
   const onTaskDelete = (tid) => {
     IpcSender.req.task.deleteTask(tid, ({ success, data }) => {
       if (success) {
+        let delTaskId = data.tid;
         setTaskMap((taskMap) => {
           const newTaskMap = { ...taskMap };
-          delete newTaskMap[tid];
+          let origNext = newTaskMap[delTaskId]?.next;
+          let origPrev = newTaskMap[delTaskId]?.prev;
+          if (origNext) {
+            origNext.prev = origPrev;
+          }
+          if (origPrev) {
+            origPrev.next = origNext;
+          }
+          delete newTaskMap[delTaskId];
           return newTaskMap;
         });
       } else {
         console.error("failed to delete task");
       }
     });
+  };
+
+  const onTaskDragEndHandler = (result) => {
+    const { targetId, currentId, afterTarget } = result;
+    let targetTaskId = document.getElementById(targetId)?.getAttribute("todo-id");
+    let currentTaskId = document.getElementById(currentId)?.getAttribute("todo-id");
+    if (targetTaskId && currentTaskId) {
+      targetTaskId = parseInt(targetTaskId);
+      currentTaskId = parseInt(currentTaskId);
+
+      // check if the target.next is current when afterTarget
+      if (afterTarget === true && taskMap[targetTaskId].next?.id == currentTaskId) {
+        console.log(taskMap[targetTaskId].next?.id, currentTaskId);
+        return;
+      }
+      // check if the target.prev is current when beforeTarget
+      if (afterTarget === false && taskMap[targetTaskId].prev?.id == currentTaskId) {
+        console.log("Asdf");
+        return;
+      }
+
+      IpcSender.req.task.updateTaskOrder(currentTaskId, targetTaskId, afterTarget, ({ success, data }) => {
+        if (success) {
+          setTaskMap((taskMap) => {
+            const newTaskMap = { ...taskMap };
+            const targetTask = newTaskMap[targetTaskId];
+            const targetNextTask = targetTask.next;
+            const currentTask = newTaskMap[currentTaskId];
+            const prevTask = currentTask.prev;
+            const nextTask = currentTask.next;
+
+            if (prevTask) prevTask.next = nextTask;
+            if (nextTask) nextTask.prev = prevTask;
+
+            if (afterTarget) {
+              targetTask.next = currentTask;
+              currentTask.prev = targetTask;
+              currentTask.next = targetNextTask;
+              if (targetNextTask) targetNextTask.prev = currentTask;
+            } else {
+              currentTask.next = targetTask;
+              targetTask.prev = currentTask;
+              currentTask.prev = null;
+            }
+
+            return newTaskMap;
+          });
+        } else {
+          console.error("failed to update task order");
+        }
+      });
+    } else {
+      console.log(result);
+    }
   };
 
   const onTaskTitleChange = (tid, title) => {
@@ -300,6 +382,7 @@ const TodoContent = () => {
           outerFilter={(task) => outerFilter()(task)}
           selectedId={selectedTodoItemId}
           selectTodoItemHandler={setSelectedTodoItemId}
+          onTaskDragEndHandler={onTaskDragEndHandler}
           onTaskDelete={onTaskDelete}
           onTaskDone={onTaskDone}
           onTaskTitleChange={onTaskTitleChange}
