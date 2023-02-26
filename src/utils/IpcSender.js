@@ -58,6 +58,9 @@ const IpcSender = {
     closeWindow: () => {
       sender("system/close_window", null, currentWindow.id);
     },
+    isMaximizable: (callback) => {
+      sender("system/isMaximizable", callback, currentWindow.id);
+    },
     modal: (url, windowProperty = {}, parameter) => {
       sender("system/modal", null, currentWindow.id, url, windowProperty, parameter);
     },
@@ -112,6 +115,12 @@ const IpcSender = {
       updateTaskDone: (taskId, done, doneAt, callback) => {
         sender("task/updateTaskDone", callback, taskId, done, doneAt);
       },
+      addTaskCategory: (taskId, categoryId, callback) => {
+        sender("task/addTaskCategory", callback, taskId, categoryId);
+      },
+      deleteTaskCategory: (taskId, categoryId, callback) => {
+        sender("task/deleteTaskCategory", callback, taskId, categoryId);
+      },
       addSubtask: (subtask, taskId, callback) => {
         sender("task/addSubtask", callback, subtask, taskId);
       },
@@ -126,6 +135,25 @@ const IpcSender = {
       },
       updateSubtaskDone: (subtaskId, done, doneAt, callback) => {
         sender("task/updateSubtaskDone", callback, subtaskId, done, doneAt);
+      },
+    },
+    category: {
+      getCategoryList: (callback) => {
+        sender("category/getCategoryList", callback);
+      },
+      addCategory: (category, callback) => {
+        sender("category/addCategory", callback, category);
+      },
+      deleteCategory: (categoryId, callback) => {
+        sender("category/deleteCategory", callback, categoryId);
+      },
+      updateCategoryTitle: (categoryId, title, callback) => {
+        sender("category/updateCategoryTitle", callback, categoryId, title);
+      },
+    },
+    tasks_categories: {
+      getTasksCategoriesList: (callback) => {
+        sender("tasks_categories/getTasksCategoriesList", callback);
       },
     },
   },
@@ -148,6 +176,7 @@ const IpcSender = {
   },
   // listen only for designated request ID (request ID unknown)
   on: (topic, callback) => {
+    autoSubscribe(topic);
     const originalCallback = callback;
     const newCallback = (e, reqId, ...data) => {
       if (reqId == null) return;
@@ -162,6 +191,7 @@ const IpcSender = {
   },
   // listen for all request ID
   onAll: (topic, callback) => {
+    autoSubscribe(topic);
     const originalCallback = callback;
     const newCallback = (e, reqId, ...data) => {
       // console.log(`IpcRenderer <-- ${topic}`, data);

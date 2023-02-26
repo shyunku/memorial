@@ -2,7 +2,7 @@ import SubTaskProgressBar from "./SubTaskProgressBar";
 import "./TodoItem.scss";
 
 import moment from "moment/moment";
-import { IoCalendarOutline } from "react-icons/io5";
+import { IoAdd, IoCalendarOutline } from "react-icons/io5";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Task from "objects/Task";
 import ExpandableDiv, { VERTICAL } from "./ExpandableDiv";
@@ -13,9 +13,12 @@ import Subtask from "objects/Subtask";
 import { VscChromeClose } from "react-icons/vsc";
 import { fastInterval, printf } from "utils/Common";
 import { DraggableDiv, DraggableZone } from "./Draggable";
+import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
+import TaskRemainTimer from "./TaskRemainTimer";
 
 const TodoItem = ({
   todo,
+  categories,
   className = "",
   selected,
   blurHandler,
@@ -25,6 +28,8 @@ const TodoItem = ({
   onTaskDueDateChange,
   onTaskMemoChange,
   onTaskDone,
+  onTaskCategoryAdd,
+  onTaskCategoryDelete,
   onTaskDelete,
   onSubtaskAdded,
   onSubtaskTitleChange,
@@ -37,12 +42,21 @@ const TodoItem = ({
   const titleRef = useRef();
   const memoRef = useRef();
 
-  const [counter, setCounter] = useState(0);
-
   const [editedTitle, setEditedTitle] = useState(todo.title);
   const [editedMemo, setEditedMemo] = useState(todo.memo);
   const [newSubtaskDate, setNewSubtaskDate] = useState(null);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+
+  const addCategoryBtnCtx = useContextMenu({
+    horizontal: false,
+  });
+  const filteredCategories = useMemo(() => {
+    let filtered = [];
+    for (let cid in categories) {
+      if (!todo.categories[cid]) filtered.push(categories[cid]);
+    }
+    return filtered;
+  }, [JSON.stringify(categories), JSON.stringify(todo.categories)]);
 
   const dueDateText = useMemo(() => {
     if (!todo.dueDate) return "기한 없음";
@@ -53,6 +67,9 @@ const TodoItem = ({
     return moment(todo.dueDate).format("YY년 M월 D일");
   }, [JSON.stringify(todo.dueDate)]);
 
+  const categoryTags = useMemo(() => {
+    return Object.values(todo.categories);
+  }, [JSON.stringify(todo.categories)]);
   const isOverDue = useMemo(() => {
     if (!todo.dueDate) return false;
     return moment(todo.dueDate).isBefore(moment());
@@ -72,18 +89,6 @@ const TodoItem = ({
       return map;
     }, {})
   );
-
-  useEffect(() => {
-    if (selected) {
-      const counterId = fastInterval(() => {
-        setCounter((c) => c + 1);
-      }, 1000);
-
-      return () => {
-        clearInterval(counterId);
-      };
-    }
-  }, [selected]);
 
   useEffect(() => {
     if (!(todo instanceof Task)) {
@@ -219,103 +224,152 @@ const TodoItem = ({
               </div>
             </div>
             <div className="section summary">
-              <div className="progress-bar">
-                <div className="percent">
-                  {isOverDue ? "Outdated" : `${(100 * todoCtx.getTimeProgress()).toFixed(3)}%`}
+              <div className="category-tags">
+                {categoryTags.map((category) => {
+                  return (
+                    <div
+                      className="category-tag card"
+                      key={category.id}
+                      onClick={(e) => onTaskCategoryDelete?.(todo.id, category.id)}
+                    >
+                      {category.title}
+                    </div>
+                  );
+                })}
+                <div
+                  className={
+                    "category-adder-wrapper" + JsxUtil.classByCondition(filteredCategories.length === 0, "hide")
+                  }
+                >
+                  <div
+                    className={"category-adder card"}
+                    ref={addCategoryBtnCtx.openerRef}
+                    onClick={addCategoryBtnCtx.opener}
+                  >
+                    <div className="icon-wrapper">
+                      <IoAdd />
+                    </div>
+                    <div className="label">카테고리 태그 추가</div>
+                  </div>
+                  <ContextMenu
+                    className="category-tag-options"
+                    reference={addCategoryBtnCtx.ref}
+                    defaultStyle={true}
+                    sticky={true}
+                  >
+                    {filteredCategories.map((category) => {
+                      return (
+                        <div
+                          className="category-option"
+                          key={category.id}
+                          onClick={(e) => {
+                            onTaskCategoryAdd?.(todo.id, category);
+                            addCategoryBtnCtx.closer();
+                          }}
+                        >
+                          {category.title}
+                        </div>
+                      );
+                    })}
+                  </ContextMenu>
                 </div>
-                <div className="progress-bar-inner" style={{ width: `${100 * todoCtx.getTimeProgress()}%` }}></div>
               </div>
+              <TaskRemainTimer dueDate={todoCtx.dueDate} />
             </div>
             <div className="section sub-tasks-wrapper">
-              <div className="sub-tasks">
-                <div className="sub-task-dependency-graph">
-                  {sortedSubtaskList.map((subtask, i) => {
-                    return (
-                      <div
-                        className={"dependency-node" + JsxUtil.classByCondition(subtask.done, "fulfilled")}
-                        key={subtask.id}
-                      >
-                        <div className="grabber">
-                          <div
-                            className="circle"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSubtaskDone?.(todo.id, subtask.id, !subtask.done);
-                            }}
-                          ></div>
+              <div className="left-section">
+                <div className="sub-tasks">
+                  <div className="sub-task-dependency-graph">
+                    {sortedSubtaskList.map((subtask, i) => {
+                      return (
+                        <div
+                          className={"dependency-node" + JsxUtil.classByCondition(subtask.done, "fulfilled")}
+                          key={subtask.id}
+                        >
+                          <div className="grabber">
+                            <div
+                              className="circle"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSubtaskDone?.(todo.id, subtask.id, !subtask.done);
+                              }}
+                            ></div>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="sub-task-list">
-                  {sortedSubtaskList.map((subtask, i) => {
-                    const titleInput = subTaskTitleInputMap[subtask.id] ?? "";
-                    return (
-                      <div
-                        className={"sub-task" + JsxUtil.classByCondition(subtask.done, "fulfilled")}
-                        key={subtask.id}
-                      >
-                        <div className="delete-button" onClick={(e) => onSubtaskDelete?.(todo.id, subtask.id)}>
-                          <VscChromeClose />
-                        </div>
-                        <div className="sub-task-title">
-                          <input
-                            value={titleInput}
-                            onBlur={(e) => {
-                              if (titleInput === subtask.title) return;
-                              onSubtaskTitleDecision(subtask, titleInput);
-                            }}
-                            onChange={(e) => {
-                              const newMap = { ...subTaskTitleInputMap };
-                              newMap[subtask.id] = e.target.value;
-                              setSubTaskTitleInputMap(newMap);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
+                      );
+                    })}
+                  </div>
+                  <div className="sub-task-list">
+                    {sortedSubtaskList.map((subtask, i) => {
+                      const titleInput = subTaskTitleInputMap[subtask.id] ?? "";
+                      return (
+                        <div
+                          className={"sub-task" + JsxUtil.classByCondition(subtask.done, "fulfilled")}
+                          key={subtask.id}
+                        >
+                          <div className="delete-button" onClick={(e) => onSubtaskDelete?.(todo.id, subtask.id)}>
+                            <VscChromeClose />
+                          </div>
+                          <div className="sub-task-title">
+                            <input
+                              value={titleInput}
+                              onBlur={(e) => {
+                                if (titleInput === subtask.title) return;
                                 onSubtaskTitleDecision(subtask, titleInput);
-                                e.target.blur();
-                              }
-                            }}
-                          />
+                              }}
+                              onChange={(e) => {
+                                const newMap = { ...subTaskTitleInputMap };
+                                newMap[subtask.id] = e.target.value;
+                                setSubTaskTitleInputMap(newMap);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  onSubtaskTitleDecision(subtask, titleInput);
+                                  e.target.blur();
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className="sub-task-due-date">
+                            <DueDateMenu
+                              date={subtask.dueDate}
+                              setDate={(date) => {
+                                onSubtaskDueDateChange?.(todo.id, subtask.id, date);
+                              }}
+                            />
+                          </div>
                         </div>
-                        <div className="sub-task-due-date">
-                          <DueDateMenu
-                            date={subtask.dueDate}
-                            setDate={(date) => {
-                              onSubtaskDueDateChange?.(todo.id, subtask.id, date);
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div
-                    className={
-                      "sub-task-add-section sub-task" + JsxUtil.classByCondition(newSubtaskTitle.length == 0, "hidden")
-                    }
-                  >
-                    <input
-                      className="label"
-                      placeholder="하위 할 일 또는 이벤트 추가"
-                      value={newSubtaskTitle}
-                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                      onKeyDown={onNewSubtaskTitleKeyDown}
-                    ></input>
-                    <div className="subtask-options">
-                      <DueDateMenu date={newSubtaskDate} setDate={setNewSubtaskDate} />
-                    </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div
+                  className={
+                    "sub-task-add-section sub-task" + JsxUtil.classByCondition(newSubtaskTitle.length == 0, "hidden")
+                  }
+                >
+                  <input
+                    className="label"
+                    placeholder="하위 할 일 또는 이벤트 추가"
+                    value={newSubtaskTitle}
+                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                    onKeyDown={onNewSubtaskTitleKeyDown}
+                  ></input>
+                  <div className="subtask-options">
+                    <DueDateMenu date={newSubtaskDate} setDate={setNewSubtaskDate} />
                   </div>
                 </div>
               </div>
-              <div className="memo">
-                <textarea
-                  ref={memoRef}
-                  placeholder="여기에 메모 작성"
-                  value={editedMemo}
-                  onChange={(e) => setEditedMemo(e.target.value)}
-                  onBlur={onMemoEdit}
-                />
+              <div className="right-section">
+                <div className="memo">
+                  <textarea
+                    ref={memoRef}
+                    placeholder="여기에 메모 작성"
+                    value={editedMemo}
+                    onChange={(e) => setEditedMemo(e.target.value)}
+                    onBlur={onMemoEdit}
+                  />
+                </div>
               </div>
             </div>
           </div>

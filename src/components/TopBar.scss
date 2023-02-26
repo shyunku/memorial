@@ -7,8 +7,10 @@
   min-height: 30px;
   height: 30px;
   align-items: center;
-  background-color: $main-theme-color;
+  background: $main-theme-color;
   font-size: 12px;
+  justify-content: space-between;
+  z-index: 100;
 
   & > .drag-section {
     position: absolute;
@@ -24,5 +26,29 @@
 
   & > .title {
     margin-left: 10px;
+  }
+
+  & > .menu-section {
+    display: flex;
+    height: 100%;
+
+    & > .menu-item {
+      display: flex;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      width: 45px;
+      font-size: 15px;
+      z-index: 102;
+      -webkit-app-region: no-drag;
+
+      &:hover {
+        background-color: rgb(53, 104, 180);
+      }
+
+      &.close:hover {
+        background-color: rgb(175, 35, 35);
+      }
+    }
   }
 }

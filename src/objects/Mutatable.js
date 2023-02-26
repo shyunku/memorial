@@ -9,8 +9,8 @@ class Mutatable {
       const localKey = ctx.entityMap[key];
       if (!localKey) continue;
       let value = entity[key];
+      // console.log(`${key} -> ${localKey} = ${value}`);
       if (localKey.endsWith("At") || localKey.toLowerCase().endsWith("date")) {
-        // console.log(value ? );
         value = value ? new Date(value) : value;
       }
       ctx[localKey] = value;
@@ -29,6 +29,11 @@ class Mutatable {
       entity[key] = value;
     }
     return entity;
+  }
+
+  toObject() {
+    const { ...object } = this;
+    return object;
   }
 }
 

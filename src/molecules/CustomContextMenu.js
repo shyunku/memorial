@@ -1,7 +1,14 @@
-import { createRef, useEffect, useMemo, useRef, useState } from "react";
+import { createRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import JsxUtil from "utils/JsxUtil";
 import { v4 } from "uuid";
+import "./CustomContextMenu.scss";
 
-const direction = ["left", "right", "top", "bottom"];
+export const DIRECTON = {
+  LEFT: "left",
+  RIGHT: "right",
+  TOP: "top",
+  BOTTOM: "bottom",
+};
 
 const ContextMenuStyle = {
   position: "fixed",
@@ -10,13 +17,13 @@ const ContextMenuStyle = {
   zIndex: "1000",
 };
 
-export const ContextMenu = ({ className = "", reference, children, sticky = false, ...rest }) => {
+export const ContextMenu = ({ className = "", reference, children, defaultStyle = false, sticky = false, ...rest }) => {
   const [contextMenuId] = useState(v4());
   return (
     <div
       id={contextMenuId}
       ref={reference}
-      className={"context-menu " + className}
+      className={"context-menu " + className + JsxUtil.classByCondition(defaultStyle, "default-style")}
       style={ContextMenuStyle}
       sticky={`${sticky}`}
       {...rest}
@@ -26,7 +33,19 @@ export const ContextMenu = ({ className = "", reference, children, sticky = fals
   );
 };
 
-export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCloseIdList = [] }) => {
+export const Seperator = () => {
+  return <div className="seperator"></div>;
+};
+
+export const useContextMenu = ({
+  offsetX = 5,
+  offsetY = 5,
+  stickRefTo,
+  onBlur = () => {},
+  clearInputsOnBlur = false,
+  preventCloseIdList = [],
+  horizontal = true,
+}) => {
   const [visiblity, setVisibility] = useState(false);
   const [contextMenuX, setContextMenuX] = useState(0);
   const [contextMenuY, setContextMenuY] = useState(0);
@@ -45,6 +64,16 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
       }
     });
   });
+
+  const blurHandler = useCallback(() => {
+    if (clearInputsOnBlur && contextMenuRef.current != null) {
+      const inputs = contextMenuRef.current.querySelectorAll("input");
+      inputs.forEach((input) => {
+        input.dispatchEvent(new Event("clear", { bubbles: true }));
+      });
+    }
+    onBlur();
+  }, [contextMenuRef.current, clearInputsOnBlur, onBlur]);
 
   const sticky = useMemo(() => {
     return contextMenuRef.current != null && contextMenuRef.current.getAttribute("sticky") == "true";
@@ -105,6 +134,7 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
       if (!foundAutoClose) {
         console.log("closed with autoclose handler");
         setVisibility(false);
+        blurHandler();
       }
     } else {
       if (sticky) {
@@ -117,10 +147,9 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
           top: rect.top,
           bottom: rect.bottom,
         });
-      } else {
-        setContextMenuX(e.clientX);
-        setContextMenuY(e.clientY);
       }
+      setContextMenuX(e.clientX);
+      setContextMenuY(e.clientY);
 
       setVisibility(true);
       recentActivatedElement.current = e.target;
@@ -178,6 +207,7 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
         }
         console.log("closed with outside handler");
         setVisibility(false);
+        blurHandler();
       }
     };
 
@@ -196,8 +226,8 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
       let midY = height / 2;
 
       // initialize
-      for (let i = 0; i < direction.length; i++) {
-        contextMenuRef.current.style[direction[i]] = null;
+      for (let dir of Object.values(DIRECTON)) {
+        contextMenuRef.current.style[dir] = null;
       }
 
       let targetZindexRaw = recentActivatedElement.current
@@ -206,48 +236,64 @@ export const useContextMenu = ({ offsetX = 5, offsetY = 5, stickRefTo, preventCl
       let targetZindex = targetZindexRaw == "auto" ? 0 : targetZindexRaw;
       contextMenuRef.current.style.zIndex = Math.max(1000 + layer, targetZindex + 1);
 
-      let horizontal =
-        contextMenuX < midX ? ["left", contextMenuX + offsetX] : ["right", width - contextMenuX + offsetX];
-      let vertical =
-        contextMenuY < midY ? ["top", contextMenuY + offsetY] : ["bottom", height - contextMenuY + offsetY];
+      let horiz = contextMenuX < midX ? ["left", contextMenuX + offsetX] : ["right", width - contextMenuX + offsetX];
+      let verti = contextMenuY < midY ? ["top", contextMenuY + offsetY] : ["bottom", height - contextMenuY + offsetY];
 
       let verticalInd = contextMenuY < midY ? 1 : -1;
 
       contextMenuRef.current.style.transition = "none";
-
       if (sticky) {
         // set context menu position to proper position
         // set clicked target boundary
         let rect = clickedTargetBoundary;
 
-        if (rect.left < midX) {
-          contextMenuRef.current.style.left = `${rect.left}px`;
-        } else {
-          contextMenuRef.current.style.right = `${width - rect.left}px`;
-        }
+        if (horizontal) {
+          if (rect.left < midX) {
+            // to right
+            contextMenuRef.current.style.left = `${rect.right}px`;
+          } else {
+            // to left
+            contextMenuRef.current.style.right = `${width - rect.left}px`;
+          }
 
-        if (rect.top < midY) {
-          contextMenuRef.current.style.top = `${rect.bottom + (rect.top - rect.bottom)}px`;
+          if (rect.top < midY) {
+            // to bottom
+            contextMenuRef.current.style.top = `${rect.top}px`;
+          } else {
+            // to top
+            contextMenuRef.current.style.bottom = `${height - rect.bottom}px`;
+          }
         } else {
-          contextMenuRef.current.style.bottom = `${height - rect.top + (rect.top - rect.bottom)}px`;
+          if (rect.left < midX) {
+            // to right
+            contextMenuRef.current.style.left = `${rect.left}px`;
+          } else {
+            // to left
+            contextMenuRef.current.style.right = `${width - rect.right}px`;
+          }
+
+          if (rect.top < midY) {
+            // to bottom
+            contextMenuRef.current.style.top = `${rect.bottom}px`;
+          } else {
+            // to top
+            contextMenuRef.current.style.bottom = `${height - rect.top}px`;
+          }
         }
-        verticalInd = -verticalInd;
       } else {
-        contextMenuRef.current.style[horizontal[0]] = `${horizontal[1]}px`;
-        contextMenuRef.current.style[vertical[0]] = `${vertical[1]}px`;
+        contextMenuRef.current.style[horiz[0]] = `${horiz[1]}px`;
+        contextMenuRef.current.style[verti[0]] = `${verti[1]}px`;
       }
 
       let _ = contextMenuRef.current.offsetHeight; // must need to flush css changes
       contextMenuRef.current.style.transform = visiblity ? "translateY(0px)" : `translateY(${30 * verticalInd}px)`;
-
       contextMenuRef.current.style.visibility = visiblity ? "visible" : "hidden";
       contextMenuRef.current.style.opacity = visiblity ? "1" : "0";
-
       contextMenuRef.current.style.transition = "0.3s ease-in-out";
     }
   }, [contextMenuRef, contextMenuX, contextMenuY, visiblity, recentActivatedElement]);
 
-  return [contextMenuRef, openerRef, onContextMenuOpenHandler, onContextMenuCloseHandler];
+  return { ref: contextMenuRef, openerRef, opener: onContextMenuOpenHandler, closer: onContextMenuCloseHandler };
 };
 
 export default {};

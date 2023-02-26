@@ -35,7 +35,7 @@ const __window__ = {
 
         return window;
     },
-    createMainWindow: () => {
+    createMainWindow: (overlapWindowProperty = {}) => {
         let windowProperty = new WindowPropertyFactory()
             .windowType(WindowType.Modeless)
             .show(false)
@@ -47,6 +47,7 @@ const __window__ = {
             .height(960)
             .backgroundThrottling(false)
             .build();
+        windowProperty = {...windowProperty, ...overlapWindowProperty};
         mainWindow = __window__.invokeWindow('/', windowProperty);
         electronRemote.enable(mainWindow.webContents);
         return mainWindow;

@@ -127,6 +127,11 @@ register("system/restore_window", (event, reqId, param) => {
   if (currentWindow) currentWindow.restore();
 });
 
+register("system/isMaximizable", (event, reqId, param) => {
+  let currentWindow = BrowserWindow.fromId(param);
+  if (currentWindow) sender("isMaximizable", reqId, true, currentWindow.isMaximizable());
+});
+
 register("system/modal", (event, reqId, ...arg) => {
   Window.createModalWindow(...arg);
 });
@@ -379,6 +384,26 @@ register("task/updateTaskDone", async (event, reqId, taskId, done, doneAt) => {
   }
 });
 
+register("task/addTaskCategory", async (event, reqId, taskId, categoryId) => {
+  try {
+    let result = await db.run("INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)", taskId, categoryId);
+    sender("task/addTaskCategory", reqId, true, result);
+  } catch (err) {
+    sender("task/addTaskCategory", reqId, false);
+    throw err;
+  }
+});
+
+register("task/deleteTaskCategory", async (event, reqId, taskId, categoryId) => {
+  try {
+    let result = await db.run("DELETE FROM tasks_categories WHERE tid = ? AND cid = ?", taskId, categoryId);
+    sender("task/deleteTaskCategory", reqId, true, result);
+  } catch (err) {
+    sender("task/deleteTaskCategory", reqId, false);
+    throw err;
+  }
+});
+
 register("task/addSubtask", async (event, reqId, subtask, taskId) => {
   try {
     let result = await db.run(
@@ -434,6 +459,62 @@ register("task/updateSubtaskDone", async (event, reqId, subtaskId, done, doneAt)
     sender("task/updateSubtaskDone", reqId, true, result);
   } catch (err) {
     sender("task/updateSubtaskDone", reqId, false);
+    throw err;
+  }
+});
+
+register("category/getCategoryList", async (event, reqId) => {
+  try {
+    let result = await db.all("SELECT * FROM categories;");
+    sender("category/getCategoryList", reqId, true, result);
+  } catch (err) {
+    sender("category/getCategoryList", reqId, false);
+    throw err;
+  }
+});
+
+register("category/addCategory", async (event, reqId, category) => {
+  try {
+    let result = await db.run(
+      "INSERT INTO categories (title, secret, encrypted_pw, color) VALUES (?, ?, ?, ?)",
+      category.title,
+      category.secret,
+      category.encrypted_pw,
+      category.color
+    );
+    sender("category/addCategory", reqId, true, result);
+  } catch (err) {
+    sender("category/addCategory", reqId, false);
+    throw err;
+  }
+});
+
+register("category/deleteCategory", async (event, reqId, categoryId) => {
+  try {
+    let result = await db.run("DELETE FROM categories WHERE cid = ?", categoryId);
+    sender("category/deleteCategory", reqId, true, result);
+  } catch (err) {
+    sender("category/deleteCategory", reqId, false);
+    throw err;
+  }
+});
+
+register("category/updateCategoryTitle", async (event, reqId, categoryId, title) => {
+  try {
+    let result = await db.run("UPDATE categories SET title = ? WHERE cid = ?", title, categoryId);
+    sender("category/updateCategoryTitle", reqId, true, result);
+  } catch (err) {
+    sender("category/updateCategoryTitle", reqId, false);
+    throw err;
+  }
+});
+
+register("tasks_categories/getTasksCategoriesList", async (event, reqId) => {
+  try {
+    let result = await db.all("SELECT * FROM tasks_categories;");
+    sender("tasks_categories/getTasksCategoriesList", reqId, true, result);
+  } catch (err) {
+    sender("tasks_categories/getTasksCategoriesList", reqId, false);
     throw err;
   }
 });

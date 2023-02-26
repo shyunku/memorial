@@ -173,11 +173,11 @@
       border-radius: 3px;
       overflow: hidden;
       transition: 0.3s;
-      background-color: rgb(20, 21, 23);
+      background-color: rgb(16, 17, 18);
 
       &.focused {
         // border: 2px solid rgb(52, 77, 106);
-        background-color: rgb(12, 13, 14);
+        background-color: rgb(10, 11, 12);
 
         & > input {
           color: rgb(153, 181, 211);

@@ -42,6 +42,9 @@ input {
   font-family: inherit;
   background: inherit;
   color: inherit;
+  &::placeholder {
+    color: rgba(161, 182, 227, 0.344);
+  }
 }
 
 textarea {

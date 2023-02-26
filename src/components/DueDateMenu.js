@@ -9,11 +9,11 @@ import "./DueDateMenu.scss";
 
 const DueDateMenu = ({ date, setDate, stickRefTo }) => {
   const [dateMenuId] = useState(`due_date_menu_${v4()}`);
-  const [contextMenuRef, openerRef, openMenu, closeMenu] = useContextMenu({
+  const dueDateSettingCtx = useContextMenu({
     stickRefTo,
     preventCloseIdList: [dateMenuId],
   });
-  const [datePickerRef, _, openDatePicker, closeDatePicker] = useContextMenu({});
+  const datePickerCtx = useContextMenu({});
   const isOverDue = useMemo(() => {
     if (!date) return false;
     return moment(date).isBefore(moment());
@@ -21,13 +21,13 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
 
   return (
     <div
-      ref={openerRef}
+      ref={dueDateSettingCtx.openerRef}
       className={
         "option due-date due-date-menu" +
         JsxUtil.classByCondition(date != null, "active") +
         JsxUtil.classByCondition(isOverDue, "overdue")
       }
-      onClick={openMenu}
+      onClick={dueDateSettingCtx.opener}
     >
       <div className="visible">
         <div className="icon-wrapper">
@@ -35,12 +35,12 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
         </div>
         {date != null && <div className="summary">{moment(date).format("YY년 M월 D일 (ddd)")}</div>}
       </div>
-      <ContextMenu className={"menus"} reference={contextMenuRef} sticky={true}>
+      <ContextMenu className={"menus"} reference={dueDateSettingCtx.ref} sticky={true}>
         <div
           className="menu-option"
           onClick={(e) => {
             setDate(moment().endOf("day").toDate());
-            closeMenu();
+            dueDateSettingCtx.closer();
           }}
         >
           오늘로 설정
@@ -49,7 +49,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
           className="menu-option"
           onClick={(e) => {
             setDate(moment().add(1, "days").endOf("day").toDate());
-            closeMenu();
+            dueDateSettingCtx.closer();
           }}
         >
           내일로 설정
@@ -61,7 +61,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
               className="menu-option"
               onClick={(e) => {
                 setDate(moment(date).add(1, "days").endOf("day").toDate());
-                closeMenu();
+                dueDateSettingCtx.closer();
               }}
             >
               하루 미루기
@@ -70,7 +70,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
               className="menu-option"
               onClick={(e) => {
                 setDate(moment(date).add(1, "weeks").endOf("day").toDate());
-                closeMenu();
+                dueDateSettingCtx.closer();
               }}
             >
               일주일 미루기
@@ -78,7 +78,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
             <div className="spliter"></div>
           </>
         )}
-        <div id="set_custom_date_for_new_todo" className="menu-option" onClick={(e) => openDatePicker(e)}>
+        <div id="set_custom_date_for_new_todo" className="menu-option" onClick={(e) => datePickerCtx.opener(e)}>
           직접 설정
         </div>
         {date != null && (
@@ -88,7 +88,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
               className="menu-option delete"
               onClick={(e) => {
                 setDate(null);
-                closeMenu();
+                dueDateSettingCtx.closer();
               }}
             >
               기한 제거
@@ -99,10 +99,10 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
       <DatePicker
         id={dateMenuId}
         autoclose="false"
-        datePickerRef={datePickerRef}
+        datePickerRef={datePickerCtx.ref}
         onSelect={(e) => {
           setDate(moment(e).endOf("day").toDate());
-          closeDatePicker();
+          datePickerCtx.closer();
         }}
       />
     </div>

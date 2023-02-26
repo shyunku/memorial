@@ -14,6 +14,7 @@ import IpcSender from "utils/IpcSender";
 import Subtask from "objects/Subtask";
 import { printf } from "utils/Common";
 import moment from "moment";
+import Category from "objects/Category";
 
 const TASK_VIEW_MODE = {
   LIST: "리스트",
@@ -25,46 +26,57 @@ const TASK_VIEW_MODE = {
 
 const TodoContent = () => {
   const props = useOutletContext();
-  const { selectedTodoMenuType } = props;
+  const { selectedTodoMenuType, category: passedCategory, categories } = props;
+  const category = useMemo(() => {
+    return passedCategory ?? new Category(selectedTodoMenuType, false, true);
+  }, [selectedTodoMenuType, passedCategory]);
 
   // main objects
   const [taskMap, setTaskMap] = useState({});
   const [selectedTodoItemId, setSelectedTodoItemId] = useState(null);
   const [taskViewMode, setTaskViewMode] = useState(TASK_VIEW_MODE.LIST);
 
-  useEffect(() => {
-    IpcSender.req.task.getTaskList(({ success, data }) => {
-      if (success) {
-        // covert to Task objects
-        setTaskMap((taskMap) => {
-          const newTaskMap = {};
-          for (let i = 0; i < data.length; i++) {
-            const raw = data[i];
-            const task = Task.fromEntity(raw);
-            newTaskMap[task.id] = task;
-          }
+  const getTaskListSync = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      IpcSender.req.task.getTaskList(({ success, data }) => {
+        if (success) {
+          // covert to Task objects
+          setTaskMap((taskMap) => {
+            const newTaskMap = {};
+            for (let i = 0; i < data.length; i++) {
+              const raw = data[i];
+              const task = Task.fromEntity(raw);
+              newTaskMap[task.id] = task;
+            }
 
-          // rearrange tasks and set next/prev nodes (linked list)
-          for (let rawTask of data) {
-            const nextTaskId = rawTask.next;
-            const nextTask = nextTaskId != null ? newTaskMap[nextTaskId] : null;
-            const curTask = newTaskMap[rawTask.tid];
+            // rearrange tasks and set next/prev nodes (linked list)
+            for (let rawTask of data) {
+              const nextTaskId = rawTask.next;
+              const nextTask = nextTaskId != null ? newTaskMap[nextTaskId] : null;
+              const curTask = newTaskMap[rawTask.tid];
 
-            if (curTask) curTask.next = nextTask;
-            if (nextTask) nextTask.prev = curTask;
-          }
+              if (curTask) curTask.next = nextTask;
+              if (nextTask) nextTask.prev = curTask;
+            }
 
-          return { ...taskMap, ...newTaskMap };
-        });
-      } else {
-        console.error("failed to get task list");
-      }
+            return { ...taskMap, ...newTaskMap };
+          });
+          resolve();
+        } else {
+          console.error("failed to get task list");
+          reject();
+        }
+      });
+    });
+  }, []);
 
+  const getSubTaskListSync = useCallback(() => {
+    return new Promise((resolve, reject) => {
       // fetch all subtasks
       IpcSender.req.task.getSubtaskList(({ success, data }) => {
         if (success) {
           setTaskMap((taskMap) => {
-            const newTaskMap = {};
+            const newTaskmap = {};
             for (let i = 0; i < data.length; i++) {
               const subtaskEntity = data[i];
               const subtask = Subtask.fromEntity(subtaskEntity);
@@ -73,16 +85,55 @@ const TodoContent = () => {
                 taskMap[taskId].addSubtask(subtask);
               }
             }
-            return { ...taskMap, ...newTaskMap };
+            return { ...taskMap, ...newTaskmap };
           });
+          resolve();
         } else {
           console.error("failed to get subtask list");
+          reject();
         }
       });
     });
   }, []);
 
+  const getTasksCategoriesListSync = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      IpcSender.req.tasks_categories.getTasksCategoriesList(({ success, data }) => {
+        if (success) {
+          setTaskMap((taskMap) => {
+            const newTaskMap = {};
+            for (let i = 0; i < data.length; i++) {
+              const taskCategoryEntity = data[i];
+              const taskId = taskCategoryEntity.tid;
+              const categoryId = taskCategoryEntity.cid;
+              const category = categories[categoryId];
+              if (taskMap[taskId]) {
+                taskMap[taskId].addCategory(category);
+              }
+            }
+            return { ...taskMap, ...newTaskMap };
+          });
+          resolve();
+        } else {
+          console.error("failed to get task list");
+          reject();
+        }
+      });
+    });
+  }, [categories]);
+
+  useEffect(() => {
+    if (!categories) return;
+    (async () => {
+      console.log(categories);
+      await getTaskListSync();
+      await getSubTaskListSync();
+      await getTasksCategoriesListSync();
+    })();
+  }, [categories]);
+
   printf("taskMap", taskMap);
+  printf("categories", categories);
 
   // handlers
   const onTaskAdd = (task) => {
@@ -142,12 +193,10 @@ const TodoContent = () => {
 
       // check if the target.next is current when afterTarget
       if (afterTarget === true && taskMap[targetTaskId].next?.id == currentTaskId) {
-        console.log(taskMap[targetTaskId].next?.id, currentTaskId);
         return;
       }
       // check if the target.prev is current when beforeTarget
       if (afterTarget === false && taskMap[targetTaskId].prev?.id == currentTaskId) {
-        console.log("Asdf");
         return;
       }
 
@@ -228,6 +277,34 @@ const TodoContent = () => {
     });
   };
 
+  const onTaskCategoryAdd = (tid, category) => {
+    IpcSender.req.task.addTaskCategory(tid, category.id, ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.addCategory(category);
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to add task category");
+      }
+    });
+  };
+
+  const onTaskCategoryDelete = (tid, cid) => {
+    IpcSender.req.task.deleteTaskCategory(tid, cid, ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.deleteCategory(cid);
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to delete task category");
+      }
+    });
+  };
+
   const onTaskDone = (tid, done) => {
     const now = new Date();
     IpcSender.req.task.updateTaskDone(tid, done, now.getTime(), ({ success, data }) => {
@@ -263,7 +340,7 @@ const TodoContent = () => {
   };
 
   const onSubtaskDelete = (tid, sid) => {
-    IpcSender.req.task.deleteSubtask(tid, sid, ({ success, data }) => {
+    IpcSender.req.task.deleteSubtask(sid, ({ success, data }) => {
       if (success) {
         setTaskMap((taskMap) => {
           const task = taskMap[tid];
@@ -349,9 +426,11 @@ const TodoContent = () => {
   return (
     <div className="todo-content">
       <div className="header">
-        <div className="title">모든 할일 ({Object.keys(taskMap).length})</div>
+        <div className="title">
+          {category?.title ?? "-"} ({Object.keys(taskMap).length})
+        </div>
         <div className="metadata">
-          <div className="last-modified">마지막 수정: 3분전</div>
+          <div className="last-modified">마지막 수정: 5 분전</div>
         </div>
         <div className="options">
           <div className="view-modes">
@@ -379,6 +458,8 @@ const TodoContent = () => {
         <TaskListView
           key={selectedTodoMenuType}
           taskMap={taskMap}
+          category={category}
+          categories={categories}
           outerFilter={(task) => outerFilter()(task)}
           selectedId={selectedTodoItemId}
           selectTodoItemHandler={setSelectedTodoItemId}
@@ -388,6 +469,8 @@ const TodoContent = () => {
           onTaskTitleChange={onTaskTitleChange}
           onTaskDueDateChange={onTaskDueDateChange}
           onTaskMemoChange={onTaskMemoChange}
+          onTaskCategoryAdd={onTaskCategoryAdd}
+          onTaskCategoryDelete={onTaskCategoryDelete}
           onSubtaskAdded={onSubtaskAdded}
           onSubtaskDelete={onSubtaskDelete}
           onSubtaskTitleChange={onSubtaskTitleChange}

@@ -3,7 +3,7 @@ import moment from "moment";
 import { useMemo } from "react";
 import { printf } from "utils/Common";
 
-const TaskListView = ({ taskMap, outerFilter, ...rest }) => {
+const TaskListView = ({ taskMap, category, outerFilter, ...rest }) => {
   const taskList = useMemo(() => {
     // follow linked list flow
     const sorted = [];
@@ -32,6 +32,8 @@ const TaskListView = ({ taskMap, outerFilter, ...rest }) => {
 
     if (outerFilter != null && typeof outerFilter === "function") {
       for (const task of taskList) {
+        if (category != null && category.default === false && task.categories[category.id] == null) continue;
+
         if (outerFilter(task)) {
           if (task.done) {
             doneTasks.push(task);

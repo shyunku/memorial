@@ -1,4 +1,5 @@
 import { v4 } from "uuid";
+import Category from "./Category";
 import Mutatable from "./Mutatable";
 import Subtask from "./Subtask";
 
@@ -23,6 +24,7 @@ class Task extends Mutatable {
     this.memo = "";
     this.done = false;
     this.subtasks = {};
+    this.categories = {};
 
     this.next = null;
     this.prev = null;
@@ -44,6 +46,18 @@ class Task extends Mutatable {
     delete this.subtasks[sid];
   }
 
+  addCategory(category) {
+    if (!(category instanceof Category)) {
+      console.error("invalid category", category);
+      return;
+    }
+    this.categories[category.id] = category;
+  }
+
+  deleteCategory(cid) {
+    delete this.categories[cid];
+  }
+
   getTimeProgress() {
     if (!this.createdAt || !this.dueDate) {
       return 0;
@@ -57,6 +71,18 @@ class Task extends Mutatable {
     const passed = now.getTime() - createdAt.getTime();
     let prog = passed / total;
     return prog > 1 || prog < 0 ? 1 : prog;
+  }
+
+  getRemainTime() {
+    if (!this.createdAt || !this.dueDate) {
+      return 0;
+    }
+
+    const dueDate = new Date(this.dueDate);
+    const now = new Date();
+
+    const remain = dueDate.getTime() - now.getTime();
+    return remain < 0 ? 0 : remain;
   }
 
   getSubTaskCount() {

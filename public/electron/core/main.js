@@ -31,6 +31,7 @@ const ArchCategory = require("../objects/ArchCategory.constants");
 const Util = require("../modules/util");
 const UpdaterFlag = Updater.UPDATER_RESULT_FLAG;
 const Database = require("../modules/database");
+const WindowPropertyFactory = require("../objects/WindowPropertyFactory");
 /* ---------------------------------------- Declaration ---------------------------------------- */
 /* -------------------- General -------------------- */
 // Main context window of process
