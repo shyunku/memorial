@@ -115,6 +115,7 @@ export function fromRelativeTime(milli, rawOptions = defaultOptions) {
     }
     if (showLayerCount && j >= showLayerCount) break;
   }
+  if (texts.length === 0) texts.push("0초");
 
   return (inversed ? "-" : "") + texts.join(" ");
 }
@@ -136,6 +137,33 @@ export function shortenSize(size) {
   if (size < 1000) return formatSize(size) + "GB";
   size /= 1000;
   return formatSize(size) + "TB";
+}
+
+export function clone(obj) {
+  const seen = [];
+
+  const recurse = (obj) => {
+    if (obj == null || typeof obj !== "object") return obj;
+    if (obj instanceof Array) return obj.map(clone);
+    if (obj instanceof Date) return new Date(obj);
+
+    let seenIndex = seen.indexOf(obj);
+    if (seenIndex != -1) {
+      console.error(`Circular reference detected`);
+      return null;
+    }
+
+    seen.push(obj);
+    const newObj = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        newObj[key] = recurse(obj[key]);
+      }
+    }
+    return newObj;
+  };
+
+  return recurse(obj);
 }
 
 export default {};

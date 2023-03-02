@@ -1,5 +1,5 @@
 import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
-import DatePicker from "molecules/CustomDatePicker";
+import DateTimePicker from "molecules/CustomDateTimePicker";
 import moment from "moment/moment";
 import { useEffect, useMemo, useState } from "react";
 import { IoCalendarOutline } from "react-icons/io5";
@@ -48,7 +48,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
         <div
           className="menu-option"
           onClick={(e) => {
-            setDate(moment().add(1, "days").endOf("day").toDate());
+            setDate(moment().add(1, "days").toDate());
             dueDateSettingCtx.closer();
           }}
         >
@@ -60,7 +60,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
             <div
               className="menu-option"
               onClick={(e) => {
-                setDate(moment(date).add(1, "days").endOf("day").toDate());
+                setDate(moment(date).add(1, "days").toDate());
                 dueDateSettingCtx.closer();
               }}
             >
@@ -69,7 +69,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
             <div
               className="menu-option"
               onClick={(e) => {
-                setDate(moment(date).add(1, "weeks").endOf("day").toDate());
+                setDate(moment(date).add(1, "weeks").toDate());
                 dueDateSettingCtx.closer();
               }}
             >
@@ -96,13 +96,18 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
           </>
         )}
       </ContextMenu>
-      <DatePicker
+      <DateTimePicker
         id={dateMenuId}
         autoclose="false"
         datePickerRef={datePickerCtx.ref}
+        date={date}
+        closer={(...arg) => {
+          dueDateSettingCtx.closer(...arg);
+          datePickerCtx.closer(...arg);
+        }}
         onSelect={(e) => {
-          setDate(moment(e).endOf("day").toDate());
-          datePickerCtx.closer();
+          setDate(new Date(e));
+          // datePickerCtx.closer();
         }}
       />
     </div>

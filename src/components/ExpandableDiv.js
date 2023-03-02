@@ -3,7 +3,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 export const VERTICAL = "vertical";
 export const HORIZONTAL = "horizontal";
 
-const ExpandableDiv = ({ children, expand, direction = VERTICAL, transition = 500, reference = null, ...rest }) => {
+const ExpandableDiv = ({
+  children,
+  expand = true,
+  direction = VERTICAL,
+  transition = 500,
+  reference = null,
+  ...rest
+}) => {
   const directionStyle = useMemo(() => {
     return direction === VERTICAL ? "height" : "width";
   }, [direction]);

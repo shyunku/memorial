@@ -11,7 +11,6 @@ import JsxUtil from "utils/JsxUtil";
 import DueDateMenu from "./DueDateMenu";
 import Subtask from "objects/Subtask";
 import { VscChromeClose } from "react-icons/vsc";
-import { fastInterval, printf } from "utils/Common";
 import { DraggableDiv, DraggableZone } from "./Draggable";
 import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
 import TaskRemainTimer from "./TaskRemainTimer";
@@ -21,6 +20,7 @@ const TodoItem = ({
   categories,
   className = "",
   selected,
+  draggable,
   blurHandler,
   onTaskDragEndHandler,
   onTaskDropPredict,
@@ -65,6 +65,15 @@ const TodoItem = ({
     if (moment(todo.dueDate).isSame(moment().add(1, "day"), "day")) return "내일";
     if (moment(todo.dueDate).isSame(moment().add(2, "day"), "day")) return "모레";
     return moment(todo.dueDate).format("YY년 M월 D일");
+  }, [JSON.stringify(todo.dueDate)]);
+
+  const dueTimeText = useMemo(() => {
+    if (!todo.dueDate) return "";
+    const dueMoment = moment(todo.dueDate);
+    if (dueMoment.hours() === 23 && dueMoment.minutes() === 59) return " 자정 전";
+    if (dueMoment.hours() === 0 && dueMoment.minutes() === 0) return " 새벽 12시";
+    if (dueMoment.minutes() === 0) return dueMoment.format(" A h시");
+    return moment(todo.dueDate).format(" A h시 mm분");
   }, [JSON.stringify(todo.dueDate)]);
 
   const categoryTags = useMemo(() => {
@@ -135,7 +144,6 @@ const TodoItem = ({
   };
 
   const onMemoEdit = () => {
-    if (editedMemo.length === 0) return;
     onTaskMemoChange?.(todo.id, editedMemo);
     setEditedMemo(todo.memo);
   };
@@ -181,6 +189,7 @@ const TodoItem = ({
       dropPredictHandler={(e) => onTaskDropPredict(e, todo)}
       dragEndHandler={onTaskDragEndHandler}
       todo-id={todo.id}
+      draggable={draggable}
     >
       <AutoBlurDiv blurHandler={blurHandler} reference={expandableRef} focused={selected} {...rest}>
         <div className="delete-button" onClick={(e) => onTaskDelete(todo.id)}>
@@ -188,8 +197,13 @@ const TodoItem = ({
         </div>
         <DraggableZone className="todo-item">
           {/* {linkedListTestJsx} */}
-          <div className="title">{todo.title}</div>
-          <div className={"due-date" + JsxUtil.classByCondition(todo.dueDate != null, "active")}>{dueDateText}</div>
+          <div className="title">
+            {todo.id}.{todo.title}
+          </div>
+          <div className={"due-date" + JsxUtil.classByCondition(todo.dueDate != null, "active")}>
+            {dueDateText}
+            {dueTimeText}
+          </div>
           <SubTaskProgressBar
             overdue={isOverDue}
             total={todo.getSubTaskCount()}

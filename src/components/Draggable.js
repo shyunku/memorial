@@ -9,6 +9,7 @@ export const DraggableDiv = ({
   className = "",
   dropPredictHandler = () => null,
   dragEndHandler = () => {},
+  draggable = true,
   ...rest
 }) => {
   const [draggableDivId, _] = useState(`draggable_div_${v4()}`);
@@ -133,7 +134,7 @@ export const DraggableDiv = ({
     <div
       id={draggableDivId}
       className={"draggable-div" + JsxUtil.classByCondition(dragging, "dragging") + " " + className}
-      draggable={true}
+      draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onDrop={onDrop}

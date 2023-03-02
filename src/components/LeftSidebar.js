@@ -78,11 +78,20 @@ const LeftSidebar = ({
   };
 
   const tryDeleteCategory = (categoryId) => {
-    IpcSender.req.category.deleteCategory(categoryId, ({ success }) => {
+    IpcSender.req.category.getCategoryTasks(categoryId, ({ success, data }) => {
       if (success) {
-        onCategoryDelete?.(categoryId);
-      } else {
-        console.error("Failed to delete category");
+        if (data.length > 0) {
+          console.error(`There are ${data.length} task(s) that would be affected.`);
+          return;
+        }
+
+        IpcSender.req.category.deleteCategory(categoryId, ({ success }) => {
+          if (success) {
+            onCategoryDelete?.(categoryId);
+          } else {
+            console.error("Failed to delete category");
+          }
+        });
       }
     });
   };

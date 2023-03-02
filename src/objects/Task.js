@@ -13,6 +13,7 @@ class Task extends Mutatable {
       memo: "memo",
       done: "done",
       done_at: "doneAt",
+      categories: "categories",
     });
 
     this.id = v4();
@@ -49,6 +50,7 @@ class Task extends Mutatable {
   addCategory(category) {
     if (!(category instanceof Category)) {
       console.error("invalid category", category);
+      console.log(new Error());
       return;
     }
     this.categories[category.id] = category;

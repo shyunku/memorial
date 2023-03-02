@@ -51,10 +51,6 @@ const isWindowsOS = osCategory === ArchCategory.Windows;
 const isMacOS = osCategory === ArchCategory.MacOS;
 
 const checkUpdate = true;
-const requestPermission = true;
-
-let micPermissionStatus = "unknown";
-let camPermissionStatus = "unknown";
 
 /* ---------------------------------------- Pre-execute statements ---------------------------------------- */
 process.env.NODE_ENV =

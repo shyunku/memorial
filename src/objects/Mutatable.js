@@ -1,3 +1,5 @@
+import { clone } from "utils/Common";
+
 class Mutatable {
   constructor(entityMap) {
     this.entityMap = entityMap;
@@ -22,9 +24,18 @@ class Mutatable {
     const entity = {};
     for (let key in this.entityMap) {
       const localKey = this.entityMap[key];
-      let value = this[localKey];
+      let value = clone(this[localKey]);
+
       if (value instanceof Date) {
         value = value.getTime();
+      } else if (value instanceof Mutatable) {
+        value = value.toEntity();
+      } else if (value instanceof Object) {
+        for (let k in value) {
+          if (value[k] instanceof Mutatable) {
+            value[k] = value[k].toEntity();
+          }
+        }
       }
       entity[key] = value;
     }

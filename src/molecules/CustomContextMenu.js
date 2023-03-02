@@ -12,9 +12,10 @@ export const DIRECTON = {
 
 const ContextMenuStyle = {
   position: "fixed",
-  opacity: "1",
+  opacity: "0",
   visibility: "hidden",
   zIndex: "1000",
+  pointerEvents: "none",
 };
 
 export const ContextMenu = ({ className = "", reference, children, defaultStyle = false, sticky = false, ...rest }) => {
@@ -290,6 +291,7 @@ export const useContextMenu = ({
       contextMenuRef.current.style.visibility = visiblity ? "visible" : "hidden";
       contextMenuRef.current.style.opacity = visiblity ? "1" : "0";
       contextMenuRef.current.style.transition = "0.3s ease-in-out";
+      contextMenuRef.current.style.pointerEvents = visiblity ? "auto" : "none";
     }
   }, [contextMenuRef, contextMenuX, contextMenuY, visiblity, recentActivatedElement]);
 

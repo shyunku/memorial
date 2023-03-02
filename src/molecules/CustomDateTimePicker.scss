@@ -1,0 +1,298 @@
+.datetime-picker {
+  display: flex;
+  background-color: rgba(0, 0, 0, 0.453);
+  border: 1px solid rgba(255, 255, 255, 0.207);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  align-items: stretch;
+
+  $std-color: rgb(95, 114, 140);
+  $weekday-color: rgb(109, 139, 194);
+  color: $std-color;
+
+  & > .date-picker {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255, 255, 255, 0.207);
+    // flex: 0;
+
+    padding: 20px;
+    box-sizing: border-box;
+
+    user-select: none;
+
+    &:hover {
+      .picker-btn.confirm {
+        visibility: visible;
+        opacity: 1;
+      }
+    }
+
+    .date-picker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      & > .current-month {
+        pointer-events: none;
+        color: rgb(183, 193, 217);
+        font-weight: 700;
+        font-size: 18px;
+      }
+
+      & > .date-picker-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        //   border: 1px solid white;
+
+        &:hover {
+          background-color: $std-color;
+          color: white;
+        }
+      }
+    }
+
+    .date-picker-body {
+      display: flex;
+      flex-direction: column;
+      width: 300px;
+      margin-top: 5px;
+
+      & > .date-picker-weekdays {
+        display: flex;
+        border-bottom: 1px solid $std-color;
+        color: $weekday-color;
+        font-weight: 500;
+
+        & > .date-picker-weekday {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 30px;
+          width: calc(100% / 7);
+          font-size: 14px;
+
+          &.focused {
+            color: white;
+          }
+        }
+      }
+
+      & > .date-picker-days {
+        display: flex;
+        flex-wrap: wrap;
+
+        & > .date-picker-day {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 40px;
+          width: calc(100% / 7);
+          cursor: pointer;
+          // transition: 0.15s linear;
+          font-size: 15px;
+          color: rgb(178, 191, 218);
+          border-radius: 2px;
+
+          &:hover {
+            background-color: rgba($std-color, 0.5);
+            color: white;
+          }
+
+          &.not-current {
+            color: rgba($std-color, 0.8);
+          }
+
+          &.today {
+            // inset border with box-shadow
+            box-shadow: inset 0 0 1px 2px rgb(82, 140, 255);
+            color: rgb(82, 140, 255);
+            font-weight: 700;
+          }
+
+          &.selected {
+            background-color: rgb(42, 82, 163);
+            color: white;
+          }
+        }
+      }
+    }
+  }
+
+  & > .time-picker {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    align-items: center;
+    flex: 1;
+
+    perspective: 1000px;
+    user-select: none;
+
+    &:hover {
+      .picker-btn.confirm {
+        visibility: visible;
+        opacity: 1;
+      }
+    }
+
+    &.disabled {
+      filter: blur(5px);
+      pointer-events: none;
+    }
+
+    .time-rollers {
+      display: flex;
+      height: 100%;
+      align-items: center;
+    }
+
+    .roller-frame {
+      width: 60px;
+      height: 200px;
+      overflow: hidden;
+
+      &:not(:last-child) {
+        margin-right: 5px;
+      }
+    }
+
+    .roller-wrapper {
+      // transform: translateZ(-100px);
+      transform-style: preserve-3d;
+      -webkit-transform-style: preserve-3d;
+      width: 100%;
+      height: 100%;
+
+      // background-color: rgba(255, 255, 255, 0.201);
+
+      .roller {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        position: relative;
+
+        transform: rotateX(30deg);
+        transform-style: preserve-3d;
+        -webkit-transform-style: preserve-3d;
+        transform-origin: center;
+        transition: 0.3s ease;
+
+        & > .roll-item {
+          position: absolute;
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+          cursor: pointer;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 35px;
+          transition: 0.1s ease;
+          border-radius: 3px;
+          font-size: 18px;
+          color: rgb(76, 84, 92);
+
+          &:hover {
+            background-color: rgba(65, 98, 132, 0.093);
+          }
+
+          &.highlight {
+            color: white;
+            background-color: rgba(57, 124, 224, 0.433);
+          }
+
+          &.last {
+            background-color: rgba(225, 93, 93, 0.433);
+          }
+
+          &.hidden {
+            visibility: hidden;
+          }
+        }
+      }
+    }
+  }
+
+  .picker-footer,
+  .picker-header {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    width: 100%;
+
+    .left,
+    .right {
+      display: flex;
+    }
+
+    .right {
+      display: flex;
+      align-self: flex-end;
+      justify-self: flex-end;
+    }
+
+    .picker-btn {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      padding: 8px 12px;
+      font-size: 15px;
+      transition: 0.15s linear;
+      border-radius: 2px;
+      white-space: nowrap;
+
+      &:not(:last-child) {
+        margin-right: 5px;
+      }
+
+      &:hover {
+        background-color: rgb(54, 56, 59);
+        color: white;
+      }
+
+      &.confirm {
+        background-color: rgba(82, 140, 255, 0.3);
+        color: white;
+        opacity: 0;
+        visibility: hidden;
+
+        &:hover {
+          background-color: rgb(61, 103, 187);
+          color: white;
+        }
+      }
+
+      &.show {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      svg {
+        transform: scale(1.3);
+      }
+    }
+
+    & > .blank {
+      flex: 1;
+    }
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotateX(0deg);
+  }
+  100% {
+    transform: rotateX(360deg);
+  }
+}

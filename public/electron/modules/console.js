@@ -25,7 +25,7 @@ module.exports = (loggerModule) => {
   console.bWHITE = "\x1b[47m";
 
   console.wrap = (content, colorCode) => {
-    return colorCode + content + console.RESET;
+    return (colorCode ?? "") + content + console.RESET;
   };
 
   console.wlog = (content, colorCode) => {
@@ -58,7 +58,11 @@ module.exports = (loggerModule) => {
           }
 
           traceTexts = traceTexts.reverse();
-          return console.wrap(`[Trace: ${traceTexts.join(".")}]`, console.RED) + " " + value.message;
+          return (
+            console.wrap(`[Trace: ${traceTexts.length > 0 ? traceTexts.join(".") : "unknown"}]`, console.RED) +
+            " " +
+            value.message
+          );
         }
       default:
         try {

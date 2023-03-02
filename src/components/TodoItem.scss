@@ -24,11 +24,12 @@
   }
 
   &.done {
-    opacity: 0.5;
+    opacity: 0.3;
   }
 
   &:hover {
     opacity: 1;
+    border: 2px solid $todo-item-hover-color;
 
     .delete-button {
       opacity: 0.5;
@@ -44,8 +45,16 @@
     opacity: 1;
   }
 
-  &.overdue {
+  &:not(.done).overdue {
+    border: 2px solid rgb(57, 34, 34);
+
+    &.selected {
+      border: 2px solid rgb(164, 81, 81);
+    }
+
     & > div > .todo-item {
+      background-color: rgb(57, 34, 34) !important;
+
       & > .title {
         color: rgb(211, 84, 84) !important;
       }
@@ -56,6 +65,15 @@
     & > div > .expandable-options {
       .progress-bar-inner {
         background-color: rgb(79, 36, 36) !important;
+      }
+      .remain-time {
+        & > .label {
+          color: rgb(146, 92, 92) !important;
+        }
+
+        & > .value {
+          color: rgb(208, 83, 83) !important;
+        }
       }
     }
   }
@@ -120,7 +138,7 @@
       }
 
       & > .due-date {
-        min-width: 90px;
+        min-width: 130px;
         text-align: center;
         font-size: 13px;
         color: rgb(66, 81, 106);
@@ -134,6 +152,7 @@
     }
 
     & > .expandable-options {
+      height: 0;
       background: $todo-item-expandable-color;
       overflow: hidden;
 

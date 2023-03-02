@@ -9,7 +9,7 @@ const TaskRemainTimer = ({ dueDate }) => {
       return null;
     }
     const remain = dueDate.valueOf() - Date.now();
-    return remain < 0 ? 0 : remain;
+    return remain;
   }, [dueDate, counter]);
 
   useEffect(() => {
@@ -25,10 +25,10 @@ const TaskRemainTimer = ({ dueDate }) => {
   }, [dueDate]);
 
   return (
-    <div className="remain-time">
-      <div className="label">남은 시간</div>
+    <div className={"remain-time" + JsxUtil.classByCondition(remainMilliSeconds < 0, "overdue")}>
+      <div className="label">{dueDate != null && remainMilliSeconds < 0 ? "지난" : "남은"} 시간</div>
       <div className={"value" + JsxUtil.classByCondition(dueDate != null, "active")}>
-        {dueDate != null ? fromRelativeTime(remainMilliSeconds) : "미정"}
+        {dueDate != null ? fromRelativeTime(remainMilliSeconds < 0 ? -remainMilliSeconds : remainMilliSeconds) : "미정"}
       </div>
     </div>
   );

@@ -28,7 +28,7 @@ const register = (topic, callback, ...arg) => {
     try {
       return await originalCallback(event, reqId, ...arg);
     } catch (err) {
-      console.error(`[IpcMain]: ${err}`);
+      console.error(err);
       return null;
     }
   };
@@ -51,7 +51,9 @@ const sender = (topic, reqId, success, data = null) => {
     `IpcMain ${console.wrap(
       `--${reqIdTag(reqId)}-${success ? ">" : "X"}`,
       success ? console.CYAN : console.RED
-    )} ${console.wrap(topic, console.MAGENTA)} ${console.wrap(`(${sendeeCount})`, console.BLUE)} ${data}`
+    )} ${console.wrap(topic, console.MAGENTA)} ${console.wrap(`(${sendeeCount})`, console.BLUE)} ${JSON.stringify(
+      data
+    )}`
   );
 };
 
@@ -197,11 +199,7 @@ register("task/addTask", async (event, reqId, task) => {
     let [lastTask] = lastTidList;
 
     // transaction
-    try {
-      await db.begin();
-    } catch (err) {
-      throw err;
-    }
+    await db.begin();
 
     try {
       let result = await db.run(
@@ -216,6 +214,14 @@ register("task/addTask", async (event, reqId, task) => {
 
       if (lastTask != null) {
         await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, result.lastID, lastTask.tid);
+      }
+
+      // add category to task
+      const categories = task.categories;
+      if (categories) {
+        for (let cid in categories) {
+          await db.run(`INSERT INTO tasks_categories (tid, cid) VALUES (?, ?);`, result.lastID, cid);
+        }
       }
 
       await db.commit();
@@ -257,6 +263,9 @@ register("task/deleteTask", async (event, reqId, taskId) => {
       let [curTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", taskId);
       let nextTaskId = curTask.next ?? null;
 
+      await db.run("UPDATE tasks SET next = NULL WHERE next = ?;", taskId);
+      await db.run("DELETE FROM tasks_categories WHERE tid = ?", taskId);
+
       await db.run("DELETE FROM tasks WHERE tid = ?", taskId);
 
       // update previous task's next
@@ -266,7 +275,6 @@ register("task/deleteTask", async (event, reqId, taskId) => {
 
       // delete subtasks
       await db.run("DELETE FROM subtasks WHERE tid = ?", taskId);
-
       await db.commit();
       sender("task/deleteTask", reqId, true, {
         tid: taskId,
@@ -312,9 +320,14 @@ register("task/updateTaskOrder", async (event, reqId, taskId, targetTaskId, afte
       // update previous task's next
       if (prevTask != null) {
         // prev.next = current.next
-        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, prevTask.tid);
+        if (nextTaskId != null) {
+          await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, prevTask.tid);
+        } else {
+          await db.run(`UPDATE tasks SET next = NULL WHERE tid = ?;`, prevTask.tid);
+        }
       }
 
+      let targetPrevTask;
       // update target task's next
       if (afterTarget) {
         let [targetTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", targetTaskId);
@@ -326,6 +339,17 @@ register("task/updateTaskOrder", async (event, reqId, taskId, targetTaskId, afte
         await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, targetNextTaskId, taskId);
         // console.log(targetTaskId, targetNextTaskId, prevTask.tid, taskId, nextTaskId);
       } else {
+        let targetPrevTaskList = await db.all("SELECT * FROM tasks WHERE next = ?;", targetTaskId);
+        if (targetPrevTaskList.length > 1) {
+          console.log(targetPrevTaskList);
+          throw new Error(`tasks that ID is null is more than 1. (${targetPrevTaskList.length})`);
+        }
+
+        [targetPrevTask] = targetPrevTaskList;
+        if (targetPrevTask) {
+          await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, taskId, targetPrevTask.tid);
+        }
+
         // current.next = target.id
         await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, targetTaskId, taskId);
       }
@@ -333,6 +357,7 @@ register("task/updateTaskOrder", async (event, reqId, taskId, targetTaskId, afte
       await db.commit();
       sender("task/updateTaskOrder", reqId, true, {
         tid: taskId,
+        targetPrevTid: targetPrevTask ? targetPrevTask.tid : null,
       });
     } catch (err) {
       await db.rollback();
@@ -491,10 +516,29 @@ register("category/addCategory", async (event, reqId, category) => {
 
 register("category/deleteCategory", async (event, reqId, categoryId) => {
   try {
-    let result = await db.run("DELETE FROM categories WHERE cid = ?", categoryId);
-    sender("category/deleteCategory", reqId, true, result);
+    await db.begin();
+
+    try {
+      let result = await db.run("DELETE FROM tasks_categories WHERE cid = ?", categoryId);
+      result = await db.run("DELETE FROM categories WHERE cid = ?", categoryId);
+      db.commit();
+      sender("category/deleteCategory", reqId, true, result);
+    } catch (err) {
+      await db.rollback();
+      throw err;
+    }
   } catch (err) {
     sender("category/deleteCategory", reqId, false);
+    throw err;
+  }
+});
+
+register("category/getCategoryTasks", async (event, reqId, categoryId) => {
+  try {
+    let result = await db.all("SELECT * FROM tasks_categories WHERE cid = ?", categoryId);
+    sender("category/getCategoryTasks", reqId, true, result);
+  } catch (err) {
+    sender("category/getCategoryTasks", reqId, false);
     throw err;
   }
 });

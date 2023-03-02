@@ -18,23 +18,114 @@ import Category from "objects/Category";
 
 const TASK_VIEW_MODE = {
   LIST: "리스트",
-  CARD: "카드",
   CALENDAR: "캘린더",
   TIMELINE: "타임라인",
   DASHBOARD: "대시보드",
 };
 
+const SORT_MODE = {
+  IMPORTANT: "중요도",
+  DUE_DATE: "기한",
+  REMAIN_DATE: "남은 기한",
+  CREATED_DATE: "생성일",
+};
+
 const TodoContent = () => {
   const props = useOutletContext();
   const { selectedTodoMenuType, category: passedCategory, categories } = props;
-  const category = useMemo(() => {
-    return passedCategory ?? new Category(selectedTodoMenuType, false, true);
-  }, [selectedTodoMenuType, passedCategory]);
+
+  const [currentSortMode, setCurrentSortMode] = useState(SORT_MODE.IMPORTANT);
 
   // main objects
   const [taskMap, setTaskMap] = useState({});
   const [selectedTodoItemId, setSelectedTodoItemId] = useState(null);
   const [taskViewMode, setTaskViewMode] = useState(TASK_VIEW_MODE.LIST);
+
+  const category = useMemo(() => {
+    return passedCategory ?? new Category(selectedTodoMenuType, false, true);
+  }, [selectedTodoMenuType, passedCategory]);
+
+  /* ------------------------------ Filters ------------------------------ */
+  const categoryFilter = useMemo(() => {
+    switch (selectedTodoMenuType) {
+      case TODO_MENU_TYPE.ALL:
+        return () => true;
+      case TODO_MENU_TYPE.TODAY:
+        return (task) => task.dueDate != null && moment(task.dueDate).isSame(moment(), "day");
+      default:
+        return (task) => {
+          if (category != null && category.default === false && task.categories[category.id] == null) {
+            return false;
+          }
+          return true;
+        };
+    }
+  }, [category]);
+
+  const secretFilter = useMemo(() => {
+    return (task) => {
+      const categories = Object.values(task.categories);
+      for (let c of categories) {
+        // not current category & it's secret >> hidden
+        if (c.id != category.id && c.secret) {
+          return false;
+        }
+      }
+      return true;
+    };
+  }, [category]);
+
+  // collect all filters to apply to tasks
+  const totalFilters = useMemo(() => {
+    return [categoryFilter, secretFilter];
+  }, [categoryFilter, secretFilter]);
+
+  // create a final filter function that combines all filters
+  const finalStandaloneFilter = useMemo(() => {
+    return (task) => {
+      for (let filter of totalFilters) {
+        if (filter(task) === false) return false;
+      }
+      return true;
+    };
+  }, [totalFilters]);
+
+  // finally, apply all filters to taskMap
+  const filteredTaskMap = useMemo(() => {
+    const filtered = {};
+    for (let task of Object.values(taskMap)) {
+      if (finalStandaloneFilter(task)) filtered[task.id] = task;
+    }
+    return filtered;
+  }, [taskMap, finalStandaloneFilter]);
+
+  /* ------------------------------ Sorters ------------------------------ */
+  const sorter = useMemo(() => {
+    switch (currentSortMode) {
+      case SORT_MODE.IMPORTANT:
+        return null;
+      case SORT_MODE.REMAIN_DATE:
+        return (t1, t2) => {
+          if (t1.dueDate == null && t2.dueDate == null) return 0;
+          if (t1.dueDate == null) return 1;
+          if (t2.dueDate == null) return -1;
+          return moment(t2.dueDate).diff(moment(t1.dueDate));
+        };
+      case SORT_MODE.DUE_DATE:
+        return (t1, t2) => {
+          if (t1.dueDate == null && t2.dueDate == null) return 0;
+          if (t1.dueDate == null) return 1;
+          if (t2.dueDate == null) return -1;
+          return moment(t1.dueDate).diff(moment(t2.dueDate));
+        };
+      case SORT_MODE.CREATED_DATE:
+        return (t1, t2) => {
+          return moment(t2.createdDate).diff(moment(t1.createdDate));
+        };
+      default:
+        return null;
+    }
+  }, [currentSortMode]);
 
   const getTaskListSync = useCallback(() => {
     return new Promise((resolve, reject) => {
@@ -132,8 +223,7 @@ const TodoContent = () => {
     })();
   }, [categories]);
 
-  printf("taskMap", taskMap);
-  printf("categories", categories);
+  // printf("taskMap", taskMap);
 
   // handlers
   const onTaskAdd = (task) => {
@@ -152,6 +242,7 @@ const TodoContent = () => {
           }
           task.prev = prevTask;
           updated[task.id] = task;
+          console.log(updated, task);
           return updated;
         });
       } else {
@@ -205,7 +296,6 @@ const TodoContent = () => {
           setTaskMap((taskMap) => {
             const newTaskMap = { ...taskMap };
             const targetTask = newTaskMap[targetTaskId];
-            const targetNextTask = targetTask.next;
             const currentTask = newTaskMap[currentTaskId];
             const prevTask = currentTask.prev;
             const nextTask = currentTask.next;
@@ -214,14 +304,19 @@ const TodoContent = () => {
             if (nextTask) nextTask.prev = prevTask;
 
             if (afterTarget) {
-              targetTask.next = currentTask;
               currentTask.prev = targetTask;
-              currentTask.next = targetNextTask;
-              if (targetNextTask) targetNextTask.prev = currentTask;
+              currentTask.next = targetTask.next;
+              if (targetTask.next) {
+                targetTask.next.prev = currentTask;
+              }
+              targetTask.next = currentTask;
             } else {
               currentTask.next = targetTask;
+              currentTask.prev = targetTask.prev;
+              if (targetTask.prev) {
+                targetTask.prev.next = currentTask;
+              }
               targetTask.prev = currentTask;
-              currentTask.prev = null;
             }
 
             return newTaskMap;
@@ -412,22 +507,13 @@ const TodoContent = () => {
     });
   };
 
-  const outerFilter = useCallback(() => {
-    switch (selectedTodoMenuType) {
-      case TODO_MENU_TYPE.ALL:
-        return () => true;
-      case TODO_MENU_TYPE.TODAY:
-        return (task) => task.dueDate != null && moment(task.dueDate).isSame(moment(), "day");
-      default:
-        return () => true;
-    }
-  }, [selectedTodoMenuType]);
+  printf("taskMap", taskMap);
 
   return (
     <div className="todo-content">
       <div className="header">
         <div className="title">
-          {category?.title ?? "-"} ({Object.keys(taskMap).length})
+          {category?.title ?? "-"} ({Object.keys(filteredTaskMap).length})
         </div>
         <div className="metadata">
           <div className="last-modified">마지막 수정: 5 분전</div>
@@ -447,9 +533,19 @@ const TodoContent = () => {
               );
             })}
           </div>
-          <div className="filter-options">
-            <div className="filter-option activated">중요도 순</div>
-            <div className="filter-option">시간 순</div>
+          <div className="sort-options">
+            {Object.keys(SORT_MODE).map((mode) => {
+              const sortMode = SORT_MODE[mode];
+              return (
+                <div
+                  key={mode}
+                  className={`sort-option` + JsxUtil.classByEqual(currentSortMode, sortMode, "activated")}
+                  onClick={(e) => setCurrentSortMode(sortMode)}
+                >
+                  {sortMode} 순
+                </div>
+              );
+            })}
           </div>
         </div>
         <div className="spliter"></div>
@@ -458,9 +554,9 @@ const TodoContent = () => {
         <TaskListView
           key={selectedTodoMenuType}
           taskMap={taskMap}
-          category={category}
+          filteredTaskMap={filteredTaskMap}
           categories={categories}
-          outerFilter={(task) => outerFilter()(task)}
+          sorter={sorter}
           selectedId={selectedTodoItemId}
           selectTodoItemHandler={setSelectedTodoItemId}
           onTaskDragEndHandler={onTaskDragEndHandler}
@@ -478,8 +574,7 @@ const TodoContent = () => {
           onSubtaskDone={onSubtaskDone}
         />
       </div>
-
-      <TodoItemAddSection onTaskAdd={onTaskAdd} />
+      <TodoItemAddSection onTaskAdd={onTaskAdd} category={category} />
     </div>
   );
 };

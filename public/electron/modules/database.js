@@ -70,7 +70,9 @@ module.exports = {
       }
 
       // Process doesn't wait while database writer changes transactions (if level = OFF)
-      db.run("PRAGMA synchronous = OFF");
+      db.run("PRAGMA synchronous = OFF;");
+      db.run("PRAGMA foreign_keys = ON;");
+      db.run("PRAGMA check_constraints = ON;");
       console.info(`Database successfully connected.`);
     });
   },
@@ -96,7 +98,7 @@ module.exports = {
       },
       run: (query, ...args) => {
         console.system(
-          `IpcMain ${console.wrap(`<-[RUN]->`, console.BLUE)} ${console.wrap(
+          `IpcMain ${console.wrap(`--[RUN]->`, console.BLUE)} ${console.wrap(
             "sqlite3: " + query,
             console.YELLOW
           )} ${args.join(", ")}`
@@ -104,8 +106,23 @@ module.exports = {
         let params = Array.isArray(args?.[0]) ? args[0] : args;
         return new Promise((resolve, reject) => {
           db.run(query, params, function (err) {
-            if (err) reject(err);
-            else resolve(this);
+            if (err) {
+              console.system(
+                `IpcMain ${console.wrap(`X-[RES]--`, console.RED)} ${console.wrap(
+                  `sqlite3`,
+                  console.RED
+                )} Run failed: ${err}`
+              );
+              reject(err);
+            } else {
+              console.system(
+                `IpcMain ${console.wrap(`<-[RES]--`, console.BLUE)} ${console.wrap(
+                  `[${this.changes ?? "-"} row(s) affected]`,
+                  console.GREEN
+                )}`
+              );
+              resolve(this);
+            }
           });
         });
       },

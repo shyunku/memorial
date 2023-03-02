@@ -3,7 +3,8 @@ import moment from "moment";
 import { useMemo } from "react";
 import { printf } from "utils/Common";
 
-const TaskListView = ({ taskMap, category, outerFilter, ...rest }) => {
+const TaskListView = ({ taskMap, filteredTaskMap, sorter, ...rest }) => {
+  // Convert taskMap to taskList while checking if the task list is sorted correctly
   const taskList = useMemo(() => {
     // follow linked list flow
     const sorted = [];
@@ -22,40 +23,50 @@ const TaskListView = ({ taskMap, category, outerFilter, ...rest }) => {
         }
       }
     }
-    printf("sorted", sorted);
     return sorted;
   }, [taskMap]);
 
+  // Filter sorted task list (taskList)
+  const sortedAndFilteredTaskList = useMemo(() => {
+    let sorted = [];
+    for (let task of taskList) {
+      if (filteredTaskMap[task.id]) {
+        sorted.push(task);
+      }
+    }
+
+    // sort by outer sorter if provided
+    if (sorter != null && typeof sorter == "function") {
+      sorted = sorted.sort(sorter);
+    }
+    return sorted;
+  }, [taskList, filteredTaskMap, sorter]);
+
+  // Split task list into done and not done
   const [doneTaskList, notDoneTaskList] = useMemo(() => {
     const doneTasks = [];
     const notDoneTasks = [];
 
-    if (outerFilter != null && typeof outerFilter === "function") {
-      for (const task of taskList) {
-        if (category != null && category.default === false && task.categories[category.id] == null) continue;
-
-        if (outerFilter(task)) {
-          if (task.done) {
-            doneTasks.push(task);
-          } else {
-            notDoneTasks.push(task);
-          }
-        }
+    for (const task of sortedAndFilteredTaskList) {
+      if (task.done) {
+        doneTasks.push(task);
+      } else {
+        notDoneTasks.push(task);
       }
     }
 
     return [doneTasks, notDoneTasks];
-  }, [taskList]);
+  }, [sortedAndFilteredTaskList]);
 
   return (
     <div className="todo-item-groups">
       <div className="todo-item-group">
         <div className="title">해야할 일 ({notDoneTaskList.length})</div>
-        <TaskList taskList={notDoneTaskList} {...rest} />
+        <TaskList taskList={notDoneTaskList} draggable={sorter == null} {...rest} />
       </div>
       <div className="todo-item-group">
         <div className="title">완료됨 ({doneTaskList.length})</div>
-        <TaskList taskList={doneTaskList} {...rest} />
+        <TaskList taskList={doneTaskList} draggable={sorter == null} {...rest} />
       </div>
     </div>
   );
