@@ -197,9 +197,7 @@ const TodoItem = ({
         </div>
         <DraggableZone className="todo-item">
           {/* {linkedListTestJsx} */}
-          <div className="title">
-            {todo.id}.{todo.title}
-          </div>
+          <div className="title">{todo.title}</div>
           <div className={"due-date" + JsxUtil.classByCondition(todo.dueDate != null, "active")}>
             {dueDateText}
             {dueTimeText}
