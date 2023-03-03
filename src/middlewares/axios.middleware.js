@@ -2,7 +2,7 @@ import React from "react";
 import { unwrapResult } from "@reduxjs/toolkit";
 import axios, { AxiosError } from "axios";
 import { useEffect } from "react";
-import { toast } from "react-hot-toast";
+// import { toast } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 
 const AxiosMiddleware = () => {

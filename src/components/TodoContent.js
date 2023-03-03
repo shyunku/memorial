@@ -1,20 +1,17 @@
-import { IoCalendarOutline } from "react-icons/io5";
 import "./TodoContent.scss";
 import React, { createRef, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-
 import { TODO_MENU_TYPE } from "components/LeftSidebar";
-
 import Task from "objects/Task";
 import TodoItemAddSection from "./TodoItemAddSection";
-import TaskList from "./TaskList";
 import { useOutletContext } from "react-router-dom";
 import TaskListView from "views/TaskListView";
 import JsxUtil from "utils/JsxUtil";
 import IpcSender from "utils/IpcSender";
 import Subtask from "objects/Subtask";
-import { printf } from "utils/Common";
+import { fastInterval, printf } from "utils/Common";
 import moment from "moment";
 import Category from "objects/Category";
+import Toast from "molecules/Toast";
 
 const TASK_VIEW_MODE = {
   LIST: "리스트",

@@ -4,7 +4,6 @@ import { configureStore } from "@reduxjs/toolkit";
 import persistStore from "redux-persist/es/persistStore";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
-import { Toaster } from "react-hot-toast";
 import MainRouter from "routers/MainRouter";
 import AxiosMiddleware from "middlewares/axios.middleware";
 import rootReducer from "store/rootReducer";
@@ -13,6 +12,7 @@ import reportWebVitals from "./reportWebVitals";
 // Import styles
 import "styles/reset.scss";
 import "styles/index.scss";
+import Toast from "molecules/Toast";
 
 const store = configureStore({
   reducer: rootReducer,
@@ -25,8 +25,8 @@ root.render(
   <Provider store={store}>
     <PersistGate loading={null} persistor={persistor}>
       <MainRouter />
-      <Toaster position="top-center" />
       <AxiosMiddleware />
+      <Toast.Toaster />
     </PersistGate>
   </Provider>
 );

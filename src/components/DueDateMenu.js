@@ -33,7 +33,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
         <div className="icon-wrapper">
           <IoCalendarOutline />
         </div>
-        {date != null && <div className="summary">{moment(date).format("YY년 M월 D일 (ddd)")}</div>}
+        {date != null && <div className="summary">{moment(date).format("YY년 M월 D일 (ddd) A h시 mm분")}</div>}
       </div>
       <ContextMenu className={"menus"} reference={dueDateSettingCtx.ref} sticky={true}>
         <div

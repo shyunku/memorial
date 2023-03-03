@@ -1,5 +1,6 @@
 import { ContextMenu, Seperator, useContextMenu } from "molecules/CustomContextMenu";
 import SubmitInput from "molecules/SubmitInput";
+import Toast from "molecules/Toast";
 import Category from "objects/Category";
 import { useRef, useState } from "react";
 import {
@@ -81,7 +82,7 @@ const LeftSidebar = ({
     IpcSender.req.category.getCategoryTasks(categoryId, ({ success, data }) => {
       if (success) {
         if (data.length > 0) {
-          console.error(`There are ${data.length} task(s) that would be affected.`);
+          Toast.warn(`${data.length}개의 항목에서 해당 카테고리를 사용중입니다.`);
           return;
         }
 
