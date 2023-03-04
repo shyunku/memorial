@@ -5,13 +5,13 @@ import moment from "moment/moment";
 import { IoAdd, IoCalendarOutline } from "react-icons/io5";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Task from "objects/Task";
-import ExpandableDiv, { VERTICAL } from "./ExpandableDiv";
-import AutoBlurDiv from "../molecules/AutoBlurDiv";
+import ExpandableDiv, { VERTICAL } from "molecules/ExpandableDiv";
+import AutoBlurDiv from "molecules/AutoBlurDiv";
 import JsxUtil from "utils/JsxUtil";
-import DueDateMenu from "./DueDateMenu";
+import DueDateMenu from "molecules/DueDateMenu";
 import Subtask from "objects/Subtask";
 import { VscChromeClose } from "react-icons/vsc";
-import { DraggableDiv, DraggableZone } from "./Draggable";
+import { DraggableDiv, DraggableZone } from "molecules/Draggable";
 import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
 import TaskRemainTimer from "./TaskRemainTimer";
 

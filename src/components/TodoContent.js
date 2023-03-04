@@ -13,12 +13,13 @@ import moment from "moment";
 import Category from "objects/Category";
 import Toast from "molecules/Toast";
 import Prompt from "molecules/Prompt";
+import TaskCalendarView from "views/TaskCalendarView";
 
 const TASK_VIEW_MODE = {
   LIST: "리스트",
   CALENDAR: "캘린더",
-  TIMELINE: "타임라인",
-  DASHBOARD: "대시보드",
+  // TIMELINE: "타임라인",
+  // DASHBOARD: "대시보드",
 };
 
 const SORT_MODE = {
@@ -532,45 +533,51 @@ const TodoContent = () => {
             })}
           </div>
           <div className="sort-options">
-            {Object.keys(SORT_MODE).map((mode) => {
-              const sortMode = SORT_MODE[mode];
-              return (
-                <div
-                  key={mode}
-                  className={`sort-option` + JsxUtil.classByEqual(currentSortMode, sortMode, "activated")}
-                  onClick={(e) => setCurrentSortMode(sortMode)}
-                >
-                  {sortMode} 순
-                </div>
-              );
-            })}
+            {taskViewMode === TASK_VIEW_MODE.LIST &&
+              Object.keys(SORT_MODE).map((mode) => {
+                const sortMode = SORT_MODE[mode];
+                return (
+                  <div
+                    key={mode}
+                    className={`sort-option` + JsxUtil.classByEqual(currentSortMode, sortMode, "activated")}
+                    onClick={(e) => setCurrentSortMode(sortMode)}
+                  >
+                    {sortMode} 순
+                  </div>
+                );
+              })}
           </div>
         </div>
         <div className="spliter"></div>
       </div>
       <div className="body">
-        <TaskListView
-          key={selectedTodoMenuType}
-          taskMap={taskMap}
-          filteredTaskMap={filteredTaskMap}
-          categories={categories}
-          sorter={sorter}
-          selectedId={selectedTodoItemId}
-          selectTodoItemHandler={setSelectedTodoItemId}
-          onTaskDragEndHandler={onTaskDragEndHandler}
-          onTaskDelete={onTaskDelete}
-          onTaskDone={onTaskDone}
-          onTaskTitleChange={onTaskTitleChange}
-          onTaskDueDateChange={onTaskDueDateChange}
-          onTaskMemoChange={onTaskMemoChange}
-          onTaskCategoryAdd={onTaskCategoryAdd}
-          onTaskCategoryDelete={onTaskCategoryDelete}
-          onSubtaskAdded={onSubtaskAdded}
-          onSubtaskDelete={onSubtaskDelete}
-          onSubtaskTitleChange={onSubtaskTitleChange}
-          onSubtaskDueDateChange={onSubtaskDueDateChange}
-          onSubtaskDone={onSubtaskDone}
-        />
+        {{
+          [TASK_VIEW_MODE.LIST]: (
+            <TaskListView
+              key={selectedTodoMenuType}
+              taskMap={taskMap}
+              filteredTaskMap={filteredTaskMap}
+              categories={categories}
+              sorter={sorter}
+              selectedId={selectedTodoItemId}
+              selectTodoItemHandler={setSelectedTodoItemId}
+              onTaskDragEndHandler={onTaskDragEndHandler}
+              onTaskDelete={onTaskDelete}
+              onTaskDone={onTaskDone}
+              onTaskTitleChange={onTaskTitleChange}
+              onTaskDueDateChange={onTaskDueDateChange}
+              onTaskMemoChange={onTaskMemoChange}
+              onTaskCategoryAdd={onTaskCategoryAdd}
+              onTaskCategoryDelete={onTaskCategoryDelete}
+              onSubtaskAdded={onSubtaskAdded}
+              onSubtaskDelete={onSubtaskDelete}
+              onSubtaskTitleChange={onSubtaskTitleChange}
+              onSubtaskDueDateChange={onSubtaskDueDateChange}
+              onSubtaskDone={onSubtaskDone}
+            />
+          ),
+          [TASK_VIEW_MODE.CALENDAR]: <TaskCalendarView filteredTaskMap={filteredTaskMap} />,
+        }[taskViewMode] ?? <div>Currently not supported</div>}
       </div>
       <TodoItemAddSection onTaskAdd={onTaskAdd} category={category} />
     </div>

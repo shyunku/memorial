@@ -4,18 +4,7 @@ import SubmitInput from "molecules/SubmitInput";
 import Toast from "molecules/Toast";
 import Category from "objects/Category";
 import { useRef, useState } from "react";
-import {
-  IoAdd,
-  IoClose,
-  IoKey,
-  IoKeyOutline,
-  IoKeySharp,
-  IoLockClosed,
-  IoLogoBuffer,
-  IoPricetag,
-  IoReader,
-  IoToday,
-} from "react-icons/io5";
+import { IoAdd, IoClose, IoKey, IoKeySharp, IoLogoBuffer, IoReader, IoToday } from "react-icons/io5";
 import sha256 from "sha256";
 import { printf } from "utils/Common";
 import IpcSender from "utils/IpcSender";

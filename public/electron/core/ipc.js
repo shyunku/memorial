@@ -259,6 +259,9 @@ register("task/deleteTask", async (event, reqId, taskId) => {
     }
 
     try {
+      // delete subtasks first
+      await db.run("DELETE FROM subtasks WHERE tid = ?", taskId);
+
       // get next task
       let [curTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", taskId);
       let nextTaskId = curTask.next ?? null;
@@ -272,9 +275,6 @@ register("task/deleteTask", async (event, reqId, taskId) => {
       if (prevTask != null) {
         await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, prevTask.tid);
       }
-
-      // delete subtasks
-      await db.run("DELETE FROM subtasks WHERE tid = ?", taskId);
       await db.commit();
       sender("task/deleteTask", reqId, true, {
         tid: taskId,

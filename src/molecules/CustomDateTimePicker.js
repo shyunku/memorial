@@ -1,4 +1,3 @@
-import ExpandableDiv, { HORIZONTAL } from "components/ExpandableDiv";
 import moment from "moment";
 import "moment/locale/ko";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -7,7 +6,7 @@ import { VscDebugContinue, VscDebugReverseContinue } from "react-icons/vsc";
 import { fastInterval } from "utils/Common";
 import { floorMinutesByStep, circularDistance, hours12, hours12tohours24, ceilMinutesByStep } from "utils/DateTime";
 import JsxUtil from "utils/JsxUtil";
-import { ContextMenu, useContextMenu } from "./CustomContextMenu";
+import { ContextMenu } from "./CustomContextMenu";
 import "./CustomDateTimePicker.scss";
 
 moment.locale("ko");
@@ -89,15 +88,12 @@ const DateTimePicker = ({ onSelect = () => {}, closer, visible, date, datePicker
     newDate.setFullYear(watchingMonth.getFullYear());
     newDate.setMonth(watchingMonth.getMonth());
     newDate.setDate(date);
-    if (selectedDate == null) {
-      const today = new Date();
-      newDate.setHours(today.getHours());
-      newDate.setMinutes(ceilMinutesByStep(today.getMinutes(), 5));
-    } else {
-      newDate.setMinutes(floorMinutesByStep(newDate.getMinutes(), 5));
-    }
-    newDate.setSeconds(0);
-    setAttachEndMode(false);
+
+    newDate.setHours(23);
+    newDate.setMinutes(59);
+    newDate.setSeconds(59);
+    setAttachEndMode(true);
+
     setSelectedDate(newDate);
   };
 

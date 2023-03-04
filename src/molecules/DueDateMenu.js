@@ -39,7 +39,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
         <div
           className="menu-option"
           onClick={(e) => {
-            setDate(moment().endOf("day").toDate());
+            setDate(moment().endOf("day").hours(23).minutes(59).seconds(59).toDate());
             dueDateSettingCtx.closer();
           }}
         >
@@ -48,7 +48,7 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
         <div
           className="menu-option"
           onClick={(e) => {
-            setDate(moment().add(1, "days").toDate());
+            setDate(moment().add(1, "days").hours(23).minutes(59).seconds(59).toDate());
             dueDateSettingCtx.closer();
           }}
         >

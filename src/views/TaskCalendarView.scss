@@ -1,0 +1,148 @@
+.task-view.calendar {
+  display: flex;
+  flex-direction: column;
+
+  .calendar-view {
+    display: flex;
+    flex-direction: column;
+
+    .calendar-view-header {
+      display: flex;
+      margin-bottom: 25px;
+
+      .current-year-month {
+        font-size: 28px;
+        font-weight: bold;
+      }
+    }
+
+    .calendar-view-body {
+      display: flex;
+      flex-direction: column;
+
+      .cell {
+        display: flex;
+        flex-direction: column;
+        width: calc(100% / 7);
+        border: 1px solid rgb(41, 48, 61);
+        box-sizing: border-box;
+        background-color: rgb(14, 14, 15);
+        transition: 0.2s ease;
+      }
+
+      .week-cells {
+        display: flex;
+        width: 100%;
+
+        .week-cell {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 32px;
+          font-size: 15px;
+          color: rgb(175, 188, 215);
+          font-weight: bold;
+          background-color: rgb(35, 45, 59);
+
+          &.sunday {
+            color: rgb(255, 110, 110);
+          }
+        }
+      }
+
+      .day-cells {
+        display: flex;
+        flex-wrap: wrap;
+        width: 100%;
+
+        .day-cell {
+          height: 180px;
+          padding: 8px;
+
+          &:hover {
+            background-color: rgb(25, 31, 39);
+
+            .date {
+              color: white !important;
+            }
+          }
+
+          &.today {
+            .date {
+              background-color: rgb(121, 61, 61) !important;
+              color: white !important;
+            }
+          }
+
+          &:not(.current-month) {
+            background-color: rgb(24, 26, 29);
+            // opacity: 0;
+          }
+
+          .day-cell-header {
+            display: flex;
+
+            .date {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 25px !important;
+              height: 25px !important;
+              //   border-radius: 50%;
+              border-radius: 3px;
+              font-size: 15px;
+              color: rgb(152, 160, 173);
+              transition: 0.2s ease;
+              background-color: rgba(255, 255, 255, 0.074);
+            }
+          }
+
+          .tasks {
+            display: flex;
+            flex-direction: column;
+            margin-top: 15px;
+            flex: 1;
+            overflow-y: overlay;
+
+            .task {
+              display: flex;
+              align-items: center;
+              padding: 5px 8px;
+              white-space: nowrap;
+              border-radius: 3px;
+              font-size: 13px;
+              width: 100%;
+              box-sizing: border-box;
+              cursor: pointer;
+              transition: 0.2s ease;
+
+              background-color: rgb(40, 41, 45);
+              color: rgb(106, 112, 120);
+
+              &:not(:last-child) {
+                margin-bottom: 10px;
+              }
+
+              &:hover {
+                background-color: rgb(52, 61, 78);
+                color: white;
+              }
+
+              .title {
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              }
+
+              .subtasks {
+                margin-left: 8px;
+                color: rgb(112, 147, 212);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

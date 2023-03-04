@@ -1,0 +1,27 @@
+.task-view.list {
+  & > .todo-item-groups {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
+
+    & > .todo-item-group {
+      display: flex;
+      flex-direction: column;
+
+      &:not(:last-child) {
+        margin-bottom: 50px;
+      }
+
+      & > .title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 15px;
+        opacity: 0.7;
+      }
+
+      & > .todo-list {
+      }
+    }
+  }
+}

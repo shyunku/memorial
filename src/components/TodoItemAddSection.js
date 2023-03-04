@@ -1,9 +1,7 @@
 import JsxUtil from "utils/JsxUtil";
-import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
 import { useRef, useState } from "react";
 import Task from "objects/Task";
-import { IoCalendarOutline } from "react-icons/io5";
-import DueDateMenu from "./DueDateMenu";
+import DueDateMenu from "molecules/DueDateMenu";
 
 const TodoItemAddSection = ({ onTaskAdd, category }) => {
   const [newTodoItemFocused, setNewTodoItemFocused] = useState(false);

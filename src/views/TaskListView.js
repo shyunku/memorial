@@ -1,7 +1,6 @@
 import TaskList from "components/TaskList";
-import moment from "moment";
 import { useMemo } from "react";
-import { printf } from "utils/Common";
+import "./TaskListView.scss";
 
 const TaskListView = ({ taskMap, filteredTaskMap, sorter, ...rest }) => {
   // Convert taskMap to taskList while checking if the task list is sorted correctly
@@ -59,14 +58,16 @@ const TaskListView = ({ taskMap, filteredTaskMap, sorter, ...rest }) => {
   }, [sortedAndFilteredTaskList]);
 
   return (
-    <div className="todo-item-groups">
-      <div className="todo-item-group">
-        <div className="title">해야할 일 ({notDoneTaskList.length})</div>
-        <TaskList taskList={notDoneTaskList} draggable={sorter == null} {...rest} />
-      </div>
-      <div className="todo-item-group">
-        <div className="title">완료됨 ({doneTaskList.length})</div>
-        <TaskList taskList={doneTaskList} draggable={sorter == null} {...rest} />
+    <div className="task-view list">
+      <div className="todo-item-groups">
+        <div className="todo-item-group">
+          <div className="title">해야할 일 ({notDoneTaskList.length})</div>
+          <TaskList taskList={notDoneTaskList} draggable={sorter == null} {...rest} />
+        </div>
+        <div className="todo-item-group">
+          <div className="title">완료됨 ({doneTaskList.length})</div>
+          <TaskList taskList={doneTaskList} draggable={sorter == null} {...rest} />
+        </div>
       </div>
     </div>
   );
