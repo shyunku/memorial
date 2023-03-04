@@ -1,5 +1,5 @@
 const { ipcMain, webContents, app, BrowserWindow, screen, remote, Menu, powerMonitor } = require("electron");
-const { Readable } = require("stream");
+const sha256 = require("sha256");
 const WindowPropertyFactory = require("../objects/WindowPropertyFactory");
 const __IpcRouter__ = require("../objects/IpcRouter");
 const Window = require("./window");
@@ -529,6 +529,22 @@ register("category/deleteCategory", async (event, reqId, categoryId) => {
     }
   } catch (err) {
     sender("category/deleteCategory", reqId, false);
+    throw err;
+  }
+});
+
+register("category/checkCategoryPassword", async (event, reqId, categoryId, hashedPassword) => {
+  try {
+    const doubleHashedPassword = sha256(hashedPassword);
+    let results = await db.all(
+      "SELECT * FROM categories WHERE cid = ? AND encrypted_pw = ?",
+      categoryId,
+      doubleHashedPassword
+    );
+    let ok = results.length > 0;
+    sender("category/checkCategoryPassword", reqId, true, ok);
+  } catch (err) {
+    sender("category/checkCategoryPassword", reqId, false);
     throw err;
   }
 });

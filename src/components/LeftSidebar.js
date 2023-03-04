@@ -1,4 +1,5 @@
 import { ContextMenu, Seperator, useContextMenu } from "molecules/CustomContextMenu";
+import Prompt from "molecules/Prompt";
 import SubmitInput from "molecules/SubmitInput";
 import Toast from "molecules/Toast";
 import Category from "objects/Category";
@@ -15,6 +16,7 @@ import {
   IoReader,
   IoToday,
 } from "react-icons/io5";
+import sha256 from "sha256";
 import { printf } from "utils/Common";
 import IpcSender from "utils/IpcSender";
 import JsxUtil from "utils/JsxUtil";
@@ -63,7 +65,10 @@ const LeftSidebar = ({
       addSecretCategoryRef.current.warn();
       return false;
     }
+
     const category = new Category(categoryName, true);
+    category.setPassword(rawPassword);
+
     return new Promise((resolve, reject) => {
       IpcSender.req.category.addCategory(category.toEntity(), ({ success, data }) => {
         if (success) {
@@ -78,7 +83,8 @@ const LeftSidebar = ({
     });
   };
 
-  const tryDeleteCategory = (categoryId) => {
+  const tryDeleteCategory = (e, categoryId) => {
+    e.stopPropagation();
     IpcSender.req.category.getCategoryTasks(categoryId, ({ success, data }) => {
       if (success) {
         if (data.length > 0) {
@@ -95,6 +101,39 @@ const LeftSidebar = ({
         });
       }
     });
+  };
+
+  const onCustomCategorySelect = (categoryId) => {
+    const category = categories[categoryId];
+    if (category) {
+      if (category.secret == true) {
+        Prompt.float("비밀 카테고리", `'${category.title}' 카테고리에 접근하려면 비밀번호를 입력해주세요.`, {
+          inputs: [{ key: "password", placeholder: "비밀번호", type: "password" }],
+          onConfirm: (data) => {
+            const password = data.password;
+            const hashedPassword = sha256(password);
+
+            return new Promise((resolve, reject) => {
+              IpcSender.req.category.checkCategoryPassword(categoryId, hashedPassword, ({ success, data }) => {
+                if (success) {
+                  if (data) {
+                    setSelectedTodoMenuType(categoryId);
+                  } else {
+                    Toast.error("비밀번호가 일치하지 않습니다.");
+                    resolve(false);
+                  }
+                } else {
+                  Toast.error(`비밀번호가 틀렸습니다.`);
+                }
+                resolve(true);
+              });
+            });
+          },
+        });
+      } else {
+        setSelectedTodoMenuType(categoryId);
+      }
+    }
   };
 
   return (
@@ -147,11 +186,11 @@ const LeftSidebar = ({
               <div
                 className={"todo-menu" + JsxUtil.classByEqual(selectedTodoMenuType, category.id, "selected")}
                 key={category.id}
-                onClick={() => setSelectedTodoMenuType(category.id)}
+                onClick={(e) => onCustomCategorySelect(category.id)}
               >
                 <div className="icon-wrapper">{category.secret ? <IoKeySharp /> : <IoReader />}</div>
                 <div className="title">{category.title}</div>
-                <div className="delete-btn" onClick={(e) => tryDeleteCategory(category.id)}>
+                <div className="delete-btn" onClick={(e) => tryDeleteCategory(e, category.id)}>
                   <IoClose />
                 </div>
               </div>

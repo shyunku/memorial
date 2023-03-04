@@ -20,7 +20,7 @@ class Category extends Mutatable {
   }
 
   setPassword(password) {
-    this.encryptedPw = sha256(password);
+    this.encryptedPw = sha256(sha256(password));
   }
 }
 

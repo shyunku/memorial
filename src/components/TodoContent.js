@@ -12,6 +12,7 @@ import { fastInterval, printf } from "utils/Common";
 import moment from "moment";
 import Category from "objects/Category";
 import Toast from "molecules/Toast";
+import Prompt from "molecules/Prompt";
 
 const TASK_VIEW_MODE = {
   LIST: "리스트",
@@ -504,7 +505,7 @@ const TodoContent = () => {
     });
   };
 
-  printf("taskMap", taskMap);
+  // printf("taskMap", taskMap);
 
   return (
     <div className="todo-content">

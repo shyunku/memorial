@@ -13,6 +13,7 @@ import reportWebVitals from "./reportWebVitals";
 import "styles/reset.scss";
 import "styles/index.scss";
 import Toast from "molecules/Toast";
+import Prompt from "molecules/Prompt";
 
 const store = configureStore({
   reducer: rootReducer,
@@ -24,9 +25,10 @@ const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <Provider store={store}>
     <PersistGate loading={null} persistor={persistor}>
+      <Prompt.Prompt />
+      <Toast.Toaster />
       <MainRouter />
       <AxiosMiddleware />
-      <Toast.Toaster />
     </PersistGate>
   </Provider>
 );

@@ -20,7 +20,7 @@ const POSITION = {
   BOTTOM_LEFT: "bottom-left",
 };
 
-export const Toaster = ({ position = POSITION.TOP_CENTER, expiresIn = 3000 }) => {
+export const Toaster = ({ position = POSITION.TOP_RIGHT, expiresIn = 3000 }) => {
   const [activeToasts, setActiveToasts] = useState([]);
   const fadeOutDuration = useMemo(() => 300, []);
   const horizontalAlign = useMemo(() => {
@@ -45,7 +45,6 @@ export const Toaster = ({ position = POSITION.TOP_CENTER, expiresIn = 3000 }) =>
     const [vertical, horizontal] = splited;
     let style = {
       position: "fixed",
-      zIndex: "1000",
       alignItems: horizontalAlign,
       pointerEvents: "none",
       [vertical]: "50px",
@@ -163,12 +162,6 @@ const addToastItem = (type, message, extra = null, options) => {
   };
   document.dispatchEvent(toastEvent);
 };
-
-// <VscDebug/>
-// <VscInfo/>
-// <VscWarning/>
-// <VscCheck/>
-// <VscError/>
 
 export default {
   Toaster,

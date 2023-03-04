@@ -6,7 +6,7 @@ import { IoAdd, IoCalendarOutline } from "react-icons/io5";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Task from "objects/Task";
 import ExpandableDiv, { VERTICAL } from "./ExpandableDiv";
-import AutoBlurDiv from "./AutoBlurDiv";
+import AutoBlurDiv from "../molecules/AutoBlurDiv";
 import JsxUtil from "utils/JsxUtil";
 import DueDateMenu from "./DueDateMenu";
 import Subtask from "objects/Subtask";

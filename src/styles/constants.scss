@@ -3,3 +3,47 @@ $main-bg-color: #181818;
 $left-sidebar-color: #23252a;
 
 $left-sidebar-width: 240px;
+
+$ease-out-elastic: cubic-bezier(0, 0.99, 0.57, 1.22);
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-45px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in-centerX {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-45px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes fade-out-centerX {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(45px);
+  }
+}

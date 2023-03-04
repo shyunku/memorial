@@ -147,6 +147,9 @@ const IpcSender = {
       deleteCategory: (categoryId, callback) => {
         sender("category/deleteCategory", callback, categoryId);
       },
+      checkCategoryPassword: (categoryId, hashedPassword, callback) => {
+        sender("category/checkCategoryPassword", callback, categoryId, hashedPassword);
+      },
       updateCategoryTitle: (categoryId, title, callback) => {
         sender("category/updateCategoryTitle", callback, categoryId, title);
       },
