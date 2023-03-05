@@ -105,10 +105,56 @@ export const useContextMenu = ({
     e.stopPropagation();
     // console.log(e.currentTarget, e.target);
 
+    const finalize = () => {
+      if (sticky) {
+        // set context menu position to proper position
+        // set clicked target boundary
+        let rect = (stickRefTo?.current ?? e.target).getBoundingClientRect();
+        setClickedTargetBoundary({
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+        });
+      }
+      setContextMenuX(e.clientX);
+      setContextMenuY(e.clientY);
+
+      setVisibility(true);
+      recentActivatedElement.current = e.target;
+    };
+
     if (e.currentTarget != e.target) {
+      console.log(e.currentTarget, e.target);
+      // if ancestor of e.target is openerRef, just open context menu & make children as no pointer events
+      let foundOpener = false;
+      let parent = e.target.parentElement;
+      while (parent != null) {
+        if (parent == openerRef.current) {
+          foundOpener = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+
+      if (foundOpener) {
+        const children = openerRef.current.children;
+
+        // check if children has this context menu
+        // children that doesn't have this context would have "pointer-events: none"
+        for (let i = 0; i < children.length; i++) {
+          if (!children[i].classList.contains("context-menu")) {
+            children[i].style.pointerEvents = "none";
+          }
+        }
+
+        finalize();
+        return;
+      }
+
       // if ancestor of e.target is contextMenu, don't close context menu
       let foundContextMenu = false;
-      let parent = e.target.parentElement;
+      parent = e.target.parentElement;
       while (parent != null) {
         if (parent.classList.contains("context-menu")) {
           foundContextMenu = true;
@@ -138,22 +184,7 @@ export const useContextMenu = ({
         blurHandler();
       }
     } else {
-      if (sticky) {
-        // set context menu position to proper position
-        // set clicked target boundary
-        let rect = (stickRefTo?.current ?? e.target).getBoundingClientRect();
-        setClickedTargetBoundary({
-          left: rect.left,
-          right: rect.right,
-          top: rect.top,
-          bottom: rect.bottom,
-        });
-      }
-      setContextMenuX(e.clientX);
-      setContextMenuY(e.clientY);
-
-      setVisibility(true);
-      recentActivatedElement.current = e.target;
+      finalize();
     }
   };
 
@@ -178,16 +209,16 @@ export const useContextMenu = ({
   useEffect(() => {
     if (openerRef?.current != null) {
       const children = openerRef.current.children;
+
       // check if children has this context menu
       // children that doesn't have this context would have "pointer-events: none"
       for (let i = 0; i < children.length; i++) {
         if (!children[i].classList.contains("context-menu")) {
           children[i].style.pointerEvents = "none";
-        } else {
         }
       }
     }
-  }, [openerRef]);
+  }, [openerRef.current]);
 
   useEffect(() => {
     const onOutsideClick = (e) => {
@@ -203,7 +234,6 @@ export const useContextMenu = ({
           if (preventCloseIdList.includes(parent.id)) {
             return;
           }
-
           parent = parent.parentElement;
         }
         console.log("closed with outside handler");

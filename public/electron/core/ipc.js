@@ -1,10 +1,11 @@
 const { ipcMain, webContents, app, BrowserWindow, screen, remote, Menu, powerMonitor } = require("electron");
 const sha256 = require("sha256");
+const moment = require("moment");
 const WindowPropertyFactory = require("../objects/WindowPropertyFactory");
 const __IpcRouter__ = require("../objects/IpcRouter");
 const Window = require("./window");
 const Request = require("./request");
-const db = require("../modules/database").getContext();
+const db = require("../modules/sqlite3").getContext();
 const IpcRouter = new __IpcRouter__();
 const silentTopics = [];
 
@@ -40,11 +41,11 @@ const silentRegister = (topic, ...arg) => {
 };
 
 // send data with success flag
-const sender = (topic, reqId, success, data = null) => {
+const sender = (topic, reqId, success, data = null, ...extra) => {
   if (typeof success !== "boolean")
     console.error(`[IpcMain]: success flag is not boolean (${console.wrap(topic, console.MAGENTA)})`);
   let packagedData = { success, data };
-  let sendeeCount = IpcRouter.broadcast(topic, reqId, packagedData);
+  let sendeeCount = IpcRouter.broadcast(topic, reqId, packagedData, ...extra);
 
   if (silentTopics.includes(topic)) return;
   console.system(
@@ -416,8 +417,48 @@ register("task/updateTaskMemo", async (event, reqId, taskId, memo) => {
 
 register("task/updateTaskDone", async (event, reqId, taskId, done, doneAt) => {
   try {
-    let result = await db.run("UPDATE tasks SET done = ?, done_at = ? WHERE tid = ?", done, doneAt, taskId);
-    sender("task/updateTaskDone", reqId, true, result);
+    let task = await db.get("SELECT * FROM tasks WHERE tid = ? LIMIT 1", taskId);
+    if (task != null && task.repeat_period != null) {
+      let repeatStartAt = task.repeat_start_at ?? task.due_date;
+      let repeatPeriod = task.repeat_period;
+
+      // find next due date with period, just update due_date
+      const unitMap = {
+        day: "days",
+        week: "weeks",
+        month: "months",
+        year: "years",
+      };
+
+      let nextDueDate = null;
+      let repeatPeriodUnit = unitMap[repeatPeriod] ?? null;
+
+      if (repeatPeriodUnit != null) {
+        nextDueDate = moment(repeatStartAt);
+        while (nextDueDate.isBefore(moment()) || nextDueDate.isSameOrBefore(moment(task.due_date))) {
+          nextDueDate = moment(nextDueDate).add(1, repeatPeriodUnit);
+        }
+        nextDueDate = nextDueDate.valueOf();
+      } else {
+        throw new Error(`repeat period unit not found: (${repeatPeriodUnit})`);
+      }
+
+      if (nextDueDate != null) {
+        let result = await db.run(
+          "UPDATE tasks SET done = ?, done_at = ?, due_date = ? WHERE tid = ?",
+          false,
+          doneAt,
+          nextDueDate,
+          taskId
+        );
+        sender("task/updateTaskDone", reqId, true, result, true, nextDueDate);
+      } else {
+        throw new Error("nextDueDate is null");
+      }
+    } else {
+      let result = await db.run("UPDATE tasks SET done = ?, done_at = ? WHERE tid = ?", done, doneAt, taskId);
+      sender("task/updateTaskDone", reqId, true, result, false);
+    }
   } catch (err) {
     sender("task/updateTaskDone", reqId, false);
     throw err;

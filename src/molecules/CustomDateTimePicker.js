@@ -18,7 +18,7 @@ const DateTimePicker = ({ onSelect = () => {}, closer, visible, date, datePicker
   const [hovered, setHovered] = useState(false);
 
   // watching
-  const [watchingMonth, setWatchingMonth] = useState(new Date());
+  const [watchingMonth, setWatchingMonth] = useState(date ?? new Date());
   const prevMonthLastDate = useMemo(() => {
     return new Date(watchingMonth.getFullYear(), watchingMonth.getMonth(), 0);
   }, [watchingMonth]);

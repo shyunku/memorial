@@ -1,17 +1,5 @@
 /* ---------------------------------------- import ---------------------------------------- */
-const path = require("path");
-const {
-  ipcMain,
-  webContents,
-  app,
-  BrowserWindow,
-  screen,
-  remote,
-  Menu,
-  powerMonitor,
-  systemPreferences,
-  powerSaveBlocker,
-} = require("electron");
+const { app } = require("electron");
 const userDataPath = app.getPath("userData");
 const appDataPath = app.getAppPath();
 
@@ -30,7 +18,7 @@ const Updater = require("../modules/updater");
 const ArchCategory = require("../objects/ArchCategory.constants");
 const Util = require("../modules/util");
 const UpdaterFlag = Updater.UPDATER_RESULT_FLAG;
-const Database = require("../modules/database");
+const Database = require("../modules/sqlite3");
 const WindowPropertyFactory = require("../objects/WindowPropertyFactory");
 /* ---------------------------------------- Declaration ---------------------------------------- */
 /* -------------------- General -------------------- */
@@ -75,6 +63,8 @@ Database.initialize(isWindowsOS, buildLevel, userDataPath, appDataPath);
 /* ---------------------------------------- Main execute statements ---------------------------------------- */
 app.on("ready", async () => {
   try {
+    // database check & initialize
+
     if (isProdMode && checkUpdate) {
       const window = await Window.createUpdaterWindow(true);
       const { result: checkUpdateResult, data } = await Updater.checkForUpdates(osCategory);

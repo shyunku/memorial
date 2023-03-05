@@ -421,12 +421,17 @@ const TodoContent = () => {
 
   const onTaskDone = (tid, done) => {
     const now = new Date();
-    IpcSender.req.task.updateTaskDone(tid, done, now.getTime(), ({ success, data }) => {
+    IpcSender.req.task.updateTaskDone(tid, done, now.getTime(), ({ success, data }, isRepeated, newDueDate) => {
       if (success) {
         setTaskMap((taskMap) => {
           const task = taskMap[tid];
-          task.done = done;
-          task.doneAt = now;
+          if (isRepeated) {
+            task.done = false;
+            task.dueDate = new Date(newDueDate);
+          } else {
+            task.done = done;
+            task.doneAt = now;
+          }
           return { ...taskMap, [tid]: task };
         });
       } else {
@@ -526,7 +531,7 @@ const TodoContent = () => {
     });
   };
 
-  printf("taskMap", taskMap);
+  // printf("taskMap", taskMap);
 
   return (
     <div className="todo-content">
