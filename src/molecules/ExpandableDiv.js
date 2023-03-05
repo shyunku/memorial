@@ -14,6 +14,7 @@ const ExpandableDiv = ({
   const directionStyle = useMemo(() => {
     return direction === VERTICAL ? "height" : "width";
   }, [direction]);
+  const [trueHidden, setTrueHidden] = useState(expand);
 
   useEffect(() => {
     const observer = new MutationObserver((mutations) => {
@@ -44,6 +45,7 @@ const ExpandableDiv = ({
   }, [reference, expand, transition]);
 
   useEffect(() => {
+    if (expand) setTrueHidden(false);
     if (expand && reference.current?.style != null) {
       // expand
       // disable transition & calculate height/width
@@ -65,11 +67,14 @@ const ExpandableDiv = ({
   const onTransitionEnd = () => {
     // console.log("transition end");
     // reference.current.style[directionStyle] = "auto";
+    if (!expand) {
+      setTrueHidden(true);
+    }
   };
 
   return (
     <div ref={reference} className="collapsable-div" onTransitionEnd={onTransitionEnd} {...rest}>
-      {children}
+      {!trueHidden && children}
     </div>
   );
 };

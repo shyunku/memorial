@@ -1,9 +1,9 @@
 import LeftSidebar, { TODO_MENU_TYPE } from "components/LeftSidebar";
 import TopBar from "components/TopBar";
+import Toast from "molecules/Toast";
 import Category from "objects/Category";
 import React, { useEffect, useMemo, useState } from "react";
 import { Outlet, useOutlet } from "react-router-dom";
-import { printf } from "utils/Common";
 import IpcSender from "utils/IpcSender";
 
 import "./Home.layout.scss";
@@ -28,6 +28,7 @@ const HomeLayout = () => {
           return newCategories;
         });
       } else {
+        Toast.error("Failed to fetch data category list");
         console.error(`Failed to get category list`);
       }
     });

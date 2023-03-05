@@ -32,10 +32,8 @@ $std-text-color: rgb(128, 146, 184);
         color: rgba(105, 115, 139, 0.622);
 
         & > .title {
-          font-size: 12px;
-
-          font-weight: 700;
-
+          font-size: 13px;
+          font-weight: 900;
           flex: 1;
         }
 
@@ -81,10 +79,10 @@ $std-text-color: rgb(128, 146, 184);
         & > .todo-menu {
           display: flex;
           height: 30px;
-          padding: 5px 10px;
+          padding: 6px 10px;
           box-sizing: border-box;
           align-items: center;
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 300;
           border-radius: 5px;
           color: $std-text-color;
@@ -93,7 +91,7 @@ $std-text-color: rgb(128, 146, 184);
           cursor: pointer;
 
           &:not(:last-child) {
-            margin-bottom: 5px;
+            margin-bottom: 6px;
           }
 
           &:hover {
@@ -120,6 +118,8 @@ $std-text-color: rgb(128, 146, 184);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            // font-size: 15px;
+            font-weight: 400;
           }
 
           & > .delete-btn {

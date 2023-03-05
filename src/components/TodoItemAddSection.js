@@ -2,22 +2,25 @@ import JsxUtil from "utils/JsxUtil";
 import { useRef, useState } from "react";
 import Task from "objects/Task";
 import DueDateMenu from "molecules/DueDateMenu";
+import TaskRepeatMenu from "molecules/TaskRepeatMenu";
 
 const TodoItemAddSection = ({ onTaskAdd, category }) => {
   const [newTodoItemFocused, setNewTodoItemFocused] = useState(false);
   const [newTodoItemContent, setNewTodoItemContent] = useState("");
   const [newTodoItemDate, setNewTodoItemDate] = useState(null);
+  const [newTodoRepeatPeriod, setNewTodoRepeatPeriod] = useState(null);
 
   const onAddTodoItem = () => {
     if (newTodoItemContent.length == 0) return;
     const newTask = new Task(newTodoItemContent, newTodoItemDate);
-    console.log(category);
+    newTask.repeatPeriod = newTodoRepeatPeriod;
     if (category != null && category.default == false) {
       newTask.addCategory(category);
     }
     onTaskAdd(newTask);
     setNewTodoItemContent("");
     setNewTodoItemDate(null);
+    setNewTodoRepeatPeriod(null);
   };
 
   return (
@@ -43,6 +46,13 @@ const TodoItemAddSection = ({ onTaskAdd, category }) => {
         />
         <div className="options">
           <DueDateMenu date={newTodoItemDate} setDate={setNewTodoItemDate} />
+          {newTodoItemDate != null && (
+            <TaskRepeatMenu
+              date={newTodoItemDate}
+              curRepeat={newTodoRepeatPeriod}
+              onRepeatChange={setNewTodoRepeatPeriod}
+            />
+          )}
         </div>
       </div>
     </div>

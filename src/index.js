@@ -11,6 +11,7 @@ import reportWebVitals from "./reportWebVitals";
 
 // Import styles
 import "styles/reset.scss";
+import "styles/fonts.scss";
 import "styles/index.scss";
 import Toast from "molecules/Toast";
 import Prompt from "molecules/Prompt";

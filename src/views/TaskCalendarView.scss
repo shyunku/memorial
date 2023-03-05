@@ -1,3 +1,5 @@
+@import "styles/constants.scss";
+
 .task-view.calendar {
   display: flex;
   flex-direction: column;
@@ -13,6 +15,56 @@
       .current-year-month {
         font-size: 28px;
         font-weight: bold;
+        flex: 1;
+      }
+
+      .options {
+        display: flex;
+        align-items: center;
+
+        .option {
+          display: flex;
+          align-items: center;
+          border: 1px solid $std-btn-color;
+          color: $std-btn-label-color;
+          padding: 5px 8px;
+          border-radius: 3px;
+          box-sizing: border-box;
+          transition: 0.2s ease;
+          height: 100%;
+          cursor: pointer;
+
+          &:not(:last-child) {
+            margin-right: 10px;
+          }
+
+          &:hover,
+          &.selected {
+            color: $highlight-color;
+            border: 1px solid $highlight-color;
+          }
+
+          .icon-wrapper {
+            display: flex;
+            align-items: center;
+          }
+
+          .label {
+            font-size: 12px;
+          }
+
+          &.ltr {
+            .icon-wrapper {
+              margin-right: 5px;
+            }
+          }
+
+          &.rtl {
+            .icon-wrapper {
+              margin-left: 5px;
+            }
+          }
+        }
       }
     }
 
@@ -24,7 +76,7 @@
         display: flex;
         flex-direction: column;
         width: calc(100% / 7);
-        border: 1px solid rgb(41, 48, 61);
+
         box-sizing: border-box;
         background-color: rgb(14, 14, 15);
         transition: 0.2s ease;
@@ -38,14 +90,23 @@
           display: flex;
           justify-content: center;
           align-items: center;
-          height: 32px;
+          height: 36px;
           font-size: 15px;
           color: rgb(175, 188, 215);
           font-weight: bold;
-          background-color: rgb(35, 45, 59);
+          background-color: rgb(10, 11, 13);
+          border-bottom: 2px solid rgb(90, 105, 125);
+
+          &:not(:last-child) {
+            border-right: 1px solid rgb(30, 37, 48);
+          }
 
           &.sunday {
-            color: rgb(255, 110, 110);
+            color: $sunday-color;
+          }
+
+          &.saturday {
+            color: $saturday-color;
           }
         }
       }
@@ -56,27 +117,39 @@
         width: 100%;
 
         .day-cell {
-          height: 180px;
+          height: 170px;
           padding: 8px;
-
-          &:hover {
-            background-color: rgb(25, 31, 39);
-
-            .date {
-              color: white !important;
-            }
-          }
-
-          &.today {
-            .date {
-              background-color: rgb(121, 61, 61) !important;
-              color: white !important;
-            }
-          }
+          border: 1px solid rgb(31, 33, 37);
 
           &:not(.current-month) {
             background-color: rgb(24, 26, 29);
             // opacity: 0;
+          }
+
+          &:hover {
+            background-color: rgb(30, 33, 37);
+            // border: 1px solid rgb(95, 149, 255);
+
+            .date {
+              color: white !important;
+            }
+          }
+
+          &.sunday .date {
+            color: $sunday-color !important;
+          }
+
+          &.saturday .date {
+            color: $saturday-color !important;
+          }
+
+          &.today {
+            border: 2px solid rgb(176, 83, 83);
+
+            .date {
+              background-color: rgb(121, 61, 61) !important;
+              color: white !important;
+            }
           }
 
           .day-cell-header {
@@ -88,12 +161,11 @@
               justify-content: center;
               width: 25px !important;
               height: 25px !important;
-              //   border-radius: 50%;
               border-radius: 3px;
               font-size: 15px;
               color: rgb(152, 160, 173);
               transition: 0.2s ease;
-              background-color: rgba(255, 255, 255, 0.074);
+              font-weight: 400;
             }
           }
 
@@ -112,19 +184,20 @@
               border-radius: 3px;
               font-size: 13px;
               width: 100%;
+              font-weight: 500;
               box-sizing: border-box;
               cursor: pointer;
               transition: 0.2s ease;
 
               background-color: rgb(40, 41, 45);
-              color: rgb(106, 112, 120);
+              color: rgb(148, 160, 173);
 
               &:not(:last-child) {
-                margin-bottom: 10px;
+                margin-bottom: 6px;
               }
 
               &:hover {
-                background-color: rgb(52, 61, 78);
+                background-color: rgb(60, 67, 80);
                 color: white;
               }
 

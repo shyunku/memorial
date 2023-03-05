@@ -1,4 +1,4 @@
-.due-date-menu {
+.task-option-menu {
   $std-color: rgb(131, 145, 171);
   $highlight-color: rgb(79, 133, 226);
   $hover-highlight-color: rgb(131, 177, 255);
@@ -83,6 +83,10 @@
         &.delete {
           color: rgb(255, 44, 44);
         }
+      }
+
+      &.highlight {
+        color: $highlight-color;
       }
 
       &.delete {

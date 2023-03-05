@@ -4,7 +4,7 @@ import Mutatable from "./Mutatable";
 import Subtask from "./Subtask";
 
 class Task extends Mutatable {
-  constructor(title, dueDate) {
+  constructor(title, dueDate, repeatPeriod = null) {
     super({
       tid: "id",
       created_at: "createdAt",
@@ -14,6 +14,8 @@ class Task extends Mutatable {
       done: "done",
       done_at: "doneAt",
       categories: "categories",
+      repeat_period: "repeatPeriod",
+      repeat_start_at: "repeatStartAt",
     });
 
     this.id = v4();
@@ -26,6 +28,8 @@ class Task extends Mutatable {
     this.done = false;
     this.subtasks = {};
     this.categories = {};
+    this.repeatPeriod = repeatPeriod;
+    this.repeatStartAt = dueDate;
 
     this.next = null;
     this.prev = null;
@@ -50,7 +54,6 @@ class Task extends Mutatable {
   addCategory(category) {
     if (!(category instanceof Category)) {
       console.error("invalid category", category);
-      console.log(new Error());
       return;
     }
     this.categories[category.id] = category;

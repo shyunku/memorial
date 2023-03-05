@@ -203,12 +203,14 @@ register("task/addTask", async (event, reqId, task) => {
 
     try {
       let result = await db.run(
-        "INSERT INTO tasks (title, created_at, done_at, memo, done, due_date) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO tasks (title, created_at, done_at, memo, done, due_date, repeat_period, repeat_start_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         task.title,
         task.created_at,
         task.done_at,
         task.memo,
         task.done,
+        task.due_date,
+        task.repeat_period,
         task.due_date
       );
 
@@ -381,8 +383,21 @@ register("task/updateTaskTitle", async (event, reqId, taskId, title) => {
 
 register("task/updateTaskDueDate", async (event, reqId, taskId, dueDate) => {
   try {
-    let result = await db.run("UPDATE tasks SET due_date = ? WHERE tid = ?", dueDate, taskId);
-    sender("task/updateTaskDueDate", reqId, true, result);
+    await db.begin();
+
+    try {
+      if (dueDate == null) {
+        await db.run("UPDATE tasks SET repeat_period = NULL, repeat_start_at = NULL WHERE tid = ?", taskId);
+      } else {
+        await db.run("UPDATE tasks SET repeat_start_at = ? WHERE tid = ?", dueDate, taskId);
+      }
+      let result = await db.run("UPDATE tasks SET due_date = ? WHERE tid = ?", dueDate, taskId);
+      await db.commit();
+      sender("task/updateTaskDueDate", reqId, true, result);
+    } catch (err) {
+      await db.rollback();
+      throw err;
+    }
   } catch (err) {
     sender("task/updateTaskDueDate", reqId, false);
     throw err;
@@ -425,6 +440,39 @@ register("task/deleteTaskCategory", async (event, reqId, taskId, categoryId) => 
     sender("task/deleteTaskCategory", reqId, true, result);
   } catch (err) {
     sender("task/deleteTaskCategory", reqId, false);
+    throw err;
+  }
+});
+
+register("task/updateTaskRepeatPeriod", async (event, reqId, taskId, repeatPeriod) => {
+  try {
+    await db.begin();
+
+    let result;
+    try {
+      if (repeatPeriod == null) {
+        result = await db.run("UPDATE tasks SET repeat_period = NULL, repeat_start_at = NULL WHERE tid = ?", taskId);
+      } else {
+        let repeatStartAt = await db.get("SELECT repeat_start_at FROM tasks WHERE tid = ?", taskId);
+        if (repeatStartAt == null) {
+          repeatStartAt = await db.get("SELECT due_date FROM tasks WHERE tid = ?", taskId);
+          if (repeatStartAt != null) {
+            await db.run("UPDATE tasks SET repeat_start_at = ? WHERE tid = ?", repeatStartAt, taskId);
+          } else {
+            throw Error(`Trying to update repeat period of task that has no due date. (tid: ${taskId})`);
+          }
+        }
+        result = await db.run("UPDATE tasks SET repeat_period = ? WHERE tid = ?", repeatPeriod, taskId);
+      }
+
+      await db.commit();
+      sender("task/updateTaskRepeatPeriod", reqId, true, result);
+    } catch (err) {
+      await db.rollback();
+      throw err;
+    }
+  } catch (err) {
+    sender("task/updateTaskRepeatPeriod", reqId, false);
     throw err;
   }
 });

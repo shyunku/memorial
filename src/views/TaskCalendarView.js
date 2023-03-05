@@ -1,5 +1,6 @@
 import moment from "moment";
 import { useEffect, useMemo, useState } from "react";
+import { IoPlay, IoPlayBack, IoPlayForward } from "react-icons/io5";
 import { fastInterval } from "utils/Common";
 import JsxUtil from "utils/JsxUtil";
 import "./TaskCalendarView.scss";
@@ -42,11 +43,60 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
     }, 1000);
   }, []);
 
+  const onPrevYear = () => {
+    setWatchingMonth(new Date(watchingMonth.getFullYear() - 1, watchingMonth.getMonth(), 1));
+  };
+
+  const onPrevMonth = () => {
+    setWatchingMonth(new Date(watchingMonth.getFullYear(), watchingMonth.getMonth() - 1, 1));
+  };
+
+  const onCurrentMonth = () => {
+    setWatchingMonth(new Date());
+  };
+
+  const onNextMonth = () => {
+    setWatchingMonth(new Date(watchingMonth.getFullYear(), watchingMonth.getMonth() + 1, 1));
+  };
+
+  const onNextYear = () => {
+    setWatchingMonth(new Date(watchingMonth.getFullYear() + 1, watchingMonth.getMonth(), 1));
+  };
+
   return (
     <div className="task-view calendar">
       <div className="calendar-view">
         <div className="calendar-view-header">
-          <div className="current-year-month">2023년 3월</div>
+          <div className="current-year-month">{watchingMoment.format("YYYY년 M월")}</div>
+          <div className="options">
+            <div className="option ltr" onClick={onPrevYear}>
+              <div className="icon-wrapper">
+                <IoPlayBack />
+              </div>
+              <div className="label">지난 해</div>
+            </div>
+            <div className="option ltr" onClick={onPrevMonth}>
+              <div className="icon-wrapper">
+                <IoPlay style={{ transform: `rotate(180deg)` }} />
+              </div>
+              <div className="label">지난 달</div>
+            </div>
+            <div className="option" onClick={onCurrentMonth}>
+              <div className="label">현재</div>
+            </div>
+            <div className="option rtl" onClick={onNextMonth}>
+              <div className="label">다음 달</div>
+              <div className="icon-wrapper">
+                <IoPlay />
+              </div>
+            </div>
+            <div className="option rtl" onClick={onNextYear}>
+              <div className="label">다음 해</div>
+              <div className="icon-wrapper">
+                <IoPlayForward />
+              </div>
+            </div>
+          </div>
         </div>
         <div className="calendar-view-body">
           <div className="week-cells">
@@ -58,7 +108,8 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
                     className={
                       "week-cell cell" +
                       JsxUtil.classByCondition(hoveredDate?.getDay() == index, "focused") +
-                      JsxUtil.classByCondition(index == 0, "sunday")
+                      JsxUtil.classByCondition(index == 0, "sunday") +
+                      JsxUtil.classByCondition(index == 6, "saturday")
                     }
                     key={index}
                   >
@@ -75,7 +126,7 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
                   key={index}
                   year={watchingMoment.year()}
                   month={watchingMoment.month() - 1}
-                  day={moment(prevMonthLastDate).date() - curMonthFirstDay + index}
+                  day={moment(prevMonthLastDate).date() - curMonthFirstDay + index + 1}
                   currentMoment={currentMoment}
                   dateTaskMap={dateTaskMap}
                 />
@@ -114,9 +165,18 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
 };
 
 const DayCell = ({ currentMoment, year, month, day, dateTaskMap, currentMonth = false, ...rest }) => {
+  const cellDate = useMemo(() => {
+    return moment(new Date(year, month, day));
+  }, [year, month, day]);
   const isToday = useMemo(() => {
-    return currentMoment.date() === day && currentMoment.month() === month && currentMoment.year() === year;
-  }, [currentMoment, year, month, day]);
+    return cellDate.isSame(currentMoment, "day");
+  }, [cellDate]);
+  const isSunday = useMemo(() => {
+    return cellDate.day() == 0;
+  }, [cellDate]);
+  const isSaturday = useMemo(() => {
+    return cellDate.day() == 6;
+  }, [cellDate]);
 
   const dateKey = `${year}-${month + 1}-${day}`;
   const tasks = dateTaskMap[dateKey] || [];
@@ -126,7 +186,9 @@ const DayCell = ({ currentMoment, year, month, day, dateTaskMap, currentMonth = 
       className={
         "day-cell cell" +
         JsxUtil.classByCondition(isToday, "today") +
-        JsxUtil.classByCondition(currentMonth, "current-month")
+        JsxUtil.classByCondition(currentMonth, "current-month") +
+        JsxUtil.classByCondition(isSunday, "sunday") +
+        JsxUtil.classByCondition(isSaturday, "saturday")
       }
       {...rest}
     >

@@ -2,10 +2,10 @@ import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
 import DateTimePicker from "molecules/CustomDateTimePicker";
 import moment from "moment/moment";
 import { useEffect, useMemo, useState } from "react";
-import { IoCalendarOutline } from "react-icons/io5";
+import { IoCalendarClearOutline, IoCalendarOutline } from "react-icons/io5";
 import JsxUtil from "utils/JsxUtil";
 import { v4 } from "uuid";
-import "./DueDateMenu.scss";
+import "./TaskOptionMenu.scss";
 
 const DueDateMenu = ({ date, setDate, stickRefTo }) => {
   const [dateMenuId] = useState(`due_date_menu_${v4()}`);
@@ -23,16 +23,14 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
     <div
       ref={dueDateSettingCtx.openerRef}
       className={
-        "option due-date due-date-menu" +
+        "option due-date task-option-menu" +
         JsxUtil.classByCondition(date != null, "active") +
         JsxUtil.classByCondition(isOverDue, "overdue")
       }
       onClick={dueDateSettingCtx.opener}
     >
       <div className="visible">
-        <div className="icon-wrapper">
-          <IoCalendarOutline />
-        </div>
+        <div className="icon-wrapper">{date != null ? <IoCalendarOutline /> : <IoCalendarClearOutline />}</div>
         {date != null && <div className="summary">{moment(date).format("YY년 M월 D일 (ddd) A h시 mm분")}</div>}
       </div>
       <ContextMenu className={"menus"} reference={dueDateSettingCtx.ref} sticky={true}>

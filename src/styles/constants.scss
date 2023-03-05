@@ -2,6 +2,16 @@ $main-theme-color: #0c0d0e; // top bar
 $main-bg-color: #181818;
 $left-sidebar-color: #23252a;
 
+$std-btn-color: rgb(75, 84, 99);
+$std-btn-label-color: rgb(105, 116, 137);
+
+$std-color: rgb(131, 145, 171);
+$highlight-color: rgb(93, 152, 255);
+
+// calendar view
+$saturday-color: rgb(95, 149, 255);
+$sunday-color: rgb(255, 110, 110);
+
 $left-sidebar-width: 240px;
 
 $ease-out-elastic: cubic-bezier(0, 0.99, 0.57, 1.22);
@@ -23,27 +33,5 @@ $ease-out-elastic: cubic-bezier(0, 0.99, 0.57, 1.22);
   }
   to {
     opacity: 0;
-  }
-}
-
-@keyframes fade-in-centerX {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-45px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-@keyframes fade-out-centerX {
-  from {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(-50%) translateY(45px);
   }
 }

@@ -8,12 +8,11 @@ import TaskListView from "views/TaskListView";
 import JsxUtil from "utils/JsxUtil";
 import IpcSender from "utils/IpcSender";
 import Subtask from "objects/Subtask";
-import { fastInterval, printf } from "utils/Common";
 import moment from "moment";
 import Category from "objects/Category";
-import Toast from "molecules/Toast";
-import Prompt from "molecules/Prompt";
 import TaskCalendarView from "views/TaskCalendarView";
+import Toast from "molecules/Toast";
+import { printf } from "utils/Common";
 
 const TASK_VIEW_MODE = {
   LIST: "리스트",
@@ -166,7 +165,6 @@ const TodoContent = () => {
       IpcSender.req.task.getSubtaskList(({ success, data }) => {
         if (success) {
           setTaskMap((taskMap) => {
-            const newTaskmap = {};
             for (let i = 0; i < data.length; i++) {
               const subtaskEntity = data[i];
               const subtask = Subtask.fromEntity(subtaskEntity);
@@ -175,7 +173,7 @@ const TodoContent = () => {
                 taskMap[taskId].addSubtask(subtask);
               }
             }
-            return { ...taskMap, ...newTaskmap };
+            return { ...taskMap };
           });
           resolve();
         } else {
@@ -191,7 +189,6 @@ const TodoContent = () => {
       IpcSender.req.tasks_categories.getTasksCategoriesList(({ success, data }) => {
         if (success) {
           setTaskMap((taskMap) => {
-            const newTaskMap = {};
             for (let i = 0; i < data.length; i++) {
               const taskCategoryEntity = data[i];
               const taskId = taskCategoryEntity.tid;
@@ -201,7 +198,7 @@ const TodoContent = () => {
                 taskMap[taskId].addCategory(category);
               }
             }
-            return { ...taskMap, ...newTaskMap };
+            return { ...taskMap };
           });
           resolve();
         } else {
@@ -215,7 +212,6 @@ const TodoContent = () => {
   useEffect(() => {
     if (!categories) return;
     (async () => {
-      console.log(categories);
       await getTaskListSync();
       await getSubTaskListSync();
       await getTasksCategoriesListSync();
@@ -349,6 +345,12 @@ const TodoContent = () => {
         setTaskMap((taskMap) => {
           const task = taskMap[tid];
           task.dueDate = dueDate;
+          if (dueDate == null) {
+            task.repeatPeriod = null;
+            task.repeatStartAt = null;
+          } else {
+            task.repeatStartAt = dueDate;
+          }
           return { ...taskMap, [tid]: task };
         });
       } else {
@@ -395,6 +397,24 @@ const TodoContent = () => {
         });
       } else {
         console.error("failed to delete task category");
+      }
+    });
+  };
+
+  const onTaskRepeatChange = (tid, repeat) => {
+    IpcSender.req.task.updateTaskRepeatPeriod(tid, repeat, ({ success, data }) => {
+      if (success) {
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.repeatPeriod = repeat;
+          if (task.repeatStartAt == null) {
+            task.repeatStartAt = task.dueDate;
+          }
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        Toast.error("failed to update task repeat period");
+        console.error("failed to update task repeat period");
       }
     });
   };
@@ -506,7 +526,7 @@ const TodoContent = () => {
     });
   };
 
-  // printf("taskMap", taskMap);
+  printf("taskMap", taskMap);
 
   return (
     <div className="todo-content">
@@ -569,6 +589,7 @@ const TodoContent = () => {
               onTaskMemoChange={onTaskMemoChange}
               onTaskCategoryAdd={onTaskCategoryAdd}
               onTaskCategoryDelete={onTaskCategoryDelete}
+              onTaskRepeatChange={onTaskRepeatChange}
               onSubtaskAdded={onSubtaskAdded}
               onSubtaskDelete={onSubtaskDelete}
               onSubtaskTitleChange={onSubtaskTitleChange}

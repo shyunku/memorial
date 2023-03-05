@@ -14,6 +14,7 @@ import { VscChromeClose } from "react-icons/vsc";
 import { DraggableDiv, DraggableZone } from "molecules/Draggable";
 import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
 import TaskRemainTimer from "./TaskRemainTimer";
+import TaskRepeatMenu from "molecules/TaskRepeatMenu";
 
 const TodoItem = ({
   todo,
@@ -31,6 +32,7 @@ const TodoItem = ({
   onTaskCategoryAdd,
   onTaskCategoryDelete,
   onTaskDelete,
+  onTaskRepeatChange,
   onSubtaskAdded,
   onSubtaskTitleChange,
   onSubtaskDone,
@@ -64,7 +66,7 @@ const TodoItem = ({
     if (moment(todo.dueDate).isSame(moment(), "day")) return "오늘";
     if (moment(todo.dueDate).isSame(moment().add(1, "day"), "day")) return "내일";
     if (moment(todo.dueDate).isSame(moment().add(2, "day"), "day")) return "모레";
-    return moment(todo.dueDate).format("YY년 M월 D일");
+    return moment(todo.dueDate).format("YY.MM.DD");
   }, [JSON.stringify(todo.dueDate)]);
 
   const dueTimeText = useMemo(() => {
@@ -75,6 +77,15 @@ const TodoItem = ({
     if (dueMoment.minutes() === 0) return dueMoment.format(" A h시");
     return moment(todo.dueDate).format(" A h시 mm분");
   }, [JSON.stringify(todo.dueDate)]);
+
+  const repeatTimeText = useMemo(() => {
+    if (!todo.repeatStartAt) return "";
+    if (todo.repeatPeriod == "day") return `매일 ${moment(todo.repeatStartAt).format("A h시 mm분")}`;
+    if (todo.repeatPeriod == "week") return `매주 ${moment(todo.repeatStartAt).format("ddd요일")}`;
+    if (todo.repeatPeriod == "month") return `매월 ${moment(todo.repeatStartAt).format("D일")}`;
+    if (todo.repeatPeriod == "year") return `매년 ${moment(todo.repeatStartAt).format("M월 D일")}`;
+    return "";
+  }, [todo.repeatStartAt, todo.repeatPeriod]);
 
   const categoryTags = useMemo(() => {
     return Object.values(todo.categories);
@@ -197,10 +208,12 @@ const TodoItem = ({
         </div>
         <DraggableZone className="todo-item">
           {/* {linkedListTestJsx} */}
-          <div className="title">{todo.title}</div>
-          <div className={"due-date" + JsxUtil.classByCondition(todo.dueDate != null, "active")}>
-            {dueDateText}
-            {dueTimeText}
+          <div className="left-side">
+            <div className="title">{todo.title}</div>
+            <div className={"due-date" + JsxUtil.classByCondition(todo.dueDate != null, "active")}>
+              {dueDateText} {dueTimeText}
+              {todoCtx.repeatPeriod != null && todo.dueDate && ` (${repeatTimeText})`}
+            </div>
           </div>
           <SubTaskProgressBar
             overdue={isOverDue}
@@ -233,6 +246,13 @@ const TodoItem = ({
                     onTaskDueDateChange?.(todo.id, date);
                   }}
                 />
+                {todo.dueDate && (
+                  <TaskRepeatMenu
+                    curRepeat={todoCtx.repeatPeriod}
+                    date={todo.repeatStartAt}
+                    onRepeatChange={(rp) => onTaskRepeatChange?.(todo.id, rp)}
+                  />
+                )}
               </div>
             </div>
             <div className="section summary">

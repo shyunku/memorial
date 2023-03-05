@@ -121,6 +121,9 @@ const IpcSender = {
       deleteTaskCategory: (taskId, categoryId, callback) => {
         sender("task/deleteTaskCategory", callback, taskId, categoryId);
       },
+      updateTaskRepeatPeriod: (taskId, repeatPeriod, callback) => {
+        sender("task/updateTaskRepeatPeriod", callback, taskId, repeatPeriod);
+      },
       addSubtask: (subtask, taskId, callback) => {
         sender("task/addSubtask", callback, subtask, taskId);
       },
