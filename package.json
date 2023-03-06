@@ -5,8 +5,8 @@
   "homepage": "./",
   "private": true,
   "config": {
-    "react-port": 9300,
-    "scheme-version": 4
+    "react_port": 9300,
+    "scheme_version": 4
   },
   "dependencies": {
     "@electron/remote": "2.0.9",
@@ -43,11 +43,11 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "line-test": "echo %npm_package_config_react-port%",
-    "win-react": "set PORT=%npm_package_config_react-port% && set BROWSER=none&& npm start",
-    "mac-react": "PORT=$npm_package_config_react-port BROWSER=none npm start",
-    "win-electron": "set ELECTRON_START_URL=http://localhost:%npm_package_config_react-port% && set NODE_ENV=development && wait-on http://localhost:%npm_package_config_react-port% && electron .",
-    "mac-electron": "export ELECTRON_START_URL=http://localhost:$npm_package_config_react-port && export NODE_ENV=development && wait-on http://localhost:$npm_package_config_react-port && electron .",
+    "line-test": "echo %npm_package_config_react_port%",
+    "win-react": "set PORT=%npm_package_config_react_port% && set BROWSER=none&& npm start",
+    "mac-react": "PORT=$npm_package_config_react_port BROWSER=none npm start",
+    "win-electron": "set ELECTRON_START_URL=http://localhost:%npm_package_config_react_port% && set NODE_ENV=development && wait-on http://localhost:%npm_package_config_react_port% && electron .",
+    "mac-electron": "export ELECTRON_START_URL=http://localhost:$npm_package_config_react_port && export NODE_ENV=development && wait-on http://localhost:$npm_package_config_react_port && electron .",
     "win-all": "concurrently \"npm run win-react\" \"npm run win-electron\""
   },
   "eslintConfig": {

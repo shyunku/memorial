@@ -8,7 +8,7 @@ let db;
 
 module.exports = {
   initialize: function (isWindowsOS, buildLevel, userDataPath, appDataPath) {
-    let schemeVersion = "v" + packageJson.config["scheme-version"];
+    let schemeVersion = "v" + packageJson.config["scheme_version"];
     let datafileDirPath;
     let databaseDirPath;
     let databaseFilePath;
@@ -21,15 +21,30 @@ module.exports = {
           slashes: false,
         });
 
-        databaseTemplatePath = path.join(appDataPath, "public", "resources", "template.sqlite3");
+        databaseTemplatePath = path.join(
+          appDataPath,
+          "public",
+          "resources",
+          "template.sqlite3"
+        );
         break;
       case 1:
         datafileDirPath = path.join(userDataPath, "datafiles");
-        databaseTemplatePath = path.join(appDataPath, "build", "resources", "template.sqlite3");
+        databaseTemplatePath = path.join(
+          appDataPath,
+          "build",
+          "resources",
+          "template.sqlite3"
+        );
         break;
       case 2:
         datafileDirPath = path.join(userDataPath, "datafiles");
-        databaseTemplatePath = path.join(appDataPath, "../", "resources", "template.sqlite3");
+        databaseTemplatePath = path.join(
+          appDataPath,
+          "../",
+          "resources",
+          "template.sqlite3"
+        );
         break;
     }
 
@@ -49,7 +64,9 @@ module.exports = {
     }
 
     if (!fs.existsSync(databaseDirPath)) {
-      console.warn(`Database directory (${schemeVersion}) doesn't exists, newly create`);
+      console.warn(
+        `Database directory (${schemeVersion}) doesn't exists, newly create`
+      );
       fs.mkdirSync(databaseDirPath);
     }
 
@@ -108,15 +125,18 @@ module.exports = {
           db.run(query, params, function (err) {
             if (err) {
               console.system(
-                `IpcMain ${console.wrap(`X-[RES]--`, console.RED)} ${console.wrap(
-                  `sqlite3`,
+                `IpcMain ${console.wrap(
+                  `X-[RES]--`,
                   console.RED
-                )} Run failed: ${err}`
+                )} ${console.wrap(`sqlite3`, console.RED)} Run failed: ${err}`
               );
               reject(err);
             } else {
               console.system(
-                `IpcMain ${console.wrap(`<-[RES]--`, console.BLUE)} ${console.wrap(
+                `IpcMain ${console.wrap(
+                  `<-[RES]--`,
+                  console.BLUE
+                )} ${console.wrap(
                   `[${this.changes ?? "-"} row(s) affected]`,
                   console.GREEN
                 )}`
