@@ -3,6 +3,42 @@ import JsxUtil from "utils/JsxUtil";
 import { v4 } from "uuid";
 import "./CustomContextMenu.scss";
 
+/**
+ * If you want to make a context menu bundle as "button", with visible part & context menu,
+ * you have to seperate visible part & context menu. (same layer for two)
+ * Then, you can follow this steps.
+ *
+ * 1. Create context with using @function useContextMenu hook.
+ *    ex) const context = useContextMenu({ ... });
+ * 2. Add openerRef and opener function to visible part.
+ *    ex) <div ref={context.openerRef} onClick={context.opener}>...</div>
+ * 3. Add reference to context menu.
+ *    ex) <ContextMenu reference={context.ref}>...</ContextMenu>
+ * 4. Add closer function to somewhere else. (Optional)
+ *    ex) <div onClick={context.closer}>...</div>
+ *
+ * There are more options for context menu.
+ * 1. You can set sticky option to context menu. (default: false)
+ *    If you set sticky option to true, context menu will be shown sticky to visible part.
+ *      ex) <ContextMenu reference={context.ref} sticky={true}>...</ContextMenu>
+ *    You can also set sticky direction to it. (In this case, this option should be set with hook)
+ *      ex) const context = useContextMenu({ horizontal: true });
+ *    And Also you can set where context menu stick to. (default: visible part)
+ * 2. You can set onBlur function to context menu. (default: () => {})
+ *    If you set onBlur function to context menu, it will be called when context menu is closed.
+ * 3. You can set context menu position offset. (default: { offsetX: 5, offsetY: 5 })
+ *    Originally, context menu will be shown at the mouse position (if sticky option is disabled).
+ *    You can set offset to context menu position.
+ * 4. You can set preventCloseIdList to context menu. (default: [])
+ *    Context menu will not be closed when clicked on the element which has id in preventCloseIdList.
+ * 5. You can set clearInputsOnBlur to context menu. (default: false)
+ *    If enabled, Context menu will clear all inputs in it when context menu is closed.
+ *
+ * What you don't need to do (automatically processed)
+ * 1. Context menu will be closed when clicked outside of context menu.
+ * 2. Pointer events of non-context-menu child in openerRef will be disabled (to not interrupt click event for opener).
+ */
+
 export const DIRECTON = {
   LEFT: "left",
   RIGHT: "right",
@@ -51,6 +87,7 @@ export const useContextMenu = ({
   const [contextMenuX, setContextMenuX] = useState(0);
   const [contextMenuY, setContextMenuY] = useState(0);
   const [clickedTargetBoundary, setClickedTargetBoundary] = useState({});
+  const [contextMenuChanger, setContextMenuChanger] = useState(0);
 
   const openerRef = useRef();
   const contextMenuRef = useRef();
@@ -58,9 +95,12 @@ export const useContextMenu = ({
 
   const contextMenuObserver = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
+      setContextMenuChanger((prev) => prev + 1);
       if (mutation.attributeName === "class" && mutation.type === "attributes") {
         if (contextMenuRef.current.classList.contains("hide")) {
+          console.log("close by hider");
           setVisibility(false);
+          blurHandler();
         }
       }
     });
@@ -78,7 +118,7 @@ export const useContextMenu = ({
 
   const sticky = useMemo(() => {
     return contextMenuRef.current != null && contextMenuRef.current.getAttribute("sticky") == "true";
-  }, [contextMenuRef.current]);
+  }, [contextMenuRef.current, contextMenuChanger]);
 
   const layer = useMemo(() => {
     let contextMenuLayer = 0;
@@ -139,8 +179,9 @@ export const useContextMenu = ({
 
       if (foundOpener) {
         const children = openerRef.current.children;
+        let foundNonContextMenu = false;
 
-        // check if children has this context menu
+        // check if children of openerRef has this context menu
         // children that doesn't have this context would have "pointer-events: none"
         for (let i = 0; i < children.length; i++) {
           if (!children[i].classList.contains("context-menu")) {
@@ -148,6 +189,7 @@ export const useContextMenu = ({
           }
         }
 
+        console.log("opened with in-openerRef handler", openerRef.current);
         finalize();
         return;
       }
@@ -184,6 +226,7 @@ export const useContextMenu = ({
         blurHandler();
       }
     } else {
+      console.log("opened with exact target click handler");
       finalize();
     }
   };
@@ -203,6 +246,7 @@ export const useContextMenu = ({
       parent = parent.parentElement;
     }
 
+    console.log("close by closer");
     setVisibility(false);
   };
 
@@ -257,9 +301,7 @@ export const useContextMenu = ({
       let midY = height / 2;
 
       // initialize
-      for (let dir of Object.values(DIRECTON)) {
-        contextMenuRef.current.style[dir] = null;
-      }
+      for (let dir of Object.values(DIRECTON)) contextMenuRef.current.style[dir] = null;
 
       let targetZindexRaw = recentActivatedElement.current
         ? window.getComputedStyle(recentActivatedElement.current).getPropertyValue("z-index")
@@ -269,7 +311,6 @@ export const useContextMenu = ({
 
       let horiz = contextMenuX < midX ? ["left", contextMenuX + offsetX] : ["right", width - contextMenuX + offsetX];
       let verti = contextMenuY < midY ? ["top", contextMenuY + offsetY] : ["bottom", height - contextMenuY + offsetY];
-
       let verticalInd = contextMenuY < midY ? 1 : -1;
 
       contextMenuRef.current.style.transition = "none";

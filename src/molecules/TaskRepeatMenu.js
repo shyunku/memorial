@@ -35,12 +35,8 @@ const TaskRepeatMenu = ({ date, curRepeat, onRepeatChange, stickRefTo }) => {
   }, [date, curRepeat]);
 
   return (
-    <div
-      ref={taskRepeatMenuCtx.openerRef}
-      className={"option task-option-menu" + JsxUtil.classByCondition(curRepeat != null, "active")}
-      onClick={taskRepeatMenuCtx.opener}
-    >
-      <div className="visible">
+    <div className={"option task-option-menu" + JsxUtil.classByCondition(curRepeat != null, "active")}>
+      <div className="visible" ref={taskRepeatMenuCtx.openerRef} onClick={taskRepeatMenuCtx.opener}>
         <div className="icon-wrapper">
           <IoRepeatOutline />
         </div>

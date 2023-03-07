@@ -20,95 +20,100 @@ const DueDateMenu = ({ date, setDate, stickRefTo }) => {
   }, [JSON.stringify(date)]);
 
   return (
-    <div
-      ref={dueDateSettingCtx.openerRef}
-      className={
-        "option due-date task-option-menu" +
-        JsxUtil.classByCondition(date != null, "active") +
-        JsxUtil.classByCondition(isOverDue, "overdue")
-      }
-      onClick={dueDateSettingCtx.opener}
-    >
-      <div className="visible">
-        <div className="icon-wrapper">{date != null ? <IoCalendarOutline /> : <IoCalendarClearOutline />}</div>
-        {date != null && <div className="summary">{moment(date).format("YY년 M월 D일 (ddd) A h시 mm분")}</div>}
+    <>
+      <div
+        className={
+          "option due-date task-option-menu" +
+          JsxUtil.classByCondition(date != null, "active") +
+          JsxUtil.classByCondition(isOverDue, "overdue")
+        }
+      >
+        <div className="visible" ref={dueDateSettingCtx.openerRef} onClick={dueDateSettingCtx.opener}>
+          <div className="icon-wrapper">{date != null ? <IoCalendarOutline /> : <IoCalendarClearOutline />}</div>
+          {date != null && <div className="summary">{moment(date).format("YY년 M월 D일 (ddd) A h시 mm분")}</div>}
+        </div>
+        <ContextMenu className={"menus"} reference={dueDateSettingCtx.ref} sticky={true}>
+          <div
+            className="menu-option"
+            onClick={(e) => {
+              setDate(moment().endOf("day").hours(23).minutes(59).seconds(59).toDate());
+              dueDateSettingCtx.closer();
+            }}
+          >
+            오늘로 설정
+          </div>
+          <div
+            className="menu-option"
+            onClick={(e) => {
+              setDate(moment().add(1, "days").hours(23).minutes(59).seconds(59).toDate());
+              dueDateSettingCtx.closer();
+            }}
+          >
+            내일로 설정
+          </div>
+          <div className="spliter"></div>
+          {date != null && (
+            <>
+              <div
+                className="menu-option"
+                onClick={(e) => {
+                  setDate(moment(date).add(1, "days").toDate());
+                  dueDateSettingCtx.closer();
+                }}
+              >
+                하루 미루기
+              </div>
+              <div
+                className="menu-option"
+                onClick={(e) => {
+                  setDate(moment(date).add(1, "weeks").toDate());
+                  dueDateSettingCtx.closer();
+                }}
+              >
+                일주일 미루기
+              </div>
+              <div className="spliter"></div>
+            </>
+          )}
+          <div
+            id="set_custom_date_for_new_todo"
+            ref={datePickerCtx.openerRef}
+            className="menu-option"
+            onClick={(e) => datePickerCtx.opener(e)}
+          >
+            직접 설정
+          </div>
+          {date != null && (
+            <>
+              <div className="spliter"></div>
+              <div
+                className="menu-option delete"
+                onClick={(e) => {
+                  setDate(null);
+                  dueDateSettingCtx.closer();
+                }}
+              >
+                기한 제거
+              </div>
+            </>
+          )}
+        </ContextMenu>
+        <DateTimePicker
+          id={dateMenuId}
+          autoclose="false"
+          datePickerRef={datePickerCtx.ref}
+          date={date}
+          closer={(...arg) => {
+            dueDateSettingCtx.closer(...arg);
+            datePickerCtx.closer(...arg);
+          }}
+          onSelect={(e) => {
+            setDate(new Date(e));
+            // datePickerCtx.closer();
+          }}
+        />
       </div>
-      <ContextMenu className={"menus"} reference={dueDateSettingCtx.ref} sticky={true}>
-        <div
-          className="menu-option"
-          onClick={(e) => {
-            setDate(moment().endOf("day").hours(23).minutes(59).seconds(59).toDate());
-            dueDateSettingCtx.closer();
-          }}
-        >
-          오늘로 설정
-        </div>
-        <div
-          className="menu-option"
-          onClick={(e) => {
-            setDate(moment().add(1, "days").hours(23).minutes(59).seconds(59).toDate());
-            dueDateSettingCtx.closer();
-          }}
-        >
-          내일로 설정
-        </div>
-        <div className="spliter"></div>
-        {date != null && (
-          <>
-            <div
-              className="menu-option"
-              onClick={(e) => {
-                setDate(moment(date).add(1, "days").toDate());
-                dueDateSettingCtx.closer();
-              }}
-            >
-              하루 미루기
-            </div>
-            <div
-              className="menu-option"
-              onClick={(e) => {
-                setDate(moment(date).add(1, "weeks").toDate());
-                dueDateSettingCtx.closer();
-              }}
-            >
-              일주일 미루기
-            </div>
-            <div className="spliter"></div>
-          </>
-        )}
-        <div id="set_custom_date_for_new_todo" className="menu-option" onClick={(e) => datePickerCtx.opener(e)}>
-          직접 설정
-        </div>
-        {date != null && (
-          <>
-            <div className="spliter"></div>
-            <div
-              className="menu-option delete"
-              onClick={(e) => {
-                setDate(null);
-                dueDateSettingCtx.closer();
-              }}
-            >
-              기한 제거
-            </div>
-          </>
-        )}
-      </ContextMenu>
-      <DateTimePicker
-        id={dateMenuId}
-        autoclose="false"
-        datePickerRef={datePickerCtx.ref}
-        date={date}
-        closer={(...arg) => {
-          dueDateSettingCtx.closer(...arg);
-          datePickerCtx.closer(...arg);
-        }}
-        onSelect={(e) => {
-          setDate(new Date(e));
-          // datePickerCtx.closer();
-        }}
-      />
-    </div>
+    </>
   );
 };
 

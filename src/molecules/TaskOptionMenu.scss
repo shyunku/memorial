@@ -29,8 +29,10 @@
     align-items: center;
     justify-content: center;
     color: rgba($std-color, 0.5);
+    padding: 0 15px;
+    cursor: pointer;
 
-    & * {
+    & > * {
       pointer-events: none;
     }
 
