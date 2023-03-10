@@ -190,10 +190,10 @@ const LeftSidebar = ({
       <div className="account-section">
         <ProfileImage />
         <div className="profile-summary">
-          <div className="email">whdudgns7321@gmail.com</div>
-          <div className="status synchronizing">
+          <div className="email">%UserEMail%</div>
+          <div className="status synchronized">
             <div className="status-dot"></div>
-            <div className="status-text">동기화 중...</div>
+            <div className="status-text">동기화 완료</div>
           </div>
         </div>
       </div>

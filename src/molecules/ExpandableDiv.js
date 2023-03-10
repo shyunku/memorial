@@ -5,7 +5,7 @@ export const HORIZONTAL = "horizontal";
 
 const ExpandableDiv = ({
   children,
-  expand = true,
+  expand = false,
   direction = VERTICAL,
   transition = 500,
   reference = null,
@@ -14,7 +14,7 @@ const ExpandableDiv = ({
   const directionStyle = useMemo(() => {
     return direction === VERTICAL ? "height" : "width";
   }, [direction]);
-  const [trueHidden, setTrueHidden] = useState(expand);
+  const [trueHidden, setTrueHidden] = useState(!expand);
 
   useEffect(() => {
     const observer = new MutationObserver((mutations) => {

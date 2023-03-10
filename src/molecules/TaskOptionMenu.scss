@@ -8,10 +8,18 @@
   &.active > .visible,
   &:hover > .visible {
     color: $highlight-color !important;
+
+    &.without-form {
+      background-color: rgba(79, 133, 226, 0.134) !important;
+    }
   }
 
   &.overdue > .visible {
     color: rgb(206, 69, 69) !important;
+
+    &.without-form {
+      background-color: rgba(206, 69, 69, 0.134) !important;
+    }
   }
 
   & > *:not(.context-menu) {
@@ -28,12 +36,24 @@
     height: 100%;
     align-items: center;
     justify-content: center;
-    color: rgba($std-color, 0.5);
+    color: rgba($std-color, 0.7);
     padding: 0 15px;
     cursor: pointer;
 
     & > * {
       pointer-events: none;
+    }
+
+    &.without-form {
+      padding: 0;
+      background-color: rgba(160, 160, 160, 0.09);
+      padding: 5px 10px;
+      box-sizing: border-box;
+      border-radius: 3px;
+
+      &:hover {
+        background-color: rgba(160, 160, 160, 0.17);
+      }
     }
 
     .icon-wrapper {

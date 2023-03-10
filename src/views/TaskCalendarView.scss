@@ -8,6 +8,39 @@
     display: flex;
     flex-direction: column;
 
+    @media screen and (max-width: 1300px) {
+      .calendar-view-header {
+        flex-direction: column;
+        & > *:not(:last-child) {
+          margin-bottom: 15px;
+        }
+      }
+      .week-cells {
+        display: none !important;
+      }
+      .day-cell:not(.current-month) {
+        display: none !important;
+      }
+      .day-cells {
+        flex-direction: column;
+
+        .cell {
+          flex-direction: row !important;
+          width: 100% !important;
+          height: auto !important;
+
+          .tasks {
+            margin-top: 0 !important;
+            margin-left: 10px;
+
+            .remain-time {
+              display: flex !important;
+            }
+          }
+        }
+      }
+    }
+
     .calendar-view-header {
       display: flex;
       margin-bottom: 25px;
@@ -127,8 +160,8 @@
           }
 
           &:hover {
-            background-color: rgb(30, 33, 37);
-            // border: 1px solid rgb(95, 149, 255);
+            // background-color: rgb(0, 0, 0);
+            border: 1px solid rgb(84, 101, 137);
 
             .date {
               color: white !important;
@@ -169,6 +202,22 @@
             }
           }
 
+          @media screen and (max-width: 1920px) and (min-width: 1300px) {
+            .task {
+              .subtasks {
+                display: none;
+              }
+            }
+          }
+
+          @media screen and (max-width: 1400px) and (min-width: 1300px) {
+            .task {
+              .remain-time {
+                display: none !important;
+              }
+            }
+          }
+
           .tasks {
             display: flex;
             flex-direction: column;
@@ -189,7 +238,7 @@
               cursor: pointer;
               transition: 0.2s ease;
 
-              background-color: rgb(40, 41, 45);
+              background-color: rgb(37, 38, 42);
               color: rgb(148, 160, 173);
 
               &:not(:last-child) {
@@ -201,16 +250,29 @@
                 color: white;
               }
 
+              &.done {
+                opacity: 0.3;
+              }
+
               .title {
-                flex: 1;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
               }
 
               .subtasks {
-                margin-left: 8px;
+                margin-left: 5px;
                 color: rgb(112, 147, 212);
+              }
+
+              .remain-time {
+                display: flex;
+                flex: 1;
+                justify-content: flex-end;
+                color: rgb(109, 134, 175);
+                font-weight: 300;
+                margin-left: 10px;
+                font-size: 12px;
               }
             }
           }

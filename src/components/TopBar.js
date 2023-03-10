@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { VscChromeClose, VscChromeMaximize, VscChromeMinimize, VscChromeRestore, VscGear } from "react-icons/vsc";
 import IpcSender from "utils/IpcSender";
 import "./TopBar.scss";
+import PackageJson from "../../package.json";
 
 const TopBar = () => {
   const [maximized, setMaximized] = useState(false);
@@ -46,7 +47,7 @@ const TopBar = () => {
   return (
     <div className="component top-bar">
       <div className="drag-section"></div>
-      <div className="title">Memorial</div>
+      <div className="title">Memorial - {PackageJson.version}v</div>
       <div className="menu-section">
         <div className="menu-item" onClick={null}>
           <VscGear />

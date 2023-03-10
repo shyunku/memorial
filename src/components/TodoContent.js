@@ -540,7 +540,7 @@ const TodoContent = () => {
           {category?.title ?? "-"} ({Object.keys(filteredTaskMap).length})
         </div>
         <div className="metadata">
-          <div className="last-modified">마지막 수정: 5 분전</div>
+          <div className="last-modified">마지막 수정: -</div>
         </div>
         <div className="options">
           <div className="view-modes">

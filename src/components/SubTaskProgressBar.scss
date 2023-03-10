@@ -8,7 +8,7 @@
   $overdue-color: rgb(183, 66, 66);
   $overdue-text-color: rgb(239, 88, 88);
 
-  &.overdue {
+  &.overdue:not(.done) {
     .subtask-circle.fulfilled {
       background-color: $overdue-color !important;
     }

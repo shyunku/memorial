@@ -1,4 +1,17 @@
 .task-view.list {
+  min-width: 500px;
+
+  @media screen and (max-width: 1300px) {
+    .todo-item {
+      .remain-time {
+        margin-right: 0 !important;
+      }
+      .subtask-progress-bar-wrapper {
+        display: none;
+      }
+    }
+  }
+
   & > .todo-item-groups {
     display: flex;
     flex-direction: column;

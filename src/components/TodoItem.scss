@@ -62,11 +62,18 @@
     .todo-item {
       background-color: rgb(57, 34, 34) !important;
 
-      & > .title {
-        color: rgb(211, 84, 84) !important;
+      .left-side {
+        & > .title {
+          color: rgb(211, 84, 84) !important;
+        }
+        & > .due-date {
+          color: rgb(187, 78, 78) !important;
+        }
       }
-      & > .due-date {
-        color: rgb(187, 78, 78) !important;
+      .right-side {
+        .remain-time {
+          color: rgb(176, 106, 106) !important;
+        }
       }
     }
 
@@ -132,6 +139,7 @@
           color: $task-title-color;
           font-size: 16px;
           font-weight: 300;
+          white-space: nowrap;
         }
 
         & > .due-date {
@@ -142,10 +150,27 @@
           color: rgba(0, 0, 0, 0);
           transition: 0.15s linear;
           margin-right: 5px;
+          white-space: nowrap;
 
           &.active {
             color: rgb(78, 133, 237);
           }
+        }
+      }
+
+      & > .right-side {
+        display: flex;
+        align-items: center;
+
+        & > *:not(:last-child) {
+          margin-right: 15px;
+        }
+
+        .remain-time {
+          font-size: 13px;
+          // font-weight: 200;
+          white-space: nowrap;
+          color: rgb(100, 123, 163);
         }
       }
     }

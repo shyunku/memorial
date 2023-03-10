@@ -12,11 +12,20 @@ const TaskRemainTimer = ({ dueDate }) => {
     return remain;
   }, [dueDate, counter]);
 
+  const remainTimeText = useMemo(() => {
+    if (dueDate == null) {
+      return "미정";
+    }
+    return fromRelativeTime(remainMilliSeconds < 0 ? -remainMilliSeconds : remainMilliSeconds, {
+      showLayerCount: null,
+    });
+  }, [dueDate, counter]);
+
   useEffect(() => {
     if (dueDate != null) {
       const counterId = fastInterval(() => {
         setCounter((c) => c + 1);
-      }, 50);
+      }, 500);
 
       return () => {
         clearInterval(counterId);
@@ -27,9 +36,7 @@ const TaskRemainTimer = ({ dueDate }) => {
   return (
     <div className={"remain-time" + JsxUtil.classByCondition(remainMilliSeconds < 0, "overdue")}>
       <div className="label">{dueDate != null && remainMilliSeconds < 0 ? "지난" : "남은"} 시간</div>
-      <div className={"value" + JsxUtil.classByCondition(dueDate != null, "active")}>
-        {dueDate != null ? fromRelativeTime(remainMilliSeconds < 0 ? -remainMilliSeconds : remainMilliSeconds) : "미정"}
-      </div>
+      <div className={"value" + JsxUtil.classByCondition(dueDate != null, "active")}>{remainTimeText}</div>
     </div>
   );
 };

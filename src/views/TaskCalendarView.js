@@ -1,7 +1,7 @@
 import moment from "moment";
 import { useEffect, useMemo, useState } from "react";
 import { IoPlay, IoPlayBack, IoPlayForward } from "react-icons/io5";
-import { fastInterval } from "utils/Common";
+import { fastInterval, fromRelativeTime } from "utils/Common";
 import JsxUtil from "utils/JsxUtil";
 import "./TaskCalendarView.scss";
 
@@ -181,6 +181,19 @@ const DayCell = ({ currentMoment, year, month, day, dateTaskMap, currentMonth = 
   const dateKey = `${year}-${month + 1}-${day}`;
   const tasks = dateTaskMap[dateKey] || [];
 
+  const sortedTasks = useMemo(() => {
+    return tasks.sort((a, b) => {
+      if (a.done && !b.done) return 1;
+      if (!a.done && b.done) return -1;
+
+      const aMoment = moment(a.dueDate);
+      const bMoment = moment(b.dueDate);
+      if (aMoment.isBefore(bMoment)) return -1;
+      if (aMoment.isAfter(bMoment)) return 1;
+      return 0;
+    });
+  }, [tasks]);
+
   return (
     <div
       className={
@@ -196,20 +209,63 @@ const DayCell = ({ currentMoment, year, month, day, dateTaskMap, currentMonth = 
         <div className="date">{day}</div>
       </div>
       <div className="tasks">
-        {tasks.map((task) => {
-          const subtasks = Object.values(task.subtasks ?? {});
-          return (
-            <div className="task" key={task.id}>
-              <div className="title">{task.title}</div>
-              {subtasks.length > 0 && (
-                <div className="subtasks">
-                  ({task.getFulfilledSubTaskCount()}/{subtasks.length})
-                </div>
-              )}
-            </div>
-          );
+        {sortedTasks.map((task) => {
+          return <TaskCell task={task} key={task.id} />;
         })}
       </div>
+    </div>
+  );
+};
+
+const TaskCell = ({ task }) => {
+  const [counter, setCounter] = useState(0);
+
+  const dueDate = useMemo(() => {
+    if (task.dueDate == null) return null;
+    return moment(task.dueDate).toDate();
+  }, [task.date]);
+
+  const subtasks = useMemo(() => {
+    return Object.values(task.subtasks ?? {});
+  });
+
+  const remainMilliSeconds = useMemo(() => {
+    if (dueDate == null) {
+      return null;
+    }
+    const remain = dueDate.valueOf() - Date.now();
+    return remain;
+  }, [dueDate, counter]);
+
+  const remainTimeText = useMemo(() => {
+    if (dueDate == null) {
+      return "미정";
+    }
+    return fromRelativeTime(remainMilliSeconds < 0 ? -remainMilliSeconds : remainMilliSeconds, {
+      showLayerCount: 1,
+    });
+  }, [dueDate, counter]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCounter((c) => c + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className={"task" + JsxUtil.classByCondition(task.done, "done")} key={task.id}>
+      <div className="title">{task.title}</div>
+      {subtasks.length > 0 && (
+        <div className="subtasks">
+          ({task.getFulfilledSubTaskCount()}/{subtasks.length})
+        </div>
+      )}
+      {dueDate != null && !task.done && remainMilliSeconds != null && (
+        <div className="remain-time">
+          {remainTimeText} {remainMilliSeconds < 0 ? "지남" : "남음"}
+        </div>
+      )}
     </div>
   );
 };

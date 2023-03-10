@@ -15,6 +15,7 @@ import { DraggableDiv, DraggableZone } from "molecules/Draggable";
 import { ContextMenu, useContextMenu } from "molecules/CustomContextMenu";
 import TaskRemainTimer from "./TaskRemainTimer";
 import TaskRepeatMenu from "molecules/TaskRepeatMenu";
+import { fastInterval, fromRelativeTime } from "utils/Common";
 
 const TodoItem = ({
   todo,
@@ -43,6 +44,8 @@ const TodoItem = ({
   const expandableRef = useRef();
   const titleRef = useRef();
   const memoRef = useRef();
+
+  const [timeCounter, setTimeCounter] = useState(0);
 
   const [editedTitle, setEditedTitle] = useState(todo.title);
   const [editedMemo, setEditedMemo] = useState(todo.memo);
@@ -73,7 +76,7 @@ const TodoItem = ({
     if (!todo.dueDate) return "";
     const dueMoment = moment(todo.dueDate);
     if (dueMoment.hours() === 23 && dueMoment.minutes() === 59) return " 자정 전";
-    if (dueMoment.hours() === 0 && dueMoment.minutes() === 0) return " 새벽 12시";
+    if (dueMoment.hours() === 0 && dueMoment.minutes() === 0) return " 새벽 0시";
     if (dueMoment.minutes() === 0) return dueMoment.format(" A h시");
     return moment(todo.dueDate).format(" A h시 mm분");
   }, [JSON.stringify(todo.dueDate)]);
@@ -87,13 +90,26 @@ const TodoItem = ({
     return "";
   }, [todo.repeatStartAt, todo.repeatPeriod]);
 
+  const remainTimeMilli = useMemo(() => {
+    if (!todo.dueDate) return null;
+    const dueMoment = moment(todo.dueDate);
+    const nowMoment = moment();
+    const diff = dueMoment.diff(nowMoment);
+    return diff;
+  }, [JSON.stringify(todo.dueDate), timeCounter]);
+
+  const remainTimeText = useMemo(() => {
+    if (remainTimeMilli == null) return "";
+    return fromRelativeTime(remainTimeMilli < 0 ? -remainTimeMilli : remainTimeMilli, { showLayerCount: 3 });
+  }, [remainTimeMilli]);
+
   const categoryTags = useMemo(() => {
     return Object.values(todo.categories);
   }, [JSON.stringify(todo.categories)]);
   const isOverDue = useMemo(() => {
     if (!todo.dueDate) return false;
     return moment(todo.dueDate).isBefore(moment());
-  }, [JSON.stringify(todo.dueDate)]);
+  }, [JSON.stringify(todo.dueDate), timeCounter]);
 
   const todoCtx = Task.fromObject(todo);
   const subtaskMap = useMemo(() => {
@@ -115,6 +131,13 @@ const TodoItem = ({
       console.error(`todo is not an instance of Task: ${todo}`);
       return;
     }
+    const timeCounterThread = fastInterval(() => {
+      setTimeCounter((timeCounter) => timeCounter + 1);
+    }, 1000);
+
+    return () => {
+      clearInterval(timeCounterThread);
+    };
   }, []);
 
   useEffect(() => {
@@ -210,23 +233,32 @@ const TodoItem = ({
           {/* {linkedListTestJsx} */}
           <div className="left-side">
             <div className="title">{todo.title}</div>
-            <div className={"due-date" + JsxUtil.classByCondition(todo.dueDate != null, "active")}>
-              {dueDateText} {dueTimeText}
-              {todoCtx.repeatPeriod != null && todo.dueDate && ` (${repeatTimeText})`}
-            </div>
+            {todo.dueDate != null && (
+              <div className={"due-date" + JsxUtil.classByCondition(todo.dueDate != null, "active")}>
+                {dueDateText} {dueTimeText}
+                {todoCtx.repeatPeriod != null && todo.dueDate && ` (${repeatTimeText})`}
+              </div>
+            )}
           </div>
-          <SubTaskProgressBar
-            overdue={isOverDue}
-            total={todo.getSubTaskCount()}
-            fulfilled={todo.getFulfilledSubTaskCount()}
-            done={todo.done}
-            doneHandler={(done) => {
-              onTaskDone?.(todo.id, done);
-              setImmediate(() => {
-                blurHandler?.();
-              }, 0);
-            }}
-          />
+          <div className="right-side">
+            {remainTimeMilli != null && (
+              <div className="remain-time">
+                {remainTimeText} {remainTimeMilli < 0 ? "지남" : "남음"}
+              </div>
+            )}
+            <SubTaskProgressBar
+              overdue={isOverDue}
+              total={todo.getSubTaskCount()}
+              fulfilled={todo.getFulfilledSubTaskCount()}
+              done={todo.done}
+              doneHandler={(done) => {
+                onTaskDone?.(todo.id, done);
+                setImmediate(() => {
+                  blurHandler?.();
+                }, 0);
+              }}
+            />
+          </div>
         </DraggableZone>
         <ExpandableDiv reference={expandableRef} expand={selected} className={"expandable-options"} transition={350}>
           <div className="options-wrapper">
@@ -241,6 +273,7 @@ const TodoItem = ({
               ></input>
               <div className="options">
                 <DueDateMenu
+                  withoutForm={true}
                   date={todo.dueDate}
                   setDate={(date) => {
                     onTaskDueDateChange?.(todo.id, date);
@@ -248,6 +281,7 @@ const TodoItem = ({
                 />
                 {todo.dueDate && (
                   <TaskRepeatMenu
+                    withoutForm={true}
                     curRepeat={todoCtx.repeatPeriod}
                     date={todo.repeatStartAt}
                     onRepeatChange={(rp) => onTaskRepeatChange?.(todo.id, rp)}

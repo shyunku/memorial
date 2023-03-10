@@ -13,7 +13,7 @@ const REPEAT_TYPES = {
   year: "매년",
 };
 
-const TaskRepeatMenu = ({ date, curRepeat, onRepeatChange, stickRefTo }) => {
+const TaskRepeatMenu = ({ date, curRepeat, onRepeatChange, stickRefTo, withoutForm }) => {
   const [taskRepeatMenuId] = useState(`task_repeat_menu_${v4()}`);
   const taskRepeatMenuCtx = useContextMenu({
     preventCloseIdList: [taskRepeatMenuId],
@@ -36,7 +36,11 @@ const TaskRepeatMenu = ({ date, curRepeat, onRepeatChange, stickRefTo }) => {
 
   return (
     <div className={"option task-option-menu" + JsxUtil.classByCondition(curRepeat != null, "active")}>
-      <div className="visible" ref={taskRepeatMenuCtx.openerRef} onClick={taskRepeatMenuCtx.opener}>
+      <div
+        className={"visible" + JsxUtil.classByCondition(withoutForm, "without-form")}
+        ref={taskRepeatMenuCtx.openerRef}
+        onClick={taskRepeatMenuCtx.opener}
+      >
         <div className="icon-wrapper">
           <IoRepeatOutline />
         </div>

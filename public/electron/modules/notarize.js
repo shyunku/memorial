@@ -1,6 +1,7 @@
 const { notarize } = require("electron-notarize");
 const dotenv = require("dotenv");
 const path = require("path");
+const PackageJson = require("../../../package.json");
 
 dotenv.config({ path: path.resolve(__dirname, "../config/.env") });
 
@@ -14,7 +15,7 @@ module.exports = async function _notarize(context) {
   const appName = context.packager.appInfo.productFilename;
 
   return await notarize({
-    appBundleId: "com.ejoy.memorial",
+    appBundleId: PackageJson.build.appId,
     appPath: `${appOutDir}/${appName}.app`,
     appleId: process.env.APPLE_ID,
     appleIdPassword: process.env.APPLE_PW,
