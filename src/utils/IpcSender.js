@@ -84,6 +84,9 @@ const IpcSender = {
     getComputerIdleTime: () => {
       sender("system/computer_idle_time");
     },
+    sendWebviewLoadDoneSignal: (webviewId) => {
+      sender("system/sendWebviewLoadDoneSignal", null, webviewId);
+    },
   },
   req: {
     task: {

@@ -1,13 +1,27 @@
-const { ipcMain, webContents, app, BrowserWindow, screen, remote, Menu, powerMonitor } = require("electron");
+const {
+  ipcMain,
+  webContents,
+  app,
+  BrowserWindow,
+  screen,
+  remote,
+  Menu,
+  powerMonitor,
+  session,
+  shell,
+} = require("electron");
 const sha256 = require("sha256");
 const moment = require("moment");
 const WindowPropertyFactory = require("../objects/WindowPropertyFactory");
 const __IpcRouter__ = require("../objects/IpcRouter");
 const Window = require("./window");
 const Request = require("./request");
-const db = require("../modules/sqlite3").getContext();
 const IpcRouter = new __IpcRouter__();
 const silentTopics = [];
+
+const rootDB = require("../modules/sqlite3").getRootContext();
+let db = null;
+// let db = require("../modules/sqlite3").getContext();
 
 const reqIdTag = (reqId) => {
   return reqId ? `[${reqId.substr(0, 3)}]` : "";
@@ -160,6 +174,8 @@ register("system/computer_idle_time", (event, reqId) => {
   const idleTime = powerMonitor.getSystemIdleTime();
   emiter("system/computer_idle_time", reqId, idleTime);
 });
+
+register("system/sendWebviewLoadDoneSignal", (event, reqId, webviewId) => {});
 
 register("__callback__", (event, reqId, topic, data) => {
   IpcRouter.broadcast(topic, data);

@@ -1,7 +1,5 @@
 /* ---------------------------------------- import ---------------------------------------- */
 const { app } = require("electron");
-const userDataPath = app.getPath("userData");
-const appDataPath = app.getAppPath();
 
 /**
  * Flag that indicates whether current process context is on build mode.
@@ -9,6 +7,7 @@ const appDataPath = app.getAppPath();
  * Otherwise, this will be false.
  */
 const isBuildMode = !process.env.ELECTRON_START_URL;
+const appDataPath = app.getAppPath();
 
 const PreloadResult = require("../modules/preload").all(isBuildMode, appDataPath);
 const Ipc = require("./ipc");
@@ -20,6 +19,8 @@ const Util = require("../modules/util");
 const UpdaterFlag = Updater.UPDATER_RESULT_FLAG;
 const Database = require("../modules/sqlite3");
 const WindowPropertyFactory = require("../objects/WindowPropertyFactory");
+const FileSystem = require("../modules/filesystem");
+const Session = require("./session");
 /* ---------------------------------------- Declaration ---------------------------------------- */
 /* -------------------- General -------------------- */
 // Main context window of process
@@ -29,23 +30,21 @@ let mainWindow;
  * Flag that indicates whether this process context is on production mode.
  * Only deployed version of program should have this value as true, otherwise this will be false.
  */
-let isProdMode;
-let buildLevel = 0;
+process.env.NODE_ENV =
+  process.env.NODE_ENV && process.env.NODE_ENV.trim().toLowerCase() == "development" ? "development" : "production";
+let isProdMode = process.env.NODE_ENV === "production";
+let buildLevel = isProdMode + isBuildMode;
 
 const osCategory = Util.getSystemArchCategory();
 const osLabel = Util.getSystemArchitectureLabel();
 
 const isWindowsOS = osCategory === ArchCategory.Windows;
 const isMacOS = osCategory === ArchCategory.MacOS;
+const userDataPath = FileSystem.getUserDataPath(buildLevel);
 
 const checkUpdate = true;
 
 /* ---------------------------------------- Pre-execute statements ---------------------------------------- */
-process.env.NODE_ENV =
-  process.env.NODE_ENV && process.env.NODE_ENV.trim().toLowerCase() == "development" ? "development" : "production";
-isProdMode = process.env.NODE_ENV === "production";
-buildLevel = isProdMode + isBuildMode;
-
 Ipc.setSockets(Socket.socket);
 Socket.setIpc(Ipc);
 Updater.setIpc(Ipc);
@@ -58,7 +57,7 @@ console.debug(`[Build Mode] ${isBuildMode}`);
 console.debug(`[AppData Path] ${appDataPath}`);
 console.debug(`[UserData Path] ${userDataPath}`);
 
-Database.initialize(isWindowsOS, buildLevel, userDataPath, appDataPath);
+Database.initializeRoot(buildLevel, userDataPath);
 
 /* ---------------------------------------- Main execute statements ---------------------------------------- */
 app.on("ready", async () => {
@@ -95,7 +94,16 @@ app.on("ready", async () => {
     // powerSaveBlocker.start('prevent-app-suspension');
     // app.commandLine.appendSwitch('webrtc-max-cpu-consumption-percentage', '100');
 
+    // initialize session
+    Session.initialize();
+
     mainWindow = Window.createMainWindow();
+
+    // make login window non-resizable
+    mainWindow.setResizable(false);
+    mainWindow.setFullScreenable(false);
+    mainWindow.setSize(1280, 960);
+
     Window.setWindowStateChangeListener(mainWindow, Ipc);
   } catch (err) {
     console.error(err);

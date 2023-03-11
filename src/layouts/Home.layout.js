@@ -54,17 +54,14 @@ const HomeLayout = () => {
 
   return (
     <div className="home-layout">
-      <TopBar />
-      <div className="home-layout__content">
-        <LeftSidebar
-          setSelectedTodoMenuType={setSelectedTodoMenuType}
-          selectedTodoMenuType={selectedTodoMenuType}
-          categories={categories ?? {}}
-          onCategoryAdd={onCategoryAdd}
-          onCategoryDelete={onCategoryDelete}
-        />
-        <Outlet context={{ selectedTodoMenuType, category: selectedCategory, categories }} />
-      </div>
+      <LeftSidebar
+        setSelectedTodoMenuType={setSelectedTodoMenuType}
+        selectedTodoMenuType={selectedTodoMenuType}
+        categories={categories ?? {}}
+        onCategoryAdd={onCategoryAdd}
+        onCategoryDelete={onCategoryDelete}
+      />
+      <Outlet context={{ selectedTodoMenuType, category: selectedCategory, categories }} />
     </div>
   );
 };

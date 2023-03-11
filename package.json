@@ -1,12 +1,14 @@
 {
   "name": "memorial",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "main": "public/electron/core/main.js",
   "homepage": "./",
   "private": true,
   "config": {
     "react_port": 9300,
-    "scheme_version": 4
+    "scheme_version": 1,
+    "root_scheme_version": 1,
+    "app_server_endpoint": "http://localhost:4033"
   },
   "dependencies": {
     "@electron/remote": "2.0.9",
