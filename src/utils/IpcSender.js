@@ -3,6 +3,7 @@ import { colorize } from "./Common";
 const electron = window.require("electron");
 const { ipcRenderer } = electron;
 const remote = window.require("@electron/remote");
+const DISABLE_SENDER_LOG = true;
 
 const subscribed = {
   "system/subscribe": {},
@@ -25,6 +26,12 @@ const senderSync = (topic, ...arg) => {
 const sender = (topic, callback, ...arg) => {
   autoSubscribe(topic);
   const sendId = uuid.v4();
+  if (!DISABLE_SENDER_LOG && topic !== "system/subscribe") {
+    console.log(
+      `IpcRenderer --> ${colorize.yellow(`[${sendId?.substring(0, 3) ?? "unknown"}]`)} ${colorize.magenta(topic)}`,
+      ...arg
+    );
+  }
   let listener = IpcSender.on(topic, (reqId, ...result) => {
     if (reqId !== sendId) return;
     IpcSender.off(topic, listener);
@@ -84,11 +91,27 @@ const IpcSender = {
     getComputerIdleTime: () => {
       sender("system/computer_idle_time");
     },
-    sendWebviewLoadDoneSignal: (webviewId) => {
-      sender("system/sendWebviewLoadDoneSignal", null, webviewId);
-    },
   },
   req: {
+    system: {
+      setAsHomeWindow: (callback) => {
+        sender("system/setAsHomeWindow", callback);
+      },
+      setAsLoginWindow: (callback) => {
+        sender("system/setAsLoginWindow", callback);
+      },
+    },
+    auth: {
+      sendGoogleOauthResult: (result, callback) => {
+        sender("auth/sendGoogleOauthResult", callback, result);
+      },
+      isDatabaseReady: (userId, callback) => {
+        sender("auth/isDatabaseReady", callback, userId);
+      },
+      initializeDatabase: (userId, callback) => {
+        sender("auth/initializeDatabase", callback, userId);
+      },
+    },
     task: {
       getTaskList: (callback) => {
         sender("task/getAllTaskList", callback);

@@ -15,6 +15,7 @@ import "styles/fonts.scss";
 import "styles/index.scss";
 import Toast from "molecules/Toast";
 import Prompt from "molecules/Prompt";
+import Loading from "molecules/Loading";
 
 const store = configureStore({
   reducer: rootReducer,
@@ -28,6 +29,7 @@ root.render(
     <PersistGate loading={null} persistor={persistor}>
       <Prompt.Prompt />
       <Toast.Toaster />
+      <Loading.Loading />
       <MainRouter />
       <AxiosMiddleware />
     </PersistGate>

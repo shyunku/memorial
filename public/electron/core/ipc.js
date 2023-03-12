@@ -16,12 +16,25 @@ const WindowPropertyFactory = require("../objects/WindowPropertyFactory");
 const __IpcRouter__ = require("../objects/IpcRouter");
 const Window = require("./window");
 const Request = require("./request");
+const crypto = require("crypto");
 const IpcRouter = new __IpcRouter__();
 const silentTopics = [];
 
-const rootDB = require("../modules/sqlite3").getRootContext();
+/**
+ * @type {import("../modules/sqlite3")}
+ */
+let databaseContext = null;
+
+/**
+ * @type {import("sqlite3").Database}
+ */
+let rootDB = null;
 let db = null;
-// let db = require("../modules/sqlite3").getContext();
+
+/**
+ * @type {BrowserWindow}
+ */
+let mainWindow = null;
 
 const reqIdTag = (reqId) => {
   return reqId ? `[${reqId.substr(0, 3)}]` : "";
@@ -175,13 +188,96 @@ register("system/computer_idle_time", (event, reqId) => {
   emiter("system/computer_idle_time", reqId, idleTime);
 });
 
-register("system/sendWebviewLoadDoneSignal", (event, reqId, webviewId) => {});
-
 register("__callback__", (event, reqId, topic, data) => {
   IpcRouter.broadcast(topic, data);
 });
 
 /* ---------------------------------------- Custom ---------------------------------------- */
+register("system/setAsHomeWindow", (event, reqId) => {
+  try {
+    // make home window resizable
+    mainWindow.setResizable(true);
+    mainWindow.setFullScreenable(true);
+    // mainWindow.setSize(1280, 960);
+    sender("system/setAsHomeWindow", reqId, true);
+  } catch (err) {
+    sender("system/setAsHomeWindow", reqId, false, err);
+    throw err;
+  }
+});
+
+register("system/setAsLoginWindow", (event, reqId) => {
+  try {
+    // make login window non-resizable
+    mainWindow.setResizable(false);
+    mainWindow.setFullScreenable(false);
+    mainWindow.setSize(1280, 960);
+    sender("system/setAsLoginWindow", reqId, true);
+  } catch (err) {
+    sender("system/setAsLoginWindow", reqId, false, err);
+    throw err;
+  }
+});
+
+register("auth/sendGoogleOauthResult", async (event, reqId, data) => {
+  try {
+    let { auth, user } = data;
+    let { access_token, refresh_token, expired_at } = auth;
+    let { auth_id, uid, google_auth_id, google_email } = user;
+
+    // check if user exists already
+    let isSignupNeeded = false;
+    let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", uid);
+    if (users.length === 0) {
+      // newly created user
+      isSignupNeeded = true;
+      // need to create secret key to encrypt/decrypt data
+      const newSecret = crypto.randomBytes(32).toString("hex");
+      await rootDB.run(
+        "INSERT INTO users (uid, auth_id, google_auth_id, google_email, secret_key) VALUES (?, ?, ?, ?, ?);",
+        [uid, auth_id, google_auth_id, google_email, newSecret]
+      );
+
+      // create database for user
+      db = await databaseContext.initialize(uid);
+    } else {
+      let [user] = users;
+      isSignupNeeded = user.auth_id == null || user.auth_encrypted_pw == null;
+      // no need to create user
+      db = await databaseContext.getContext(uid);
+    }
+
+    // reply
+    sender("auth/sendGoogleOauthResult", reqId, true, {
+      isSignupNeeded,
+    });
+  } catch (err) {
+    sender("auth/sendGoogleOauthResult", reqId, false);
+    throw err;
+  }
+});
+
+register("auth/isDatabaseReady", async (event, reqId, userId) => {
+  try {
+    let ready = await databaseContext.isReadyForOperateUser(userId);
+    sender("auth/isDatabaseReady", reqId, true, ready);
+  } catch (err) {
+    sender("auth/isDatabaseReady", reqId, false);
+    throw err;
+  }
+});
+
+register("auth/initializeDatabase", async (event, reqId, userId) => {
+  try {
+    await databaseContext.initialize(userId);
+    db = await databaseContext.getContext(userId);
+    sender("auth/initializeDatabase", reqId, true);
+  } catch (err) {
+    sender("auth/initializeDatabase", reqId, false);
+    throw err;
+  }
+});
+
 register("task/getAllTaskList", async (event, reqId) => {
   try {
     let tasks = await db.all("SELECT * FROM tasks;");
@@ -697,5 +793,12 @@ module.exports = {
   silentRegister,
   setSockets: (socket_) => {
     socket = socket_;
+  },
+  setDatabaseContext: (db_) => {
+    databaseContext = db_;
+    rootDB = databaseContext.getRootContext();
+  },
+  setMainWindow: (mainWindow_) => {
+    mainWindow = mainWindow_;
   },
 };

@@ -57,12 +57,18 @@ console.debug(`[Build Mode] ${isBuildMode}`);
 console.debug(`[AppData Path] ${appDataPath}`);
 console.debug(`[UserData Path] ${userDataPath}`);
 
-Database.initializeRoot(buildLevel, userDataPath);
+Database.setSystemInfo(buildLevel, userDataPath);
+Database.initializeRoot();
+
+Ipc.setDatabaseContext(Database);
 
 /* ---------------------------------------- Main execute statements ---------------------------------------- */
 app.on("ready", async () => {
   try {
     // database check & initialize
+
+    // listen for default electron events
+    listenForDefaultElectronEvents();
 
     if (isProdMode && checkUpdate) {
       // const window = await Window.createUpdaterWindow(true);
@@ -99,11 +105,7 @@ app.on("ready", async () => {
 
     mainWindow = Window.createMainWindow();
 
-    // make login window non-resizable
-    mainWindow.setResizable(false);
-    mainWindow.setFullScreenable(false);
-    mainWindow.setSize(1280, 960);
-
+    Ipc.setMainWindow(mainWindow);
     Window.setWindowStateChangeListener(mainWindow, Ipc);
   } catch (err) {
     console.error(err);
@@ -111,3 +113,10 @@ app.on("ready", async () => {
     throw err;
   }
 });
+
+function listenForDefaultElectronEvents() {
+  app.on("browser-window-created", (e, window) => {
+    if (mainWindow == null || window.id === mainWindow.id) return;
+    window.setMenu(null);
+  });
+}

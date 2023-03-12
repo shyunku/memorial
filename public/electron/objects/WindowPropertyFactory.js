@@ -9,7 +9,7 @@ class WindowPropertyFactory {
         nodeIntegrationInWorker: true,
         enableRemoteModule: true,
         webviewTag: true,
-        webSecurity: false,
+        webSecurity: true,
         devTools: true,
         spellcheck: false,
         contextIsolation: false,
@@ -87,6 +87,10 @@ class WindowPropertyFactory {
 
   backgroundThrottling = (backgroundThrottling) => {
     return this.setProperty("backgroundThrottling", backgroundThrottling);
+  };
+
+  partition = (partition) => {
+    return this.setProperty("partition", partition);
   };
 
   windowType = (modalType) => {

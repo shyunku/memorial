@@ -116,12 +116,12 @@ const Prompt = () => {
         <div className="buttons">
           {options.confirmBtn && (
             <div className="button confirm" onClick={onConfirm}>
-              확인
+              {options.confirmText}
             </div>
           )}
           {options.cancelBtn && (
             <div className="button" onClick={onCancel}>
-              취소
+              {options.cancelText}
             </div>
           )}
         </div>

@@ -3,8 +3,15 @@ import { VscChromeClose, VscChromeMaximize, VscChromeMinimize, VscChromeRestore,
 import IpcSender from "utils/IpcSender";
 import "./TopBar.scss";
 import PackageJson from "../../package.json";
+import { IoLogOutOutline } from "react-icons/io5";
+import Prompt from "molecules/Prompt";
+import { useDispatch } from "react-redux";
+import { removeAccount, removeAuth } from "store/accountSlice";
+import { useNavigate } from "react-router-dom";
 
 const TopBar = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [maximized, setMaximized] = useState(false);
 
   const minimize = () => {
@@ -21,6 +28,19 @@ const TopBar = () => {
 
   const close = () => {
     IpcSender.system.closeWindow();
+  };
+
+  const logout = () => {
+    Prompt.float("로그아웃", "정말 로그아웃 하시겠습니까?", {
+      confirmText: "로그아웃",
+      cancelText: "취소",
+      onConfirm: () => {
+        dispatch(removeAuth());
+        dispatch(removeAccount());
+        navigate("/login");
+      },
+      onCancel: () => {},
+    });
   };
 
   useEffect(() => {
@@ -49,6 +69,9 @@ const TopBar = () => {
       <div className="drag-section"></div>
       <div className="title">Memorial - {PackageJson.version}v</div>
       <div className="menu-section">
+        <div className="menu-item" onClick={logout}>
+          <IoLogOutOutline />
+        </div>
         <div className="menu-item" onClick={null}>
           <VscGear />
         </div>

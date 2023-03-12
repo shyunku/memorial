@@ -36,8 +36,8 @@
   border-radius: 3px;
   overflow: hidden;
   padding: 25px 30px;
-  min-width: 400px;
-  color: rgb(145, 165, 194);
+  min-width: 360px;
+  color: rgb(169, 188, 217);
 
   opacity: 0;
   transform: translateX(-50%) translateY(-30px) scale(0.95);
@@ -46,16 +46,17 @@
   box-shadow: 0 0 20px 5px rgba(0, 0, 0, 0.448);
 
   .title {
-    font-size: 20px;
-    font-weight: bold;
+    font-size: 21px;
+    font-weight: 700;
     margin-bottom: 25px;
   }
 
   .contents {
     display: flex;
     flex-direction: column;
-    font-size: 13px;
-    color: rgb(103, 117, 137);
+    font-size: 14px;
+    // font-weight: 900;
+    color: rgb(141, 161, 188);
 
     .content {
       &:not(:last-child) {

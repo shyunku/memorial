@@ -9,7 +9,15 @@ let currentDatabaseUserId = null;
 let db = null;
 let rootDB = null;
 
-function initializeRoot(buildLevel, userDataPath) {
+let buildLevel = null;
+let userDataPath = null;
+
+function setSystemInfo(_buildLevel, _userDataPath) {
+  buildLevel = _buildLevel;
+  userDataPath = _userDataPath;
+}
+
+function initializeRoot() {
   console.info("Initializing Root Database...");
 
   const appResourcePath = FileSystem.getAppResourcesPath(buildLevel);
@@ -47,7 +55,10 @@ function initializeRoot(buildLevel, userDataPath) {
   });
 }
 
-function initialize(buildLevel, userDataPath, userId) {
+async function initialize(userId) {
+  if (userId == null) throw new Error("User ID is not valid.");
+  console.info("Initializing User Database... [User ID: " + userId + "]");
+
   const appResourcePath = FileSystem.getAppResourcesPath(buildLevel);
   const schemeVersion = "v" + packageJson.config["scheme_version"];
 
@@ -59,7 +70,7 @@ function initialize(buildLevel, userDataPath, userId) {
   let datafileDirPath = path.join(userDataPath, "datafiles");
 
   let databaseDirPath = path.join(datafileDirPath, schemeVersion);
-  let databaseFileName = `user-${uid}.sqlite3`;
+  let databaseFileName = `user-${userId}.sqlite3`;
   let databaseFilePath = path.join(databaseDirPath, databaseFileName);
   let databaseTemplatePath = path.join(appResourcePath, "template.sqlite3");
 
@@ -88,18 +99,23 @@ function initialize(buildLevel, userDataPath, userId) {
   }
 
   currentDatabaseUserId = userId;
-  db = new sqlite3.Database(databaseFilePath, (err) => {
-    if (err) {
-      console.error(`Error occurred while opening database`);
-      console.error(err);
-      return;
-    }
 
-    // Process doesn't wait while database writer changes transactions (if level = OFF)
-    db.run("PRAGMA synchronous = OFF;");
-    db.run("PRAGMA foreign_keys = ON;");
-    db.run("PRAGMA check_constraints = ON;");
-    console.info(`Database successfully connected.`);
+  return new Promise((resolve, reject) => {
+    db = new sqlite3.Database(databaseFilePath, (err) => {
+      if (err) {
+        console.error(`Error occurred while opening database`);
+        console.error(err);
+        reject(err);
+        return;
+      }
+
+      // Process doesn't wait while database writer changes transactions (if level = OFF)
+      db.run("PRAGMA synchronous = OFF;");
+      db.run("PRAGMA foreign_keys = ON;");
+      db.run("PRAGMA check_constraints = ON;");
+      console.info(`Database successfully connected.`);
+      resolve(db);
+    });
   });
 }
 
@@ -107,8 +123,39 @@ function getRootConnection() {
   return rootDB;
 }
 
-function getConnection() {
-  return db;
+async function getConnection(userId) {
+  if (userId != currentDatabaseUserId) {
+    if (db != null) db.close();
+    db = null;
+    currentDatabaseUserId = null;
+  }
+
+  if (db == null) {
+    const schemeVersion = "v" + packageJson.config["scheme_version"];
+    let datafileDirPath = path.join(userDataPath, "datafiles");
+    let databaseDirPath = path.join(datafileDirPath, schemeVersion);
+    let databaseFileName = `user-${userId}.sqlite3`;
+    let databaseFilePath = path.join(databaseDirPath, databaseFileName);
+
+    return new Promise((resolve, reject) => {
+      db = new sqlite3.Database(databaseFilePath, (err) => {
+        if (err) {
+          console.error(`Error occurred while opening database`);
+          console.error(err);
+          reject(err);
+          return;
+        }
+
+        db.run("PRAGMA synchronous = OFF;");
+        db.run("PRAGMA foreign_keys = ON;");
+        db.run("PRAGMA check_constraints = ON;");
+        console.info(`Database successfully connected.`);
+        resolve(db);
+      });
+    });
+  } else {
+    return db;
+  }
 }
 
 function _get(_db, query, ...args) {
@@ -211,12 +258,17 @@ module.exports = {
     commit: () => _commit(rootDB),
     rollback: () => _rollback(rootDB),
   }),
-  getContext: () => ({
-    get: (query, ...args) => _get(db, query, ...args),
-    run: (query, ...args) => _run(db, query, ...args),
-    all: (query, ...args) => _all(db, query, ...args),
-    begin: () => _begin(db),
-    commit: () => _commit(db),
-    rollback: () => _rollback(db),
-  }),
+  getContext: async () => {
+    if (db == null) await getConnection();
+    return {
+      get: (query, ...args) => _get(db, query, ...args),
+      run: (query, ...args) => _run(db, query, ...args),
+      all: (query, ...args) => _all(db, query, ...args),
+      begin: () => _begin(db),
+      commit: () => _commit(db),
+      rollback: () => _rollback(db),
+    };
+  },
+  isReadyForOperateUser: (userId) => db != null && currentDatabaseUserId == userId,
+  setSystemInfo,
 };
