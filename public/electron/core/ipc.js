@@ -17,8 +17,14 @@ const __IpcRouter__ = require("../objects/IpcRouter");
 const Window = require("./window");
 const Request = require("./request");
 const crypto = require("crypto");
+const { default: axios } = require("axios");
 const IpcRouter = new __IpcRouter__();
 const silentTopics = [];
+const PackageJson = require("../../../package.json");
+
+const appServerEndpoint = PackageJson.config.app_server_endpoint;
+const appServerApiVersion = PackageJson.config.app_server_api_version;
+const appServerFinalEndpoint = `${appServerEndpoint}/${appServerApiVersion}`;
 
 /**
  * @type {import("../modules/sqlite3")}
@@ -223,7 +229,7 @@ register("auth/sendGoogleOauthResult", async (event, reqId, data) => {
   try {
     let { auth, user } = data;
     let { access_token, refresh_token, expired_at } = auth;
-    let { auth_id, uid, google_auth_id, google_email } = user;
+    let { auth_id, uid, google_auth_id, google_email, google_profile_image_url } = user;
 
     // check if user exists already
     let isSignupNeeded = false;
@@ -234,8 +240,8 @@ register("auth/sendGoogleOauthResult", async (event, reqId, data) => {
       // need to create secret key to encrypt/decrypt data
       const newSecret = crypto.randomBytes(32).toString("hex");
       await rootDB.run(
-        "INSERT INTO users (uid, auth_id, google_auth_id, google_email, secret_key) VALUES (?, ?, ?, ?, ?);",
-        [uid, auth_id, google_auth_id, google_email, newSecret]
+        "INSERT INTO users (uid, google_auth_id, google_email, google_profile_image_url, secret_key) VALUES (?, ?, ?, ?, ?);",
+        [uid, google_auth_id, google_email, google_profile_image_url, newSecret]
       );
 
       // create database for user
@@ -274,6 +280,41 @@ register("auth/initializeDatabase", async (event, reqId, userId) => {
     sender("auth/initializeDatabase", reqId, true);
   } catch (err) {
     sender("auth/initializeDatabase", reqId, false);
+    throw err;
+  }
+});
+
+register("auth/signUpWithGoogleAuth", async (event, reqId, signupRequest) => {
+  try {
+    // first update user info to local db
+    // check if user exists already in local db
+    let users = await rootDB.all("SELECT * FROM users WHERE google_auth_id = ?;", signupRequest.googleAuthId);
+    if (users.length === 0) {
+      sender("auth/signUpWithGoogleAuth", reqId, false, "NOT_FOUND_IN_LOCAL");
+      return;
+    }
+
+    // update
+    await rootDB.run("UPDATE users SET auth_id = ?, auth_encrypted_pw = ? WHERE google_auth_id = ?;", [
+      signupRequest.authId,
+      signupRequest.encryptedPassword,
+      signupRequest.googleAuthId,
+    ]);
+
+    Request.post(appServerFinalEndpoint, "/google_auth/signup", {
+      username: signupRequest.username,
+      auth_id: signupRequest.authId,
+      encrypted_password: sha256(signupRequest.encryptedPassword),
+      google_auth_id: signupRequest.googleAuthId,
+    })
+      .then((res) => {
+        sender("auth/signUpWithGoogleAuth", reqId, true, res);
+      })
+      .catch((err) => {
+        sender("auth/signUpWithGoogleAuth", reqId, false, err?.response?.status);
+      });
+  } catch (err) {
+    sender("auth/signUpWithGoogleAuth", reqId, false);
     throw err;
   }
 });

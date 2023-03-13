@@ -6,4 +6,11 @@
   background-color: rgb(61, 80, 101);
   color: rgb(113, 162, 205);
   font-size: 18px;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 }

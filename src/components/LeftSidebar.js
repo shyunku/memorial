@@ -5,7 +5,9 @@ import Toast from "molecules/Toast";
 import Category from "objects/Category";
 import { useRef, useState } from "react";
 import { IoAdd, IoClose, IoKey, IoKeySharp, IoLogoBuffer, IoReader, IoToday } from "react-icons/io5";
+import { useSelector } from "react-redux";
 import sha256 from "sha256";
+import { accountInfoSlice } from "store/accountSlice";
 import { printf } from "utils/Common";
 import IpcSender from "utils/IpcSender";
 import JsxUtil from "utils/JsxUtil";
@@ -29,6 +31,11 @@ const LeftSidebar = ({
   onCategoryAdd,
   onCategoryDelete,
 }) => {
+  const accountInfo = useSelector(accountInfoSlice);
+  const username = accountInfo?.username ?? accountInfo?.googleEmail ?? "-";
+  const profileImageUrl = accountInfo?.profileImageUrl ?? accountInfo?.googleProfileImageUrl ?? null;
+  console.log(accountInfo);
+
   const addCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
   const addSecretCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
   const addSecretCategoryRef = useRef();
@@ -188,9 +195,9 @@ const LeftSidebar = ({
         </div>
       </div>
       <div className="account-section">
-        <ProfileImage />
+        <ProfileImage src={profileImageUrl} />
         <div className="profile-summary">
-          <div className="email">%UserEMail%</div>
+          <div className="email">{username}</div>
           <div className="status synchronized">
             <div className="status-dot"></div>
             <div className="status-text">동기화 완료</div>

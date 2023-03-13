@@ -111,6 +111,9 @@ const IpcSender = {
       initializeDatabase: (userId, callback) => {
         sender("auth/initializeDatabase", callback, userId);
       },
+      signUpWithGoogleAuth: (signupRequest, callback) => {
+        sender("auth/signUpWithGoogleAuth", callback, signupRequest);
+      },
     },
     task: {
       getTaskList: (callback) => {

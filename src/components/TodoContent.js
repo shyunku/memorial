@@ -13,6 +13,8 @@ import Category from "objects/Category";
 import TaskCalendarView from "views/TaskCalendarView";
 import Toast from "molecules/Toast";
 import { printf } from "utils/Common";
+import { useSelector } from "react-redux";
+import { accountAuthSlice, accountInfoSlice } from "store/accountSlice";
 
 const TASK_VIEW_MODE = {
   LIST: "리스트",

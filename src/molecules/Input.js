@@ -8,7 +8,7 @@ const Input = ({ onChange = () => {}, onEnter, onKeyDown, value, ...rest }) => {
     }
     onKeyDown?.(e);
   };
-  return <input onChange={handleChange} onKeyDown={handleKeyDown} value={value} />;
+  return <input onChange={handleChange} onKeyDown={handleKeyDown} value={value} {...rest} />;
 };
 
 export default Input;

@@ -55,6 +55,10 @@ function initializeRoot() {
   });
 }
 
+function isReadyForOperateUser(userId) {
+  return db != null && currentDatabaseUserId == userId;
+}
+
 async function initialize(userId) {
   if (userId == null) throw new Error("User ID is not valid.");
   console.info("Initializing User Database... [User ID: " + userId + "]");
@@ -124,6 +128,7 @@ function getRootConnection() {
 }
 
 async function getConnection(userId) {
+  if (userId == null) throw new Error("User ID is not valid.");
   if (userId != currentDatabaseUserId) {
     if (db != null) db.close();
     db = null;
@@ -258,8 +263,8 @@ module.exports = {
     commit: () => _commit(rootDB),
     rollback: () => _rollback(rootDB),
   }),
-  getContext: async () => {
-    if (db == null) await getConnection();
+  getContext: async (userId) => {
+    if (isReadyForOperateUser(userId)) await getConnection(userId);
     return {
       get: (query, ...args) => _get(db, query, ...args),
       run: (query, ...args) => _run(db, query, ...args),
@@ -269,6 +274,6 @@ module.exports = {
       rollback: () => _rollback(db),
     };
   },
-  isReadyForOperateUser: (userId) => db != null && currentDatabaseUserId == userId,
+  isReadyForOperateUser,
   setSystemInfo,
 };

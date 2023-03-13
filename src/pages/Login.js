@@ -15,6 +15,7 @@ import Prompt from "molecules/Prompt";
 import { useNavigate } from "react-router-dom";
 import { setAccount, setAuth } from "store/accountSlice";
 import Input from "molecules/Input";
+import sha256 from "sha256";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -33,18 +34,16 @@ const Login = () => {
   const [signupId, setSignupId] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState("");
-  const [signupUserNameLocked, setSignupUserNameLocked] = useState(false);
 
   const goToHome = () => {
     navigate("/home");
   };
 
   const goToSignUp = () => {
-    setSignupUserName("");
+    setSignupUserName();
     setSignupId("");
     setSignupPassword("");
     setSignupPasswordConfirm("");
-    setSignupUserNameLocked(false);
     setSignupMode(true);
   };
 
@@ -59,12 +58,17 @@ const Login = () => {
           const user = currentUserInfo;
 
           dispatch(setAuth({ accessToken: auth.access_token, refreshToken: auth.refresh_token }));
-          dispatch(setAccount({ uid: user.uid, googleEmail: user.google_email }));
+          dispatch(
+            setAccount({
+              uid: user.uid,
+              googleEmail: user.google_email,
+              googleProfileImageUrl: user.google_profile_image_url,
+            })
+          );
 
           setCurrentUserInfo(null);
           setCurrentUserAuth(null);
 
-          console.log("go home");
           goToHome();
         },
         onCancel: () => {},
@@ -90,23 +94,34 @@ const Login = () => {
               setCurrentUserInfo(user);
               setCurrentUserAuth(auth);
 
-              setSignupUserName(user.google_email);
-              setSignupId("");
-              setSignupPassword("");
-              setSignupPasswordConfirm("");
-              setSignupUserNameLocked(true);
-
               goToSignUp();
             },
             onCancel: () => {
               // redirect to home page
               // use google auth info
               dispatch(setAuth({ accessToken: auth.access_token, refreshToken: auth.refresh_token }));
-              dispatch(setAccount({ uid: user.uid, googleEmail: user.google_email }));
+              dispatch(
+                setAccount({
+                  uid: user.uid,
+                  googleEmail: user.google_email,
+                  googleProfileImageUrl: user.google_profile_image_url,
+                })
+              );
               goToHome();
             },
           });
         } else {
+          // redirect to home page
+          // use google auth info
+          dispatch(setAuth({ accessToken: auth.access_token, refreshToken: auth.refresh_token }));
+          dispatch(
+            setAccount({
+              uid: user.uid,
+              googleEmail: user.google_email,
+              googleProfileImageUrl: user.google_profile_image_url,
+            })
+          );
+          goToHome();
         }
       } else {
         Toast.error("구글 계정 인증 정보 등록에 실패했습니다.");
@@ -149,7 +164,44 @@ const Login = () => {
       Toast.error("비밀번호가 서로 일치하지 않습니다.");
       return;
     }
+
     // try sign up process
+    // sign up with google auth binding
+    const singleEncryptedPassword = sha256(sha256(signupId) + signupPassword);
+    if (currentUserInfo != null) {
+      IpcSender.req.auth.signUpWithGoogleAuth(
+        {
+          username: signupUserName,
+          authId: signupId,
+          encryptedPassword: singleEncryptedPassword,
+          googleAuthId: currentUserInfo.google_auth_id,
+        },
+        ({ success, data }) => {
+          if (success) {
+            Toast.success("회원가입에 성공했습니다. 로그인해주세요.");
+            setSignupMode(false);
+          } else {
+            const status = data;
+            switch (status) {
+              case 400:
+                Toast.error("잘못된 요청입니다.");
+                break;
+              case 409:
+                Toast.error("해당 구글 계정은 이미 연동되어있습니다.");
+                // TODO :: handle this case
+                break;
+              case "NOT_FOUND_IN_LOCAL":
+                Toast.error("해당 구글 계정은 로컬에 등록되어있지 않습니다.");
+                break;
+              default:
+                console.log(data);
+                Toast.error("구글 계정 연동에 실패했습니다.");
+                break;
+            }
+          }
+        }
+      );
+    }
   };
 
   useEffect(() => {
@@ -224,14 +276,14 @@ const Login = () => {
           <div className="title">메모리얼 회원가입</div>
           <div className="input-wrapper">
             <div className="label">사용자 이름</div>
-            <Input onChange={setSignupUserName} value={signupUserName} disabled={signupUserNameLocked} />
+            <Input onChange={setSignupUserName} value={signupUserName} />
           </div>
           <div className="input-wrapper">
-            <div className="label">아이디</div>
+            <div className="label">아이디 (5자 이상)</div>
             <Input onChange={setSignupId} value={signupId} />
           </div>
           <div className="input-wrapper">
-            <div className="label">비밀번호</div>
+            <div className="label">비밀번호 (8자 이상)</div>
             <Input type="password" onChange={setSignupPassword} value={signupPassword} />
           </div>
           <div className="input-wrapper">

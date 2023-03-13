@@ -3,8 +3,10 @@ const { createSlice, current } = require("@reduxjs/toolkit");
 const initialState = Object.freeze({
   account: {
     uid: null,
-    username: "",
-    googleEmail: "",
+    username: null,
+    profileImageUrl: null,
+    googleEmail: null,
+    googleProfileImageUrl: null,
   },
   auth: {
     accessToken: null,
