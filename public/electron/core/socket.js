@@ -70,6 +70,8 @@ socket.on("alert:/version/new", (data) => {
   }
 });
 
+/* ---------------------------------------- Custom ---------------------------------------- */
+
 module.exports = {
   socket,
   setIpc: (Ipc_) => {

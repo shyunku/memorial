@@ -114,6 +114,12 @@ const IpcSender = {
       signUpWithGoogleAuth: (signupRequest, callback) => {
         sender("auth/signUpWithGoogleAuth", callback, signupRequest);
       },
+      signUp: (signupRequest, callback) => {
+        sender("auth/signUp", callback, signupRequest);
+      },
+      login: (loginRequest, callback) => {
+        sender("auth/login", callback, loginRequest);
+      },
     },
     task: {
       getTaskList: (callback) => {

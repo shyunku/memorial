@@ -16,8 +16,7 @@ const MainRouter = () => {
             </Route>
           </Route>
         </Route>
-        {/* <Route path="/" element={<Login />} />
-          <Route path="/login" element={<Login />} /> */}
+        <Route path="/login" element={<Login />} />
         <Route path="*" element={<div>404 Page</div>} />
       </Routes>
     </HashRouter>

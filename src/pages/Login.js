@@ -28,6 +28,8 @@ const Login = () => {
   const [currentUserAuth, setCurrentUserAuth] = useState(null);
 
   // Login forms
+  const [signinId, setSigninId] = useState("");
+  const [signinPassword, setSigninPassword] = useState("");
 
   // Signup forms
   const [signupUserName, setSignupUserName] = useState("");
@@ -40,7 +42,7 @@ const Login = () => {
   };
 
   const goToSignUp = () => {
-    setSignupUserName();
+    setSignupUserName("");
     setSignupId("");
     setSignupPassword("");
     setSignupPasswordConfirm("");
@@ -57,7 +59,7 @@ const Login = () => {
           const auth = currentUserAuth;
           const user = currentUserInfo;
 
-          dispatch(setAuth({ accessToken: auth.access_token, refreshToken: auth.refresh_token }));
+          dispatch(setAuth({ accessToken: auth.access_token?.token, refreshToken: auth.refresh_token?.token }));
           dispatch(
             setAccount({
               uid: user.uid,
@@ -74,13 +76,15 @@ const Login = () => {
         onCancel: () => {},
       });
     } else {
+      setSigninId("");
+      setSigninPassword("");
       setSignupMode(false);
     }
   };
 
   const onGoogleLoginSuccess = (userInfo) => {
     console.log(userInfo);
-    const { auth, newly_signed_up, user } = userInfo;
+    const { auth, user } = userInfo;
 
     IpcSender.req.auth.sendGoogleOauthResult(userInfo, ({ success, data }) => {
       if (success) {
@@ -99,7 +103,7 @@ const Login = () => {
             onCancel: () => {
               // redirect to home page
               // use google auth info
-              dispatch(setAuth({ accessToken: auth.access_token, refreshToken: auth.refresh_token }));
+              dispatch(setAuth({ accessToken: auth?.access_token?.token, refreshToken: auth?.refresh_token?.token }));
               dispatch(
                 setAccount({
                   uid: user.uid,
@@ -113,7 +117,7 @@ const Login = () => {
         } else {
           // redirect to home page
           // use google auth info
-          dispatch(setAuth({ accessToken: auth.access_token, refreshToken: auth.refresh_token }));
+          dispatch(setAuth({ accessToken: auth.access_token?.token, refreshToken: auth.refresh_token?.token }));
           dispatch(
             setAccount({
               uid: user.uid,
@@ -178,8 +182,8 @@ const Login = () => {
         },
         ({ success, data }) => {
           if (success) {
-            Toast.success("회원가입에 성공했습니다. 로그인해주세요.");
-            setSignupMode(false);
+            Toast.success("계정 연동에 성공했습니다. 로그인해주세요.");
+            goBackToLogin();
           } else {
             const status = data;
             switch (status) {
@@ -201,7 +205,89 @@ const Login = () => {
           }
         }
       );
+    } else {
+      IpcSender.req.auth.signUp(
+        {
+          username: signupUserName,
+          authId: signupId,
+          encryptedPassword: singleEncryptedPassword,
+        },
+        ({ success, data }) => {
+          if (success) {
+            Toast.success("회원가입에 성공했습니다. 로그인해주세요.");
+            goBackToLogin();
+          } else {
+            const status = data;
+            switch (status) {
+              case 400:
+                Toast.error("잘못된 요청입니다.");
+                break;
+              case 409:
+                Toast.error("이미 사용 중인 아이디입니다.");
+                break;
+              case "TRY_TO_BIND_GOOGLE":
+                Toast.error("이미 사용 중인 구글 계정이 있으신가요? 구글 계정으로 로그인해주세요.");
+                break;
+              default:
+                console.log(data);
+                Toast.error("회원가입에 실패했습니다.");
+                break;
+            }
+          }
+        }
+      );
     }
+  };
+
+  const tryLogin = () => {
+    // validate inputs
+    if (signinId.length === 0) {
+      Toast.error("아이디를 입력해주세요.");
+      return;
+    }
+    if (signinPassword.length === 0) {
+      Toast.error("비밀번호를 입력해주세요.");
+      return;
+    }
+
+    const singleEncryptedPassword = sha256(sha256(signinId) + signinPassword);
+    const loginRequest = {
+      authId: signinId,
+      encryptedPassword: singleEncryptedPassword,
+    };
+
+    IpcSender.req.auth.login(loginRequest, ({ success, data }) => {
+      if (success) {
+        try {
+          const { user, auth } = data;
+          const { access_token, refresh_token } = auth;
+          const { uid, google_email, google_profile_image_url, username } = user;
+
+          dispatch(setAuth({ accessToken: access_token?.token, refreshToken: refresh_token?.token }));
+          dispatch(
+            setAccount({ uid, googleEmail: google_email, googleProfileImageUrl: google_profile_image_url, username })
+          );
+          goToHome();
+        } catch (err) {
+          console.error(err);
+          Toast.error("로그인에 실패했습니다.");
+        }
+      } else {
+        const status = data;
+        switch (status) {
+          case 400:
+            Toast.error("잘못된 요청입니다.");
+            break;
+          case 401:
+            Toast.error("아이디 또는 비밀번호가 일치하지 않습니다.");
+            break;
+          default:
+            console.log(data);
+            Toast.error("로그인에 실패했습니다.");
+            break;
+        }
+      }
+    });
   };
 
   useEffect(() => {
@@ -249,13 +335,15 @@ const Login = () => {
           <div className="title">메모리얼 로그인</div>
           <div className="input-wrapper">
             <div className="label">아이디</div>
-            <input />
+            <Input onChange={setSigninId} value={signinId} />
           </div>
           <div className="input-wrapper">
             <div className="label">비밀번호</div>
-            <input type="password" />
+            <Input type="password" onChange={setSigninPassword} value={signinPassword} onEnter={tryLogin} />
           </div>
-          <div className="btn login-btn">로그인</div>
+          <div className="btn login-btn" onClick={tryLogin}>
+            로그인
+          </div>
           <div className="btn signup-btn" onClick={goToSignUp}>
             회원가입
           </div>

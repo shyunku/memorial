@@ -215,9 +215,10 @@ register("system/setAsHomeWindow", (event, reqId) => {
 register("system/setAsLoginWindow", (event, reqId) => {
   try {
     // make login window non-resizable
-    mainWindow.setResizable(false);
     mainWindow.setFullScreenable(false);
-    mainWindow.setSize(1280, 960);
+    mainWindow.setFullScreen(false);
+    mainWindow.setSize(1280, 900);
+    mainWindow.setResizable(false);
     sender("system/setAsLoginWindow", reqId, true);
   } catch (err) {
     sender("system/setAsLoginWindow", reqId, false, err);
@@ -286,6 +287,18 @@ register("auth/initializeDatabase", async (event, reqId, userId) => {
 
 register("auth/signUpWithGoogleAuth", async (event, reqId, signupRequest) => {
   try {
+    try {
+      await Request.post(appServerFinalEndpoint, "/google_auth/signup", {
+        username: signupRequest.username,
+        auth_id: signupRequest.authId,
+        encrypted_password: sha256(signupRequest.encryptedPassword),
+        google_auth_id: signupRequest.googleAuthId,
+      });
+    } catch (err) {
+      sender("auth/signUpWithGoogleAuth", reqId, false, err?.response?.status);
+      return;
+    }
+
     // first update user info to local db
     // check if user exists already in local db
     let users = await rootDB.all("SELECT * FROM users WHERE google_auth_id = ?;", signupRequest.googleAuthId);
@@ -300,21 +313,113 @@ register("auth/signUpWithGoogleAuth", async (event, reqId, signupRequest) => {
       signupRequest.encryptedPassword,
       signupRequest.googleAuthId,
     ]);
-
-    Request.post(appServerFinalEndpoint, "/google_auth/signup", {
-      username: signupRequest.username,
-      auth_id: signupRequest.authId,
-      encrypted_password: sha256(signupRequest.encryptedPassword),
-      google_auth_id: signupRequest.googleAuthId,
-    })
-      .then((res) => {
-        sender("auth/signUpWithGoogleAuth", reqId, true, res);
-      })
-      .catch((err) => {
-        sender("auth/signUpWithGoogleAuth", reqId, false, err?.response?.status);
-      });
   } catch (err) {
     sender("auth/signUpWithGoogleAuth", reqId, false);
+    throw err;
+  }
+});
+
+register("auth/signUp", async (event, reqId, signupRequest) => {
+  try {
+    let result;
+    try {
+      result = await Request.post(appServerFinalEndpoint, "/auth/signup", {
+        username: signupRequest.username,
+        auth_id: signupRequest.authId,
+        encrypted_password: sha256(signupRequest.encryptedPassword),
+      });
+    } catch (err) {
+      sender("auth/signUp", reqId, false, err?.response?.status);
+      return;
+    }
+
+    const uid = result.uid;
+
+    // check if user exists already in local db and register it
+    let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", uid);
+    if (users.length === 0) {
+      // newly created user
+      // need to create secret key to encrypt/decrypt data
+      const newSecret = crypto.randomBytes(32).toString("hex");
+      await rootDB.run("INSERT INTO users (uid, auth_id, auth_encrypted_pw, secret_key) VALUES (?, ?, ?, ?);", [
+        uid,
+        signupRequest.auth_id,
+        signupRequest.auth_encrypted_pw,
+        newSecret,
+      ]);
+
+      // create database for user
+      db = await databaseContext.initialize(uid);
+    } else {
+      // user already exists in local db
+      let [user] = users;
+      if (user.auth_id != null && user.auth_encrypted_pw != null) {
+        // already exists in local (but not was in server)
+        console.warn("auth/signUp: already exists in local (but newly created in server)");
+        if (user.auth_id != signupRequest.authId || user.auth_encrypted_pw != signupRequest.encryptedPassword) {
+          // but info mismatch, automatically update re-create
+          console.warn("auth/signUp: info mismatch, automatically update re-create");
+          await rootDB.run("UPDATE users SET auth_id = ?, auth_encrypted_pw = ? WHERE uid = ?;", [
+            signupRequest.authId,
+            signupRequest.encryptedPassword,
+            uid,
+          ]);
+        } else {
+          // no need to update
+        }
+      }
+
+      if (user.google_auth_id != null || user.google_email != null || user.google_profile_image_url != null) {
+        // google auth exists or remains
+        // trying to bind auth to google auth (but there was no google auth in server)
+        // delete google auth in local db
+        console.warn("auth/signUp: trying to bind auth to google auth (but there was no google auth in server)");
+        try {
+          await rootDB.run(
+            "UPDATE users SET google_auth_id = NULL, google_email = NULL, google_profile_image_url = NULL WHERE uid = ?;",
+            [uid]
+          );
+        } catch (err) {
+          // that's ok, maybe next time?
+          console.error(err);
+        }
+        sender("auth/signUp", reqId, false, "TRY_TO_BIND_GOOGLE");
+        return;
+      }
+
+      // already exists in local but wtf is happening?
+      // update all anyway
+      console.warn("auth/signUp: already exists in local but wtf is happening? (no data in it)");
+      await rootDB.run("UPDATE users SET auth_id = ?, auth_encrypted_pw = ? WHERE uid = ?;", [
+        signupRequest.authId,
+        signupRequest.encryptedPassword,
+        uid,
+      ]);
+    }
+
+    sender("auth/signUp", reqId, true);
+  } catch (err) {
+    sender("auth/signUp", reqId, false);
+    throw err;
+  }
+});
+
+register("auth/login", async (event, reqId, signinRequest) => {
+  try {
+    let result;
+    try {
+      result = await Request.post(appServerFinalEndpoint, "/auth/login", {
+        auth_id: signinRequest.authId,
+        encrypted_password: sha256(signinRequest.encryptedPassword),
+      });
+    } catch (err) {
+      sender("auth/login", reqId, false, err?.response?.status);
+      return;
+    }
+
+    sender("auth/login", reqId, true, result);
+  } catch (err) {
+    sender("auth/login", reqId, false);
     throw err;
   }
 });
