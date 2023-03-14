@@ -5,11 +5,14 @@ import "./TopBar.scss";
 import PackageJson from "../../package.json";
 import { IoLogOutOutline } from "react-icons/io5";
 import Prompt from "molecules/Prompt";
-import { useDispatch } from "react-redux";
-import { removeAccount, removeAuth } from "store/accountSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { accountInfoSlice, removeAccount, removeAuth } from "store/accountSlice";
 import { useNavigate } from "react-router-dom";
+import Toast, { Toaster } from "molecules/Toast";
 
 const TopBar = () => {
+  const accountInfo = useSelector(accountInfoSlice);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [maximized, setMaximized] = useState(false);
@@ -34,10 +37,16 @@ const TopBar = () => {
     Prompt.float("로그아웃", "정말 로그아웃 하시겠습니까?", {
       confirmText: "로그아웃",
       cancelText: "취소",
-      onConfirm: () => {
+      onConfirm: async () => {
         dispatch(removeAuth());
         dispatch(removeAccount());
-        navigate("/login");
+        try {
+          await IpcSender.req.auth.deleteAuthInfoSync(accountInfo?.uid);
+          navigate("/login");
+        } catch (err) {
+          console.log(err);
+          Toast.error("인증 정보 삭제에 실패했습니다. 다시 시도해주세요.");
+        }
       },
       onCancel: () => {},
     });

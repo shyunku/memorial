@@ -229,11 +229,12 @@ register("system/setAsLoginWindow", (event, reqId) => {
 register("auth/sendGoogleOauthResult", async (event, reqId, data) => {
   try {
     let { auth, user } = data;
-    let { access_token, refresh_token, expired_at } = auth;
+    let { access_token, refresh_token } = auth;
     let { auth_id, uid, google_auth_id, google_email, google_profile_image_url } = user;
 
     // check if user exists already
-    let isSignupNeeded = false;
+    let isSignupNeeded = false,
+      isLocalHasNoPasswordSoLoginNeeded = false;
     let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", uid);
     if (users.length === 0) {
       // newly created user
@@ -241,25 +242,86 @@ register("auth/sendGoogleOauthResult", async (event, reqId, data) => {
       // need to create secret key to encrypt/decrypt data
       const newSecret = crypto.randomBytes(32).toString("hex");
       await rootDB.run(
-        "INSERT INTO users (uid, google_auth_id, google_email, google_profile_image_url, secret_key) VALUES (?, ?, ?, ?, ?);",
-        [uid, google_auth_id, google_email, google_profile_image_url, newSecret]
+        "INSERT INTO users (uid, auth_id, google_auth_id, google_email, google_profile_image_url, access_token, refresh_token, secret_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+        [
+          uid,
+          auth_id,
+          google_auth_id,
+          google_email,
+          google_profile_image_url,
+          access_token.token,
+          refresh_token.token,
+          newSecret,
+        ]
       );
 
       // create database for user
-      db = await databaseContext.initialize(uid);
+      await databaseContext.initialize(uid);
     } else {
       let [user] = users;
+      isLocalHasNoPasswordSoLoginNeeded = user.auth_encrypted_pw == null && auth_id != null;
       isSignupNeeded = user.auth_id == null || user.auth_encrypted_pw == null;
       // no need to create user
-      db = await databaseContext.getContext(uid);
     }
 
-    // reply
+    db = await databaseContext.getContext(uid);
     sender("auth/sendGoogleOauthResult", reqId, true, {
       isSignupNeeded,
+      isLocalHasNoPasswordSoLoginNeeded,
     });
   } catch (err) {
     sender("auth/sendGoogleOauthResult", reqId, false);
+    throw err;
+  }
+});
+
+register("auth/registerAuthInfoSync", async (event, reqId, userId, accessToken, refreshToken) => {
+  try {
+    if (userId == null) throw new Error("userId is null");
+    if (accessToken == null) throw new Error("accessToken is null");
+    if (refreshToken == null) throw new Error("refreshToken is null");
+
+    // check if user exists already
+    let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", userId);
+    if (users.length === 0) {
+      // retry
+      sender("auth/registerAuthInfoSync", reqId, false, "NOT_IN_LOCAL");
+      return;
+    }
+
+    await rootDB.run("UPDATE users SET access_token = ?, refresh_token = ? WHERE uid = ?;", [
+      accessToken,
+      refreshToken,
+      userId,
+    ]);
+    sender("auth/registerAuthInfoSync", reqId, true);
+  } catch (err) {
+    sender("auth/registerAuthInfoSync", reqId, false);
+    throw err;
+  }
+});
+
+register("auth/deleteAuthInfo", async (event, reqId, userId) => {
+  try {
+    await rootDB.run("UPDATE users SET access_token = NULL, refresh_token = NULL WHERE uid = ?;", [userId]);
+    sender("auth/deleteAuthInfo", reqId, true);
+  } catch (err) {
+    sender("auth/deleteAuthInfo", reqId, false);
+    throw err;
+  }
+});
+
+register("auth/loadAuthInfoSync", async (event, reqId, userId) => {
+  try {
+    let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", [userId]);
+    if (users.length === 0) throw new Error("user not found");
+    let [user] = users;
+    sender("auth/loadAuthInfoSync", reqId, true, {
+      accessToken: user.access_token,
+      refreshToken: user.refresh_token,
+    });
+  } catch (err) {
+    sender("auth/loadAuthInfoSync", reqId, false);
     throw err;
   }
 });
@@ -417,6 +479,55 @@ register("auth/login", async (event, reqId, signinRequest) => {
       return;
     }
 
+    let { auth, user } = result;
+    let { access_token, refresh_token } = auth;
+    let { auth_id, uid, google_auth_id, google_email, google_profile_image_url } = user;
+
+    // check if user exists already
+    let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", uid);
+    if (users.length === 0) {
+      // newly created user
+      // need to create secret key to encrypt/decrypt data
+      const newSecret = crypto.randomBytes(32).toString("hex");
+      await rootDB.run(
+        "INSERT INTO users (uid, auth_id, auth_encrypted_pw, google_auth_id, google_email, google_profile_image_url, access_token, refresh_token, secret_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        [
+          uid,
+          auth_id,
+          signinRequest.encryptedPassword,
+          google_auth_id,
+          google_email,
+          google_profile_image_url,
+          access_token?.token,
+          refresh_token?.token,
+          newSecret,
+        ]
+      );
+      // create database for user
+      await databaseContext.initialize(uid);
+    } else {
+      let [user] = users;
+      // filter null options
+      const nullProperties = Object.keys(user).filter((key) => user[key] == null);
+      const newProperties = {
+        auth_id,
+        auth_encrypted_pw: signinRequest.encryptedPassword,
+        google_auth_id,
+        google_email,
+        google_profile_image_url,
+        access_token: access_token?.token,
+        refresh_token: refresh_token?.token,
+      };
+
+      if (nullProperties.length > 0) {
+        // update null properties
+        await rootDB.run(`UPDATE users SET ${nullProperties.map((key) => `${key} = ?`).join(", ")} WHERE uid = ?;`, [
+          ...nullProperties.map((key) => newProperties[key]),
+          uid,
+        ]);
+      }
+    }
+    db = await databaseContext.getContext(uid);
     sender("auth/login", reqId, true, result);
   } catch (err) {
     sender("auth/login", reqId, false);
@@ -838,6 +949,7 @@ register("task/updateSubtaskDone", async (event, reqId, subtaskId, done, doneAt)
 register("category/getCategoryList", async (event, reqId) => {
   try {
     let result = await db.all("SELECT * FROM categories;");
+    console.log(result);
     sender("category/getCategoryList", reqId, true, result);
   } catch (err) {
     sender("category/getCategoryList", reqId, false);

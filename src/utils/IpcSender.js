@@ -105,6 +105,44 @@ const IpcSender = {
       sendGoogleOauthResult: (result, callback) => {
         sender("auth/sendGoogleOauthResult", callback, result);
       },
+      registerAuthInfoSync: async (userId, accessToken, refreshToken) => {
+        return new Promise((resolve, reject) => {
+          sender(
+            "auth/registerAuthInfoSync",
+            ({ success, data }) => {
+              if (success) resolve(data);
+              else reject(data);
+            },
+            userId,
+            accessToken,
+            refreshToken
+          );
+        });
+      },
+      deleteAuthInfoSync: async (userId) => {
+        return new Promise((resolve, reject) => {
+          sender(
+            "auth/deleteAuthInfo",
+            ({ success, data }) => {
+              if (success) resolve(data);
+              else reject(data);
+            },
+            userId
+          );
+        });
+      },
+      loadAuthInfoSync: async (userId) => {
+        return new Promise((resolve, reject) => {
+          sender(
+            "auth/loadAuthInfoSync",
+            ({ success, data }) => {
+              if (success) resolve(data);
+              else reject(data);
+            },
+            userId
+          );
+        });
+      },
       isDatabaseReady: (userId, callback) => {
         sender("auth/isDatabaseReady", callback, userId);
       },

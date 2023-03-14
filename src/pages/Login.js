@@ -23,6 +23,7 @@ const Login = () => {
 
   const [childWindow, setChildWindow] = useState(null);
   const [signupMode, setSignupMode] = useState(false);
+  const [googleBinding, setGoogleBinding] = useState(false);
 
   const [currentUserInfo, setCurrentUserInfo] = useState(null);
   const [currentUserAuth, setCurrentUserAuth] = useState(null);
@@ -37,8 +38,29 @@ const Login = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState("");
 
-  const goToHome = () => {
-    navigate("/home");
+  const goToHome = async (_user, _auth) => {
+    const auth = currentUserAuth ?? _auth;
+    const user = currentUserInfo ?? _user;
+
+    try {
+      dispatch(setAuth({ accessToken: auth?.access_token?.token, refreshToken: auth?.refresh_token?.token }));
+      dispatch(
+        setAccount({
+          uid: user.uid,
+          googleEmail: user.google_email,
+          googleProfileImageUrl: user.google_profile_image_url,
+        })
+      );
+      await IpcSender.req.auth.registerAuthInfoSync(user?.uid, auth?.access_token?.token, auth?.refresh_token?.token);
+
+      setCurrentUserInfo(null);
+      setCurrentUserAuth(null);
+
+      navigate("/home");
+    } catch (err) {
+      console.error(err);
+      Toast.error("인증 정보 저장에 실패했습니다.");
+    }
   };
 
   const goToSignUp = () => {
@@ -51,26 +73,12 @@ const Login = () => {
 
   const goBackToLogin = () => {
     // if user is on signup mode & has google auth info/user info, then show prompt
-    if (signupMode && currentUserInfo != null) {
+    if (signupMode && googleBinding) {
       Prompt.float("회원가입 취소", "계정 연동을 위한 회원가입을 취소하시겠습니까?", {
         confirmText: "취소",
         cancelText: "계속 진행",
-        onConfirm: () => {
-          const auth = currentUserAuth;
-          const user = currentUserInfo;
-
-          dispatch(setAuth({ accessToken: auth.access_token?.token, refreshToken: auth.refresh_token?.token }));
-          dispatch(
-            setAccount({
-              uid: user.uid,
-              googleEmail: user.google_email,
-              googleProfileImageUrl: user.google_profile_image_url,
-            })
-          );
-
-          setCurrentUserInfo(null);
-          setCurrentUserAuth(null);
-
+        onConfirm: async () => {
+          setGoogleBinding(false);
           goToHome();
         },
         onCancel: () => {},
@@ -86,47 +94,54 @@ const Login = () => {
     console.log(userInfo);
     const { auth, user } = userInfo;
 
-    IpcSender.req.auth.sendGoogleOauthResult(userInfo, ({ success, data }) => {
+    setCurrentUserInfo(user);
+    setCurrentUserAuth(auth);
+
+    IpcSender.req.auth.sendGoogleOauthResult(userInfo, async ({ success, data }) => {
       if (success) {
-        const { isSignupNeeded } = data;
+        const { isSignupNeeded, isLocalHasNoPasswordSoLoginNeeded } = data;
+
+        if (isLocalHasNoPasswordSoLoginNeeded) {
+          Prompt.float(
+            "로컬 계정 등록",
+            "회원가입되었지만 로컬에 등록되지 않은 계정입니다. 오프라인에서도 사용가능하려면 로그인을 해야합니다.",
+            {
+              confirmText: "로컬 계정 등록",
+              cancelText: "그냥 사용",
+              onConfirm: () => {
+                // redirect to signup page
+                Toast.info("로컬 계정 등록을 위하여 로그인 해주세요.");
+                goBackToLogin();
+              },
+              onCancel: () => {
+                // redirect to home page
+                // use google auth info
+                goToHome(user, auth);
+              },
+            }
+          );
+          return;
+        }
+
         if (isSignupNeeded) {
           Prompt.float("신규 계정 등록", "오프라인에서도 사용가능하려면 회원가입을 해야합니다.", {
             confirmText: "회원가입",
             cancelText: "가입 없이 사용",
             onConfirm: () => {
               // redirect to signup page
-              setCurrentUserInfo(user);
-              setCurrentUserAuth(auth);
-
-              goToSignUp();
+              setGoogleBinding(true);
+              goToSignUp(user, auth);
             },
             onCancel: () => {
               // redirect to home page
               // use google auth info
-              dispatch(setAuth({ accessToken: auth?.access_token?.token, refreshToken: auth?.refresh_token?.token }));
-              dispatch(
-                setAccount({
-                  uid: user.uid,
-                  googleEmail: user.google_email,
-                  googleProfileImageUrl: user.google_profile_image_url,
-                })
-              );
-              goToHome();
+              goToHome(user, auth);
             },
           });
-        } else {
-          // redirect to home page
-          // use google auth info
-          dispatch(setAuth({ accessToken: auth.access_token?.token, refreshToken: auth.refresh_token?.token }));
-          dispatch(
-            setAccount({
-              uid: user.uid,
-              googleEmail: user.google_email,
-              googleProfileImageUrl: user.google_profile_image_url,
-            })
-          );
-          goToHome();
+          return;
         }
+
+        goToHome(user, auth);
       } else {
         Toast.error("구글 계정 인증 정보 등록에 실패했습니다.");
       }
@@ -256,18 +271,12 @@ const Login = () => {
       encryptedPassword: singleEncryptedPassword,
     };
 
-    IpcSender.req.auth.login(loginRequest, ({ success, data }) => {
+    IpcSender.req.auth.login(loginRequest, async ({ success, data }) => {
       if (success) {
         try {
           const { user, auth } = data;
-          const { access_token, refresh_token } = auth;
-          const { uid, google_email, google_profile_image_url, username } = user;
 
-          dispatch(setAuth({ accessToken: access_token?.token, refreshToken: refresh_token?.token }));
-          dispatch(
-            setAccount({ uid, googleEmail: google_email, googleProfileImageUrl: google_profile_image_url, username })
-          );
-          goToHome();
+          goToHome(user, auth);
         } catch (err) {
           console.error(err);
           Toast.error("로그인에 실패했습니다.");
