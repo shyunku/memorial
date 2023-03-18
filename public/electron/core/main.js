@@ -104,7 +104,10 @@ app.on("ready", async () => {
     Session.initialize();
 
     mainWindow = Window.createMainWindow();
-    mainWindow.focus();
+    mainWindow.once("ready-to-show", () => {
+      mainWindow.show();
+      mainWindow.focus();
+    });
 
     Ipc.setMainWindow(mainWindow);
     Window.setWindowStateChangeListener(mainWindow, Ipc);

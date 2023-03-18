@@ -9,7 +9,9 @@
     "scheme_version": 1,
     "root_scheme_version": 1,
     "app_server_endpoint": "http://localhost:4033",
-    "app_server_api_version": "v1"
+    "app_server_api_version": "v1",
+    "app_server_socket_endpoint": "ws://localhost:4033",
+    "app_server_socket_api_version": "v1"
   },
   "dependencies": {
     "@electron/remote": "2.0.9",
@@ -42,7 +44,8 @@
     "sqlite3": "5.1.4",
     "uuid": "9.0.0",
     "wait-on": "7.0.1",
-    "web-vitals": "2.1.4"
+    "web-vitals": "2.1.4",
+    "ws": "8.13.0"
   },
   "scripts": {
     "start": "react-scripts start",

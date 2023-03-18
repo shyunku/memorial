@@ -217,6 +217,7 @@ register("system/setAsHomeWindow", (event, reqId) => {
 register("system/setAsLoginWindow", (event, reqId) => {
   try {
     // make login window non-resizable
+    mainWindow.setResizable(true);
     mainWindow.setFullScreenable(false);
     mainWindow.setFullScreen(false);
     mainWindow.setSize(1280, 900);
@@ -469,7 +470,17 @@ register("auth/signUp", async (event, reqId, signupRequest) => {
 });
 
 register("auth/login", async (event, reqId, signinRequest) => {
+  let canLoginWithLocal = false;
   try {
+    // try login in local
+    let localUsers = await rootDB.all("SELECT * FROM users WHERE auth_id = ?;", signinRequest.authId);
+    if (localUsers.length > 0) {
+      let [localUser] = localUsers;
+      if (localUser.auth_encrypted_pw === signinRequest.encryptedPassword) {
+        canLoginWithLocal = true;
+      }
+    }
+
     let result;
     try {
       result = await Request.post(appServerFinalEndpoint, "/auth/login", {
@@ -477,7 +488,22 @@ register("auth/login", async (event, reqId, signinRequest) => {
         encrypted_password: sha256(signinRequest.encryptedPassword),
       });
     } catch (err) {
-      sender("auth/login", reqId, false, err?.response?.status);
+      let data = {
+        serverStatus: err?.response?.status,
+        canLoginWithLocal,
+      };
+
+      try {
+        if (canLoginWithLocal) {
+          let userData = localUsers[0];
+          let { uid, username, google_email: googleEmail } = userData;
+          data.localUser = { uid, username, googleEmail };
+        }
+      } catch (err) {
+        console.error(err);
+      }
+
+      sender("auth/login", reqId, false, data);
       return;
     }
 
@@ -532,14 +558,14 @@ register("auth/login", async (event, reqId, signinRequest) => {
     db = await databaseContext.getContext(uid);
     sender("auth/login", reqId, true, result);
   } catch (err) {
-    sender("auth/login", reqId, false);
+    sender("auth/login", reqId, false, { canLoginWithLocal });
     throw err;
   }
 });
 
-register("socket/connect", async (event, reqId, accessToken, refreshToken) => {
+register("socket/connect", async (event, reqId, userId, accessToken, refreshToken) => {
   try {
-    await AppServerSocket(accessToken, refreshToken, Ipc);
+    await AppServerSocket(userId, accessToken, refreshToken, Ipc, rootDB, db);
     sender("socket/connect", reqId, true);
   } catch (err) {
     sender("socket/connect", reqId, false, err);

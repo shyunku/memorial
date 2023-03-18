@@ -114,7 +114,7 @@ module.exports = (loggerModule) => {
     let currentDate = new Date();
     let levelColorCode = getColorCodeByLevel(level);
 
-    let timeSegment = moment(currentDate).format("YYYY/MM/DD HH:mm:ss.SSS");
+    let timeSegment = moment(currentDate).format("YY/MM/DD HH:mm:ss.SSS");
     let levelSegment = console.wrap(level.padEnd(6, " "), levelColorCode);
     let traceSegment = console.wrap(tracer().padEnd(global.TRACE_MAX_LENGTH, " "), console.YELLOW);
     let contentSegment = arg.map((argument) => shorten(argument)).join(" ");

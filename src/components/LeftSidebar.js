@@ -3,7 +3,7 @@ import Prompt from "molecules/Prompt";
 import SubmitInput from "molecules/SubmitInput";
 import Toast from "molecules/Toast";
 import Category from "objects/Category";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { IoAdd, IoClose, IoKey, IoKeySharp, IoLogoBuffer, IoReader, IoToday } from "react-icons/io5";
 import { useSelector } from "react-redux";
 import sha256 from "sha256";
@@ -32,9 +32,13 @@ const LeftSidebar = ({
   onCategoryDelete,
 }) => {
   const accountInfo = useSelector(accountInfoSlice);
-  const username = accountInfo?.username ?? accountInfo?.googleEmail ?? "-";
+  const username = accountInfo?.username ?? accountInfo?.googleEmail ?? `오프라인 사용자 ${accountInfo?.uid}`;
   const profileImageUrl = accountInfo?.profileImageUrl ?? accountInfo?.googleProfileImageUrl ?? null;
-  console.log(accountInfo);
+  const offlineMode = accountInfo?.offlineMode ?? false;
+
+  const serverStatus = useMemo(() => {
+    return offlineMode ? "offline" : "synchronized";
+  }, [offlineMode]);
 
   const addCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
   const addSecretCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
@@ -198,9 +202,9 @@ const LeftSidebar = ({
         <ProfileImage src={profileImageUrl} />
         <div className="profile-summary">
           <div className="email">{username}</div>
-          <div className="status synchronized">
+          <div className={"status" + JsxUtil.class(serverStatus)}>
             <div className="status-dot"></div>
-            <div className="status-text">동기화 완료</div>
+            <div className="status-text">{offlineMode ? "오프라인 모드" : "동기화 완료"}</div>
           </div>
         </div>
       </div>

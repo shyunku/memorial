@@ -4,7 +4,7 @@ import Toast from "molecules/Toast";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Outlet, useNavigate } from "react-router-dom";
-import { accountAuthSlice, accountInfoSlice } from "store/accountSlice";
+import { accountAuthSlice, accountInfoSlice, setAccount } from "store/accountSlice";
 import IpcSender from "utils/IpcSender";
 import "./Root.layout.scss";
 
@@ -15,22 +15,27 @@ const RootLayout = () => {
   const accessToken = accountAuth?.accessToken;
   const refreshToken = accountAuth?.refreshToken;
 
+  console.log(accountInfo, accountAuth);
+
+  const offlineMode = accountInfo?.offlineMode;
+
   const [databaseReady, setDatabaseReady] = useState(false);
   const [socketReady, setSocketReady] = useState(false);
-  const [tryAtOffline, setTryAtOffline] = useState(false);
+  const [tryAtOffline, setTryAtOffline] = useState(offlineMode);
 
   const goBackToLoginPage = () => {
     navigate("/login");
   };
 
   const trySocketConnection = async () => {
+    const userId = accountInfo.uid;
     const connectSocketPromise = new Promise((resolve, reject) => {
       try {
         let timeout = setTimeout(() => {
           reject("서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }, 3000);
 
-        IpcSender.req.socket.tryConnect(accessToken, refreshToken, ({ success, data }) => {
+        IpcSender.req.socket.tryConnect(userId, accessToken, refreshToken, ({ success, data }) => {
           if (success) {
             setSocketReady(true);
             resolve();
@@ -64,6 +69,7 @@ const RootLayout = () => {
 
   useEffect(() => {
     const userId = accountInfo.uid;
+    console.log(userId);
     (async () => {
       const checkDatabasePromise = new Promise((resolve, reject) => {
         IpcSender.req.auth.isDatabaseReady(userId, ({ success, data: ready }) => {
@@ -96,21 +102,16 @@ const RootLayout = () => {
       }
     })();
 
-    trySocketConnection();
-
-    const onTokenUpdated = ({ success, data }) => {
-      if (success) {
-        console.log(data);
-        // const { accessToken, refreshToken } = data;
-      }
-    };
-
-    IpcSender.on("auth/tokenUpdated", onTokenUpdated);
-
-    return () => {
-      IpcSender.off("auth/tokenUpdated", onTokenUpdated);
-    };
+    if (!offlineMode) {
+      trySocketConnection();
+    }
   }, []);
+
+  useEffect(() => {
+    if (!offlineMode && tryAtOffline) {
+      setAccount({ offlineMode: true });
+    }
+  }, [tryAtOffline, offlineMode]);
 
   return (
     <div className="root-layout">

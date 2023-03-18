@@ -38,17 +38,34 @@ const Login = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState("");
 
-  const goToHome = async (_user, _auth) => {
+  const goToHome = async (_user, _auth, withOffline = false) => {
+    if (withOffline) {
+      dispatch(
+        setAccount({
+          offlineMode: true,
+          ..._user,
+        })
+      );
+      navigate("/home", { state: { offline: true } });
+      return;
+    }
+
     const auth = currentUserAuth ?? _auth;
     const user = currentUserInfo ?? _user;
 
     try {
-      dispatch(setAuth({ accessToken: auth?.access_token?.token, refreshToken: auth?.refresh_token?.token }));
+      dispatch(
+        setAuth({
+          accessToken: auth?.access_token?.token,
+          refreshToken: auth?.refresh_token?.token,
+        })
+      );
       dispatch(
         setAccount({
           uid: user.uid,
           googleEmail: user.google_email,
           googleProfileImageUrl: user.google_profile_image_url,
+          offlineMode: false,
         })
       );
       await IpcSender.req.auth.registerAuthInfoSync(user?.uid, auth?.access_token?.token, auth?.refresh_token?.token);
@@ -282,23 +299,48 @@ const Login = () => {
           Toast.error("로그인에 실패했습니다.");
         }
       } else {
-        const status = data;
-        switch (status) {
-          case 400:
-            Toast.error("잘못된 요청입니다.");
-            break;
-          case 401:
-            Toast.error("아이디 또는 비밀번호가 일치하지 않습니다.");
-            break;
-          default:
-            if (data == null) {
-              Toast.error("서버와 연결할 수 없습니다.");
-            } else {
+        const { serverStatus, canLoginWithLocal } = data;
+        if (serverStatus != null) {
+          const status = data;
+          switch (status) {
+            case 400:
+              Toast.error("잘못된 요청입니다.");
+              break;
+            case 401:
+              Toast.error("아이디 또는 비밀번호가 일치하지 않습니다.");
+              break;
+            default:
               console.log(data);
               Toast.error("로그인에 실패했습니다.");
-            }
+              break;
+          }
+        } else {
+          // not server error
+          Toast.error("로그인 중 오류가 발생했습니다.");
+        }
 
-            break;
+        const canExtractUserData = data?.localUser != null;
+
+        if (canLoginWithLocal && canExtractUserData) {
+          const userData = data.localUser;
+
+          setTimeout(() => {
+            Prompt.float("로컬 계정으로 연결", "서버 연결이 불가능합니다. 로컬 계정으로 연결하시겠습니까?", {
+              confirmText: "로컬 계정 사용",
+              cancelText: "취소",
+              onConfirm: () => {
+                goToHome(
+                  {
+                    uid: userData.uid ?? null,
+                    username: userData.username ?? null,
+                    googleEmail: userData.googleEmail ?? null,
+                  },
+                  null,
+                  true
+                );
+              },
+            });
+          }, 500);
         }
       }
     });

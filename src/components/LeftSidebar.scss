@@ -172,16 +172,17 @@ $std-text-color: rgb(128, 146, 184);
 
       & > .status {
         display: flex;
-        font-size: 12px;
+        font-size: 13px;
         margin-top: 3px;
         padding-bottom: 2px;
-        font-weight: 100;
+        font-weight: 400;
         align-items: center;
 
         $highlight-colors: (
           "failed": rgb(255, 83, 83),
           "synchronizing": rgb(100, 255, 97),
           "synchronized": rgb(95, 196, 255),
+          "offline": rgb(155, 155, 155),
         );
 
         @each $status, $color in $highlight-colors {

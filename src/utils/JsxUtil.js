@@ -8,6 +8,9 @@ const JsxUtil = {
   classByNonEqual: (a, b, className) => {
     return a != b ? ` ${className}` : "";
   },
+  class: (...classNames) => {
+    return " " + classNames.join(" ");
+  },
   fastInterval: (func, period) => {
     func();
     return setInterval(func, period);

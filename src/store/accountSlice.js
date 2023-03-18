@@ -7,6 +7,7 @@ const initialState = Object.freeze({
     profileImageUrl: null,
     googleEmail: null,
     googleProfileImageUrl: null,
+    offlineMode: false,
   },
   auth: {
     accessToken: null,

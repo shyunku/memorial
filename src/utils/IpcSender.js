@@ -160,8 +160,8 @@ const IpcSender = {
       },
     },
     socket: {
-      tryConnect: (accessToken, refreshToken, callback) => {
-        sender("socket/connect", callback, accessToken, refreshToken);
+      tryConnect: (userId, accessToken, refreshToken, callback) => {
+        sender("socket/connect", callback, userId, accessToken, refreshToken);
       },
     },
     task: {
@@ -280,7 +280,7 @@ const IpcSender = {
     autoSubscribe(topic);
     const originalCallback = callback;
     const newCallback = (e, reqId, ...data) => {
-      // console.log(`IpcRenderer <-- ${topic}`, data);
+      console.log(`IpcRenderer <-- ${colorize.yellow(`[ALL]`)} ${colorize.magenta(topic)}`, ...data);
       originalCallback(...data);
     };
     ipcRenderer.on(topic, newCallback);
