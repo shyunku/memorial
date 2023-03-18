@@ -2,7 +2,7 @@ const axios = require("axios");
 
 const Request = {
   ok: 200,
-  post: function (host, urlPostfix, data) {
+  post: function (host, urlPostfix, data, options) {
     return new Promise((resolve, reject) => {
       const url = `${host}${urlPostfix}`;
       console.info(
@@ -11,7 +11,7 @@ const Request = {
       );
 
       axios
-        .post(url, data)
+        .post(url, data, options)
         .then((res) => {
           console.info(
             `Axios/post ${console.wrap("<--", console.GREEN)} [SERVER] ${console.wrap(urlPostfix, console.MAGENTA)}`,
@@ -28,7 +28,7 @@ const Request = {
         });
     });
   },
-  get: function (urlPostfix) {
+  get: function (urlPostfix, options) {
     return new Promise((resolve, reject) => {
       const url = `${host}${urlPostfix}`;
       console.info(
@@ -36,7 +36,7 @@ const Request = {
       );
 
       axios
-        .get(url)
+        .get(url, options)
         .then((res) => {
           console.info(
             `Axios/get ${console.wrap("<--", console.GREEN)} [SERVER] ${console.wrap(urlPostfix, console.MAGENTA)}`,

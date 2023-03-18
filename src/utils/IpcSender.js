@@ -159,6 +159,11 @@ const IpcSender = {
         sender("auth/login", callback, loginRequest);
       },
     },
+    socket: {
+      tryConnect: (accessToken, refreshToken, callback) => {
+        sender("socket/connect", callback, accessToken, refreshToken);
+      },
+    },
     task: {
       getTaskList: (callback) => {
         sender("task/getAllTaskList", callback);
@@ -167,7 +172,6 @@ const IpcSender = {
         sender("task/getAllSubtaskList", callback);
       },
       addTask: (task, callback) => {
-        console.log(task);
         sender("task/addTask", callback, task);
       },
       deleteTask: (taskId, callback) => {

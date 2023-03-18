@@ -18,13 +18,15 @@ const Loading = () => {
       const loading = { text, promise, id };
 
       setLoadings((loadings) => ({ ...loadings, [id]: loading }));
-      promise.finally(() => {
-        setLoadings((loadings) => {
-          const newLoadings = { ...loadings };
-          delete newLoadings[id];
-          return newLoadings;
-        });
-      });
+      promise
+        .finally(() => {
+          setLoadings((loadings) => {
+            const newLoadings = { ...loadings };
+            delete newLoadings[id];
+            return newLoadings;
+          });
+        })
+        .catch(() => {});
     };
     document.addEventListener("custom_loading", listener);
     return () => {

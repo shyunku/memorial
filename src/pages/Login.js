@@ -291,8 +291,13 @@ const Login = () => {
             Toast.error("아이디 또는 비밀번호가 일치하지 않습니다.");
             break;
           default:
-            console.log(data);
-            Toast.error("로그인에 실패했습니다.");
+            if (data == null) {
+              Toast.error("서버와 연결할 수 없습니다.");
+            } else {
+              console.log(data);
+              Toast.error("로그인에 실패했습니다.");
+            }
+
             break;
         }
       }

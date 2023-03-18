@@ -21,6 +21,7 @@ const { default: axios } = require("axios");
 const IpcRouter = new __IpcRouter__();
 const silentTopics = [];
 const PackageJson = require("../../../package.json");
+const AppServerSocket = require("../user_modules/appServerSocket");
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
@@ -60,7 +61,8 @@ const register = (topic, callback, ...arg) => {
       );
     }
     try {
-      return await originalCallback(event, reqId, ...arg);
+      let result = await originalCallback(event, reqId, ...arg);
+      return result;
     } catch (err) {
       console.error(err);
       return null;
@@ -531,6 +533,16 @@ register("auth/login", async (event, reqId, signinRequest) => {
     sender("auth/login", reqId, true, result);
   } catch (err) {
     sender("auth/login", reqId, false);
+    throw err;
+  }
+});
+
+register("socket/connect", async (event, reqId, accessToken, refreshToken) => {
+  try {
+    await AppServerSocket(accessToken, refreshToken, Ipc);
+    sender("socket/connect", reqId, true);
+  } catch (err) {
+    sender("socket/connect", reqId, false, err);
     throw err;
   }
 });
@@ -1041,7 +1053,7 @@ register("tasks_categories/getTasksCategoriesList", async (event, reqId) => {
 /* ---------------------------------------- Test ---------------------------------------- */
 register("test_signal", (event, param) => {});
 
-module.exports = {
+const Ipc = {
   sender,
   fastSender,
   silentSender,
@@ -1060,3 +1072,5 @@ module.exports = {
     mainWindow = mainWindow_;
   },
 };
+
+module.exports = Ipc;
