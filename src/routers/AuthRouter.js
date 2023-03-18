@@ -1,13 +1,16 @@
 import Loading from "molecules/Loading";
 import Toast from "molecules/Toast";
 import Login from "pages/Login";
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { accountAuthSlice, accountInfoSlice } from "store/accountSlice";
 import IpcSender from "utils/IpcSender";
 
 const AuthRouter = () => {
+  const location = useLocation();
+  console.log(location);
+
   const accountAuth = useSelector(accountAuthSlice);
   const accountInfo = useSelector(accountInfoSlice);
   const accessToken = useMemo(() => {
