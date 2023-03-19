@@ -3,6 +3,8 @@ const moment = require("moment");
 global.TRACE_MAX_LENGTH = 0;
 global.ERROR_TRACE_SIZE = 5;
 
+const rgbANSI = (r, g, b) => `\x1b[38;2;${r};${g};${b}m`;
+
 module.exports = (loggerModule) => {
   (console.RESET = "\x1b[0m"), (console.BRIGHT = "\x1b[1m");
 
@@ -14,6 +16,14 @@ module.exports = (loggerModule) => {
   console.MAGENTA = "\x1b[35m";
   console.CYAN = "\x1b[36m";
   console.WHITE = "\x1b[37m";
+
+  // extra
+  console.ORANGE = rgbANSI(255, 131, 59);
+  console.LIME = rgbANSI(241, 255, 138);
+  console.PURPLE = rgbANSI(184, 148, 255);
+  console.PINK = rgbANSI(242, 99, 255);
+  console.AQUA = rgbANSI(66, 255, 198);
+  console.RGB = rgbANSI;
 
   console.bBLACK = "\x1b[40m";
   console.bRED = "\x1b[41m";

@@ -12,6 +12,9 @@ let rootDB = null;
 let buildLevel = null;
 let userDataPath = null;
 
+const color = console.RGB(78, 119, 138);
+const coloredIpcMain = console.wrap("IpcMain", color);
+
 function setSystemInfo(_buildLevel, _userDataPath) {
   buildLevel = _buildLevel;
   userDataPath = _userDataPath;
@@ -165,7 +168,7 @@ async function getConnection(userId) {
 
 function _get(_db, query, ...args) {
   console.system(
-    `IpcMain ${console.wrap(`<-[GET]->`, console.BLUE)} ${console.wrap(
+    `${coloredIpcMain} ${console.wrap(`<-[GET]->`, console.BLUE)} ${console.wrap(
       "sqlite3: " + query,
       console.YELLOW
     )} ${args.join(", ")}`
@@ -181,7 +184,7 @@ function _get(_db, query, ...args) {
 
 function _run(_db, query, ...args) {
   console.system(
-    `IpcMain ${console.wrap(`--[RUN]->`, console.BLUE)} ${console.wrap(
+    `${coloredIpcMain} ${console.wrap(`--[RUN]->`, console.BLUE)} ${console.wrap(
       "sqlite3: " + query,
       console.YELLOW
     )} ${args.join(", ")}`
@@ -209,7 +212,7 @@ function _run(_db, query, ...args) {
 
 function _all(_db, query, ...args) {
   console.system(
-    `IpcMain ${console.wrap(`<-[ALL]->`, console.BLUE)} ${console.wrap(
+    `${coloredIpcMain} ${console.wrap(`<-[ALL]->`, console.BLUE)} ${console.wrap(
       "sqlite3: " + query,
       console.YELLOW
     )} ${args.join(", ")}`

@@ -22,6 +22,7 @@ const IpcRouter = new __IpcRouter__();
 const silentTopics = [];
 const PackageJson = require("../../../package.json");
 const AppServerSocket = require("../user_modules/appServerSocket");
+const { reqIdTag } = require("../modules/util");
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
@@ -43,9 +44,14 @@ let db = null;
  */
 let mainWindow = null;
 
-const reqIdTag = (reqId) => {
-  return reqId ? `[${reqId.substr(0, 3)}]` : "";
-};
+/**
+ * @type {WebSocket}
+ *
+ */
+let socket = null;
+
+const color = console.RGB(78, 119, 138);
+const coloredIpcMain = console.wrap("IpcMain", color);
 
 const register = (topic, callback, ...arg) => {
   const originalCallback = callback;
@@ -54,7 +60,7 @@ const register = (topic, callback, ...arg) => {
       let mergedArguments = arg.map((param) => console.shorten(param)).join(" ");
 
       console.system(
-        `IpcMain ${console.wrap(`<-${reqIdTag(reqId)}--`, console.GREEN)} ${console.wrap(
+        `${coloredIpcMain} ${console.wrap(`<-${reqIdTag(reqId)}--`, console.GREEN)} ${console.wrap(
           topic,
           console.MAGENTA
         )} ${mergedArguments}`
@@ -84,7 +90,7 @@ const sender = (topic, reqId, success, data = null, ...extra) => {
 
   if (silentTopics.includes(topic)) return;
   console.system(
-    `IpcMain ${console.wrap(
+    `${coloredIpcMain} ${console.wrap(
       `--${reqIdTag(reqId)}-${success ? ">" : "X"}`,
       success ? console.CYAN : console.RED
     )} ${console.wrap(topic, console.MAGENTA)} ${console.wrap(`(${sendeeCount})`, console.BLUE)} ${JSON.stringify(
@@ -99,7 +105,7 @@ const emiter = (topic, reqId, data) => {
 
   if (silentTopics.includes(topic)) return;
   console.system(
-    `IpcMain --${reqIdTag(reqId)}-> ${console.wrap(topic, console.MAGENTA)} ${console.wrap(
+    `${coloredIpcMain} --${reqIdTag(reqId)}-> ${console.wrap(topic, console.MAGENTA)} ${console.wrap(
       `(${sendeeCount})`,
       console.BLUE
     )} ${data}`
@@ -115,7 +121,7 @@ const fastSender = (topic, socketResponse) => {
 
   if (silentTopics.includes(topic)) return;
   console.system(
-    `IpcMain ${console.wrap(`--${reqIdTag("NIL")}->`, console.CYAN)} ${console.wrap(
+    `${coloredIpcMain} ${console.wrap(`--${reqIdTag("NIL")}->`, console.CYAN)} ${console.wrap(
       topic,
       console.MAGENTA
     )} ${console.wrap(`(${sendeeCount})`, console.BLUE)} ${data}`
@@ -135,7 +141,12 @@ const fastSilentSender = (topic, socketResponse) => {
   IpcRouter.broadcast(topic, packagedData);
 };
 
-// /* ---------------------------------------- System ---------------------------------------- */
+/* ---------------------------------------- Websocket (Custom) ---------------------------------------- */
+const sendTransaction = async (type, data) => {
+  if (socket == null) throw new Error("Socket is not connected");
+};
+
+/* ---------------------------------------- System ---------------------------------------- */
 register("system/terminate_signal", (event, reqId, param) => {
   app.quit();
 });
@@ -565,7 +576,7 @@ register("auth/login", async (event, reqId, signinRequest) => {
 
 register("socket/connect", async (event, reqId, userId, accessToken, refreshToken) => {
   try {
-    await AppServerSocket(userId, accessToken, refreshToken, Ipc, rootDB, db);
+    socket = await AppServerSocket(userId, accessToken, refreshToken, Ipc, rootDB, db);
     sender("socket/connect", reqId, true);
   } catch (err) {
     sender("socket/connect", reqId, false, err);
@@ -987,7 +998,6 @@ register("task/updateSubtaskDone", async (event, reqId, subtaskId, done, doneAt)
 register("category/getCategoryList", async (event, reqId) => {
   try {
     let result = await db.all("SELECT * FROM categories;");
-    console.log(result);
     sender("category/getCategoryList", reqId, true, result);
   } catch (err) {
     sender("category/getCategoryList", reqId, false);
