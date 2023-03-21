@@ -112,7 +112,8 @@ const emiter = (topic, reqId, data) => {
     `${coloredIpcMain} --${reqIdTag(reqId)}-> ${console.wrap(topic, console.MAGENTA)} ${console.wrap(
       `(${sendeeCount})`,
       console.BLUE
-    )} ${data}`
+    )}`,
+    data
   );
 };
 
@@ -251,46 +252,25 @@ register("system/setAsLoginWindow", (event, reqId) => {
 
 register("auth/sendGoogleOauthResult", async (event, reqId, data) => {
   try {
-    let { auth, user } = data;
-    let { access_token, refresh_token } = auth;
-    let { auth_id, uid, google_auth_id, google_email, google_profile_image_url } = user;
+    let { googleUserInfo } = data;
+    let { email: google_email, picture: google_profile_image_url } = googleUserInfo;
+    let user;
 
     // check if user exists already
-    let isSignupNeeded = false,
-      isLocalHasNoPasswordSoLoginNeeded = false;
-    let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", uid);
+    let isSignupNeeded = false;
+    let users = await rootDB.all("SELECT * FROM users WHERE google_email = ?;", google_email);
     if (users.length === 0) {
       // newly created user
       isSignupNeeded = true;
-      // need to create secret key to encrypt/decrypt data
-      const newSecret = crypto.randomBytes(32).toString("hex");
-      await rootDB.run(
-        "INSERT INTO users (uid, auth_id, google_auth_id, google_email, google_profile_image_url, access_token, refresh_token, secret_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
-        [
-          uid,
-          auth_id,
-          google_auth_id,
-          google_email,
-          google_profile_image_url,
-          access_token.token,
-          refresh_token.token,
-          newSecret,
-        ]
-      );
-
-      // create database for user
-      await databaseContext.initialize(uid);
     } else {
-      let [user] = users;
-      isLocalHasNoPasswordSoLoginNeeded = user.auth_encrypted_pw == null && auth_id != null;
+      user = users[0];
       isSignupNeeded = user.auth_id == null || user.auth_encrypted_pw == null;
       // no need to create user
     }
 
-    db = await databaseContext.getContext(uid);
     sender("auth/sendGoogleOauthResult", reqId, true, {
       isSignupNeeded,
-      isLocalHasNoPasswordSoLoginNeeded,
+      user,
     });
   } catch (err) {
     sender("auth/sendGoogleOauthResult", reqId, false);
@@ -319,7 +299,7 @@ register("auth/registerAuthInfoSync", async (event, reqId, userId, accessToken, 
     ]);
     sender("auth/registerAuthInfoSync", reqId, true);
   } catch (err) {
-    sender("auth/registerAuthInfoSync", reqId, false);
+    sender("auth/registerAuthInfoSync", reqId, false, err.message);
     throw err;
   }
 });
@@ -363,7 +343,6 @@ register("auth/initializeDatabase", async (event, reqId, userId) => {
   try {
     await databaseContext.initialize(userId);
     db = await databaseContext.getContext(userId);
-    console.log(db);
     sender("auth/initializeDatabase", reqId, true);
   } catch (err) {
     sender("auth/initializeDatabase", reqId, false);
@@ -373,32 +352,49 @@ register("auth/initializeDatabase", async (event, reqId, userId) => {
 
 register("auth/signUpWithGoogleAuth", async (event, reqId, signupRequest) => {
   try {
+    let result;
     try {
-      await Request.post(appServerFinalEndpoint, "/google_auth/signup", {
+      result = await Request.post(appServerFinalEndpoint, "/google_auth/signup", {
         username: signupRequest.username,
         auth_id: signupRequest.authId,
         encrypted_password: sha256(signupRequest.encryptedPassword),
         google_auth_id: signupRequest.googleAuthId,
+        google_email: signupRequest.googleEmail,
+        google_profile_image_url: signupRequest.googleProfileImageUrl,
       });
     } catch (err) {
+      console.error(err);
+      console.debug(err?.response?.data);
       sender("auth/signUpWithGoogleAuth", reqId, false, err?.response?.status);
       return;
     }
 
     // first update user info to local db
     // check if user exists already in local db
-    let users = await rootDB.all("SELECT * FROM users WHERE google_auth_id = ?;", signupRequest.googleAuthId);
+    let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", result.userId);
     if (users.length === 0) {
-      sender("auth/signUpWithGoogleAuth", reqId, false, "NOT_FOUND_IN_LOCAL");
-      return;
+      // create new
+      await rootDB.run(
+        "INSERT INTO users (uid, auth_id, username, auth_encrypted_pw, google_auth_id, google_email, google_profile_image_url) VALUES (?, ?, ?, ?, ?, ?, ?);",
+        [
+          result.userId,
+          result.authId,
+          result.username,
+          signupRequest.encryptedPassword,
+          result.googleAuthId,
+          result.googleEmail,
+          result.googleProfileImageUrl,
+        ]
+      );
+    } else {
+      // update google info (already registered without google)
+      await rootDB.run(
+        "UPDATE users SET google_auth_id = ?, google_email = ?, google_profile_image_url = ? WHERE uid = ?;",
+        [result.googleAuthId, result.googleEmail, result.googleProfileImageUrl, result.userId]
+      );
     }
 
-    // update
-    await rootDB.run("UPDATE users SET auth_id = ?, auth_encrypted_pw = ? WHERE google_auth_id = ?;", [
-      signupRequest.authId,
-      signupRequest.encryptedPassword,
-      signupRequest.googleAuthId,
-    ]);
+    sender("auth/signUpWithGoogleAuth", reqId, true, { user: result });
   } catch (err) {
     sender("auth/signUpWithGoogleAuth", reqId, false);
     throw err;
@@ -426,17 +422,15 @@ register("auth/signUp", async (event, reqId, signupRequest) => {
     if (users.length === 0) {
       // newly created user
       // need to create secret key to encrypt/decrypt data
-      const newSecret = crypto.randomBytes(32).toString("hex");
-      await rootDB.run("INSERT INTO users (uid, auth_id, auth_encrypted_pw, secret_key) VALUES (?, ?, ?, ?);", [
+      await rootDB.run("INSERT INTO users (uid, auth_id, auth_encrypted_pw, username) VALUES (?, ?, ?, ?);", [
         uid,
-        signupRequest.auth_id,
-        signupRequest.auth_encrypted_pw,
-        newSecret,
+        result.auth_id,
+        signupRequest.encryptedPassword,
+        result.username,
       ]);
 
       // create database for user
       await databaseContext.initialize(uid);
-      db = await databaseContext.getContext(uid);
     } else {
       // user already exists in local db
       let [user] = users;
@@ -538,9 +532,8 @@ register("auth/login", async (event, reqId, signinRequest) => {
     if (users.length === 0) {
       // newly created user
       // need to create secret key to encrypt/decrypt data
-      const newSecret = crypto.randomBytes(32).toString("hex");
       await rootDB.run(
-        "INSERT INTO users (uid, auth_id, auth_encrypted_pw, google_auth_id, google_email, google_profile_image_url, access_token, refresh_token, secret_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        "INSERT INTO users (uid, auth_id, auth_encrypted_pw, google_auth_id, google_email, google_profile_image_url, access_token, refresh_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
         [
           uid,
           auth_id,
@@ -550,7 +543,6 @@ register("auth/login", async (event, reqId, signinRequest) => {
           google_profile_image_url,
           access_token?.token,
           refresh_token?.token,
-          newSecret,
         ]
       );
       // create database for user
@@ -587,6 +579,10 @@ register("auth/login", async (event, reqId, signinRequest) => {
 
 register("socket/connect", async (event, reqId, userId, accessToken, refreshToken) => {
   try {
+    if (db == null) {
+      db = await databaseContext.getContext(userId);
+    }
+
     // find last blocknumber
     let transactions = await db.all("SELECT * FROM transactions ORDER BY txid DESC, timestamp DESC LIMIT 1;");
     if (transactions.length === 0) {

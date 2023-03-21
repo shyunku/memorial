@@ -16,7 +16,7 @@ const RootLayout = () => {
   const accessToken = accountAuth?.accessToken;
   const refreshToken = accountAuth?.refreshToken;
 
-  console.log(accountInfo, accountAuth);
+  // console.log(accountInfo, accountAuth);
 
   const offlineMode = accountInfo?.offlineMode;
 

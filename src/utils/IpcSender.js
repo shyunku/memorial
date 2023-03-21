@@ -124,6 +124,7 @@ const IpcSender = {
           sender(
             "auth/deleteAuthInfo",
             ({ success, data }) => {
+              console.log("came");
               if (success) resolve(data);
               else reject(data);
             },

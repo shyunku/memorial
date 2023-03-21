@@ -109,6 +109,9 @@ app.on("ready", async () => {
       mainWindow.focus();
     });
 
+    // dev test
+    // mainWindow.webContents.session.clearCache(() => {});
+
     Ipc.setMainWindow(mainWindow);
     Window.setWindowStateChangeListener(mainWindow, Ipc);
   } catch (err) {
@@ -122,7 +125,7 @@ function listenForDefaultElectronEvents() {
   app.on("browser-window-created", (e, window) => {
     if (mainWindow == null || window.id === mainWindow.id) return;
     window.setMenu(null);
-    // window.webContents.session.clearCache(() => {});
+    window.webContents.session.clearCache(() => {});
     // window.webContents.openDevTools();
   });
 }

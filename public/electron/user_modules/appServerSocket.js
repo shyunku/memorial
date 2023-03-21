@@ -237,7 +237,7 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
     }
 
     // if error is 401, then try refresh token
-    console.debug(err?.response?.status, refreshToken_);
+    console.debug(err?.response?.status, err?.response?.data, refreshToken_);
     if (err?.response?.status === 401 && refreshToken_ != null) {
       try {
         let result = await Request.post(appServerFinalEndpoint, "/auth/refreshToken", null, {
@@ -262,8 +262,8 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
         // update access token & refresh token to ipc
         sender("auth/tokenUpdated", null, true, { accessToken: accessToken_, refreshToken: refreshToken_ });
       } catch (err) {
-        console.debug(err);
-        console.debug(err.response);
+        console.error(err);
+        console.log(err?.response?.data);
         // refresh failed
         throw new Error(401);
       }
@@ -289,7 +289,7 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
 
   register("open", async () => {
     console.system(console.wrap(`Websocket connected to (${appServerSocketFinalEndpoint})`, console.CYAN));
-    emiter("socket/connected", null);
+    emiter("socket/connected", null, null);
     // emit("test", "Hello world");
     try {
       let waitingBlockNumber = await emitSync("waitingBlockNumber", null, 5000);

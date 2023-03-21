@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { setAccount, setAuth } from "store/accountSlice";
 import Input from "molecules/Input";
 import sha256 from "sha256";
+import PackageJson from "../../package.json";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -38,6 +39,8 @@ const Login = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState("");
 
+  const [googleBindingCancelHover, setGoogleBindingCancelHover] = useState(false);
+
   const goToHome = async (_user, _auth, withOffline = false) => {
     if (withOffline) {
       dispatch(
@@ -50,8 +53,8 @@ const Login = () => {
       return;
     }
 
-    const auth = currentUserAuth ?? _auth;
-    const user = currentUserInfo ?? _user;
+    const auth = _auth ?? currentUserAuth;
+    const user = _user ?? currentUserInfo;
 
     try {
       dispatch(
@@ -66,8 +69,11 @@ const Login = () => {
           googleEmail: user.google_email,
           googleProfileImageUrl: user.google_profile_image_url,
           offlineMode: false,
+          username: user?.username ?? null,
         })
       );
+
+      console.log(auth);
       await IpcSender.req.auth.registerAuthInfoSync(user?.uid, auth?.access_token?.token, auth?.refresh_token?.token);
 
       setCurrentUserInfo(null);
@@ -88,15 +94,17 @@ const Login = () => {
     setSignupMode(true);
   };
 
-  const goBackToLogin = () => {
+  const goBackToLogin = (force = false) => {
     // if user is on signup mode & has google auth info/user info, then show prompt
-    if (signupMode && googleBinding) {
+    if (force === false && signupMode && googleBinding) {
       Prompt.float("회원가입 취소", "계정 연동을 위한 회원가입을 취소하시겠습니까?", {
         confirmText: "취소",
         cancelText: "계속 진행",
         onConfirm: async () => {
           setGoogleBinding(false);
-          goToHome();
+          setSigninId("");
+          setSigninPassword("");
+          setSignupMode(false);
         },
         onCancel: () => {},
       });
@@ -109,52 +117,33 @@ const Login = () => {
 
   const onGoogleLoginSuccess = (userInfo) => {
     console.log(userInfo);
-    const { auth, user } = userInfo;
-
-    setCurrentUserInfo(user);
-    setCurrentUserAuth(auth);
+    const { auth, googleUserInfo } = userInfo;
+    const { email: googleEmail, id: googleAuthId, picture: googleProfileImageUrl } = googleUserInfo;
 
     IpcSender.req.auth.sendGoogleOauthResult(userInfo, async ({ success, data }) => {
       if (success) {
-        const { isSignupNeeded, isLocalHasNoPasswordSoLoginNeeded } = data;
+        const { isSignupNeeded, user } = data;
+        if (isSignupNeeded) {
+          setCurrentUserInfo({ googleEmail, googleAuthId, googleProfileImageUrl });
+          setCurrentUserAuth(auth);
+          setGoogleBinding(true);
 
-        if (isLocalHasNoPasswordSoLoginNeeded) {
           Prompt.float(
-            "로컬 계정 등록",
-            "회원가입되었지만 로컬에 등록되지 않은 계정입니다. 오프라인에서도 사용가능하려면 로그인을 해야합니다.",
+            "구글 계정 연동",
+            "오프라인에서도 사용가능하려면 회원가입을 해야합니다.\n이미 계정을 보유하고 있으시다면 로그인해주세요.",
             {
-              confirmText: "로컬 계정 등록",
-              cancelText: "그냥 사용",
+              confirmText: "계정 연동",
+              cancelText: "이미 계정이 있음",
               onConfirm: () => {
                 // redirect to signup page
-                Toast.info("로컬 계정 등록을 위하여 로그인 해주세요.");
-                goBackToLogin();
+                goToSignUp();
               },
               onCancel: () => {
-                // redirect to home page
-                // use google auth info
-                goToHome(user, auth);
+                // redirect to login page
+                goBackToLogin();
               },
             }
           );
-          return;
-        }
-
-        if (isSignupNeeded) {
-          Prompt.float("신규 계정 등록", "오프라인에서도 사용가능하려면 회원가입을 해야합니다.", {
-            confirmText: "회원가입",
-            cancelText: "가입 없이 사용",
-            onConfirm: () => {
-              // redirect to signup page
-              setGoogleBinding(true);
-              goToSignUp(user, auth);
-            },
-            onCancel: () => {
-              // redirect to home page
-              // use google auth info
-              goToHome(user, auth);
-            },
-          });
           return;
         }
 
@@ -174,8 +163,11 @@ const Login = () => {
       return;
     }
 
+    let domain = PackageJson.config.app_server_endpoint;
+    let apiVersion = PackageJson.config.app_server_api_version;
+
     let child = window.open(
-      "http://localhost:4033/v1/google_auth/login",
+      `${domain}/${apiVersion}/google_auth/login`,
       "구글 계정으로 로그인",
       "menubar=no,resizable=no,toolbar=no,status=no,scrollbar=no,width=400"
     );
@@ -204,18 +196,35 @@ const Login = () => {
     // try sign up process
     // sign up with google auth binding
     const singleEncryptedPassword = sha256(sha256(signupId) + signupPassword);
-    if (currentUserInfo != null) {
+    if (googleBinding === true) {
+      if (currentUserInfo == null) {
+        console.error(`currentUserInfo is null`);
+        Toast.error("오류가 발생했습니다.");
+        return;
+      }
+
       IpcSender.req.auth.signUpWithGoogleAuth(
         {
           username: signupUserName,
           authId: signupId,
           encryptedPassword: singleEncryptedPassword,
-          googleAuthId: currentUserInfo.google_auth_id,
+          googleAuthId: currentUserInfo.googleAuthId,
+          googleEmail: currentUserInfo.googleEmail,
+          googleProfileImageUrl: currentUserInfo.googleProfileImageUrl,
         },
         ({ success, data }) => {
           if (success) {
-            Toast.success("계정 연동에 성공했습니다. 로그인해주세요.");
-            goBackToLogin();
+            const user = data.user;
+            const userInfo = {
+              uid: user.userId,
+              username: user.username,
+              profileImageUrl: user.profileImageUrl,
+              googleEmail: user.googleEmail,
+              googleProfileImageUrl: user.googleProfileImageUrl,
+            };
+
+            goToHome(userInfo, currentUserAuth);
+            goBackToLogin(true);
           } else {
             const status = data;
             switch (status) {
@@ -288,6 +297,49 @@ const Login = () => {
       encryptedPassword: singleEncryptedPassword,
     };
 
+    if (googleBinding) {
+      IpcSender.req.auth.signUpWithGoogleAuth(
+        {
+          authId: signinId,
+          encryptedPassword: singleEncryptedPassword,
+          googleAuthId: currentUserInfo.googleAuthId,
+          googleEmail: currentUserInfo.googleEmail,
+          googleProfileImageUrl: currentUserInfo.googleProfileImageUrl,
+        },
+        ({ success, data }) => {
+          if (success) {
+            const user = data.user;
+            const userInfo = {
+              uid: user.userId,
+              username: user.username,
+              profileImageUrl: user.profileImageUrl,
+              googleEmail: user.googleEmail,
+              googleProfileImageUrl: user.googleProfileImageUrl,
+            };
+            goToHome(userInfo, currentUserAuth);
+          } else {
+            const status = data;
+            switch (status) {
+              case 400:
+                Toast.error("잘못된 요청입니다.");
+                break;
+              case 409:
+                goToHome(data.user, currentUserAuth);
+                break;
+              case "NOT_FOUND_IN_LOCAL":
+                Toast.error("해당 구글 계정은 로컬에 등록되어있지 않습니다.");
+                break;
+              default:
+                console.log(data);
+                Toast.error("구글 계정 연동에 실패했습니다.");
+                break;
+            }
+          }
+        }
+      );
+      return;
+    }
+
     IpcSender.req.auth.login(loginRequest, async ({ success, data }) => {
       if (success) {
         try {
@@ -301,7 +353,7 @@ const Login = () => {
       } else {
         const { serverStatus, canLoginWithLocal } = data;
         if (serverStatus != null) {
-          const status = data;
+          const status = serverStatus;
           switch (status) {
             case 400:
               Toast.error("잘못된 요청입니다.");
@@ -408,11 +460,31 @@ const Login = () => {
             <div className="label">또는</div>
             <div className="line"></div>
           </div>
-          <div className="btn google-auth-btn" onClick={tryLoginWithGoogleOauth}>
-            <div className="img-wrapper">
-              <img src={GoogleLogo} />
-            </div>
-            <div className="text">구글 계정으로 로그인</div>
+          <div
+            className="btn google-auth-btn"
+            onMouseEnter={(e) => setGoogleBindingCancelHover(true)}
+            onMouseLeave={(e) => setGoogleBindingCancelHover(false)}
+            onClick={
+              googleBinding
+                ? (e) => {
+                    setGoogleBinding(false);
+                    setGoogleBindingCancelHover(false);
+                    setCurrentUserInfo(null);
+                    setCurrentUserAuth(null);
+                  }
+                : tryLoginWithGoogleOauth
+            }
+          >
+            {googleBinding ? (
+              <div className="text">{googleBindingCancelHover ? "취소" : "구글 계정 연동 중"}</div>
+            ) : (
+              <>
+                <div className="img-wrapper">
+                  <img src={GoogleLogo} />
+                </div>
+                <div className="text">구글 계정으로 로그인</div>
+              </>
+            )}
           </div>
         </div>
         <div className={"form signup" + JsxUtil.classByCondition(!signupMode, "hidden")}>

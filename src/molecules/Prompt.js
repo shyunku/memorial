@@ -43,7 +43,7 @@ const Prompt = () => {
       const rawContents = promptData?.contents;
       let contents = rawContents;
       if (!Array.isArray(contents)) {
-        if (typeof contents === "string") contents = [contents];
+        if (typeof contents === "string") contents = contents.split("\n");
         else contents = [];
       }
       setContents(contents);

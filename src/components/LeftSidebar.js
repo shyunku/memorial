@@ -33,7 +33,7 @@ const LeftSidebar = ({
 }) => {
   const accountInfo = useSelector(accountInfoSlice);
   const offlineMode = accountInfo?.offlineMode ?? false;
-  const username = accountInfo?.username ?? accountInfo?.googleEmail ?? `오프라인 사용자 ${accountInfo?.uid}`;
+  const username = accountInfo?.username ?? accountInfo?.googleEmail ?? accountInfo?.uid ?? "Unknown";
   const profileImageUrl = (offlineMode ? accountInfo?.profileImageUrl : accountInfo?.googleProfileImageUrl) ?? null;
 
   const serverStatus = useMemo(() => {

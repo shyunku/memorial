@@ -40,10 +40,10 @@ const TopBar = () => {
       confirmText: "로그아웃",
       cancelText: "취소",
       onConfirm: async () => {
-        dispatch(removeAuth());
-        dispatch(removeAccount());
         try {
           await IpcSender.req.auth.deleteAuthInfoSync(accountInfo?.uid);
+          dispatch(removeAuth());
+          dispatch(removeAccount());
           navigate("/login");
         } catch (err) {
           console.log(err);
