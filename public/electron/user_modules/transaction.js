@@ -3,26 +3,27 @@ const TRANSACTION_TYPE = {
   CREATE_TASK: 1,
 };
 
-const makeTransaction = (type, data, targetBlockNumber) => {
-  // convert data to byte[] (content)
-  const strData = JSON.stringify(data);
-  const content = new Uint8Array(Buffer.from(strData, "utf8"));
+const makeTransaction = (type, data, curLastBlockNumber) => {
   const timestamp = Date.now();
 
   return {
     type,
-    content,
+    content: data,
     timestamp,
-    targetBlockNumber,
+    targetBlockNumber: curLastBlockNumber + 1,
   };
 };
 
-const makeInitializeTx = (data, targetBlockNumber) => {
-  return makeTransaction(TRANSACTION_TYPE.INITIALIZE, data, targetBlockNumber);
+const makeInitializeTx = (data, curLastBlockNumber) => {
+  return makeTransaction(TRANSACTION_TYPE.INITIALIZE, data, curLastBlockNumber);
 };
 
-const createTaskTx = (data, targetBlockNumber) => {
-  return makeTransaction(TRANSACTION_TYPE.CREATE_TASK, {}, targetBlockNumber);
+const createTaskTx = (data, curLastBlockNumber) => {
+  return makeTransaction(
+    TRANSACTION_TYPE.CREATE_TASK,
+    data,
+    curLastBlockNumber
+  );
 };
 
 module.exports = {
