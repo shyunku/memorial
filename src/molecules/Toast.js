@@ -153,6 +153,7 @@ const promise = async (promise, successText = null, errorText = null, options = 
 };
 
 const addToastItem = (type, message, extra = null, options) => {
+  console.log(message);
   const toastEvent = new Event("custom_toast", { bubbles: true });
   toastEvent.data = {
     type,

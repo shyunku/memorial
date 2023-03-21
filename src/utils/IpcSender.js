@@ -254,7 +254,7 @@ const IpcSender = {
   off: (topic, callback) => {
     return ipcRenderer.removeListener(topic, callback);
   },
-  removeAllListener: () => {
+  removeAllListeners: () => {
     ipcRenderer.removeAllListeners();
   },
   sendCallback: (topic, data) => {

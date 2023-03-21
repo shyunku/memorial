@@ -9,7 +9,7 @@
   align-items: center;
   background: $main-theme-color;
   font-size: 12px;
-  justify-content: space-between;
+  // justify-content: space-between;
   z-index: 100;
 
   & > .drag-section {
@@ -28,9 +28,33 @@
     margin-left: 10px;
   }
 
+  & > .server-status {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    margin-left: 10px;
+
+    transition: 0.15s ease;
+
+    &.offline .status {
+      background-color: rgb(134, 59, 59);
+    }
+
+    .status {
+      font-size: 12px;
+      background-color: rgb(41, 86, 133);
+      padding: 3px 6px;
+      border-radius: 2px;
+      // font-weight: 100;
+      color: rgb(193, 193, 193);
+    }
+  }
+
   & > .menu-section {
     display: flex;
     height: 100%;
+    flex: 1;
+    justify-content: flex-end;
 
     & > .menu-item {
       display: flex;

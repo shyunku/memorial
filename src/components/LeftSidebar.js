@@ -32,9 +32,9 @@ const LeftSidebar = ({
   onCategoryDelete,
 }) => {
   const accountInfo = useSelector(accountInfoSlice);
-  const username = accountInfo?.username ?? accountInfo?.googleEmail ?? `오프라인 사용자 ${accountInfo?.uid}`;
-  const profileImageUrl = accountInfo?.profileImageUrl ?? accountInfo?.googleProfileImageUrl ?? null;
   const offlineMode = accountInfo?.offlineMode ?? false;
+  const username = accountInfo?.username ?? accountInfo?.googleEmail ?? `오프라인 사용자 ${accountInfo?.uid}`;
+  const profileImageUrl = (offlineMode ? accountInfo?.profileImageUrl : accountInfo?.googleProfileImageUrl) ?? null;
 
   const serverStatus = useMemo(() => {
     return offlineMode ? "offline" : "synchronized";

@@ -2,13 +2,14 @@ import TopBar from "components/TopBar";
 import Loading from "molecules/Loading";
 import Toast from "molecules/Toast";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Outlet, useNavigate } from "react-router-dom";
 import { accountAuthSlice, accountInfoSlice, setAccount } from "store/accountSlice";
 import IpcSender from "utils/IpcSender";
 import "./Root.layout.scss";
 
 const RootLayout = () => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const accountInfo = useSelector(accountInfoSlice);
   const accountAuth = useSelector(accountAuthSlice);
@@ -22,6 +23,7 @@ const RootLayout = () => {
   const [databaseReady, setDatabaseReady] = useState(false);
   const [socketReady, setSocketReady] = useState(false);
   const [tryAtOffline, setTryAtOffline] = useState(offlineMode);
+  const [socketConnected, setSocketConnected] = useState(false);
 
   const goBackToLoginPage = () => {
     navigate("/login");
@@ -95,28 +97,42 @@ const RootLayout = () => {
       try {
         await Loading.float("데이터베이스 접근 중입니다. 잠시만 기다려주세요...", checkDatabasePromise);
         setDatabaseReady(true);
+        trySocketConnection();
       } catch (err) {
         console.error(err);
         Toast.error(err?.message ?? "알 수 없는 오류가 발생했습니다. 로그인 화면으로 이동합니다.");
         goBackToLoginPage();
       }
     })();
-
-    if (!offlineMode) {
-      trySocketConnection();
-    }
   }, []);
 
   useEffect(() => {
-    if (!offlineMode && tryAtOffline) {
-      setAccount({ offlineMode: true });
-    }
+    IpcSender.onAll("socket/disconnected", (data) => {
+      setSocketConnected(false);
+      setTryAtOffline(true);
+    });
+
+    IpcSender.onAll("socket/connected", (data) => {
+      setSocketConnected(true);
+    });
+
+    return () => {
+      IpcSender.removeAllListeners();
+    };
+  }, []);
+
+  useEffect(() => {
+    dispatch(setAccount({ offlineMode: tryAtOffline }));
   }, [tryAtOffline, offlineMode]);
+
+  console.log("offline", tryAtOffline, offlineMode);
 
   return (
     <div className="root-layout">
       <TopBar />
-      <div className="root-layout__content">{databaseReady && (socketReady || tryAtOffline) && <Outlet />}</div>
+      <div className="root-layout__content">
+        {databaseReady && ((socketReady && socketConnected) || tryAtOffline) && <Outlet />}
+      </div>
     </div>
   );
 };

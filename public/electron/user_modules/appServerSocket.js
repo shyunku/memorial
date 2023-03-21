@@ -3,6 +3,7 @@ const WebSocket = require("ws");
 const Request = require("../core/request");
 const { v4 } = require("uuid");
 const { reqIdTag } = require("../modules/util");
+const { makeTransaction } = require("./transaction");
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
@@ -12,7 +13,7 @@ const appServerSocketFinalEndpoint = `${appServerFinalEndpoint.replace(/http/g, 
 
 let socket;
 
-const color = console.RGB(160, 60, 255);
+const color = console.RGB(190, 75, 255);
 const coloredSocket = console.wrap("Websocket", color);
 
 class WebsocketServerResponse {
@@ -25,8 +26,16 @@ class WebsocketServerResponse {
   }
 }
 
+let queue = {};
+
 function initializeSocket(socket) {
-  const queue = {};
+  // initialize previous queue
+  for (const reqId in queue) {
+    const { callback, timeoutHandler } = queue[reqId];
+    clearTimeout(timeoutHandler);
+  }
+
+  queue = {};
 
   const sendSync = (topic, data, timeout = 3000) => {
     return new Promise((resolve, reject) => {
@@ -41,6 +50,9 @@ function initializeSocket(socket) {
       const callback = (data) => {
         resolve(data);
       };
+      const errorHandler = (err) => {
+        reject(err);
+      };
 
       let timeoutHandler = setTimeout(() => {
         console.info(
@@ -52,7 +64,7 @@ function initializeSocket(socket) {
         reject(`Request timeout`);
       }, timeout);
 
-      queue[reqId] = { callback, timeoutHandler };
+      queue[reqId] = { callback, errorHandler, timeoutHandler };
 
       const stringifiedPacket = JSON.stringify(packet);
 
@@ -162,8 +174,13 @@ function initializeSocket(socket) {
         // find on queue
         const queueItem = queue[reqId];
         if (queueItem != null) {
-          clearTimeout(queueItem.timeout);
-          queueItem?.callback(data);
+          clearTimeout(queueItem.timeoutHandler);
+          if (data.success) {
+            queueItem?.callback(data.data);
+          } else {
+            queueItem.errorHandler(new Error(data.err_message));
+          }
+
           delete queue[reqId];
           return;
         }
@@ -196,7 +213,7 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
     socket = null;
   }
 
-  const { sender } = ipc;
+  const { sender, emiter, getLastBlockNumber } = ipc;
 
   let accessToken_ = accessToken;
   let refreshToken_ = refreshToken;
@@ -267,11 +284,51 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
 
   /* ---------------------------------------- Default ---------------------------------------- */
   console.system(`Websocket connecting to ${appServerSocketFinalEndpoint}`);
-  const { emit, emitSync, on, register } = initializeSocket(socket);
+  const socketCtx = initializeSocket(socket);
+  const { emit, emitSync, on, register } = socketCtx;
 
-  register("open", () => {
+  register("open", async () => {
     console.system(console.wrap(`Websocket connected to (${appServerSocketFinalEndpoint})`, console.CYAN));
-    emit("test", "Hello world");
+    emiter("socket/connected", null);
+    // emit("test", "Hello world");
+    try {
+      let waitingBlockNumber = await emitSync("waitingBlockNumber", null, 5000);
+      console.info(`Remote Waiting block number`, waitingBlockNumber);
+
+      if (waitingBlockNumber == 1) {
+        // this is first commit time
+        // initialize server states
+        // TODO :: implment this
+      }
+
+      let lastBlockNumber = getLastBlockNumber();
+      if (lastBlockNumber < waitingBlockNumber - 1) {
+        // sync blocks needed (behind)
+        console.info(`Local block number is behind remote, syncing...`);
+        let result = await emitSync("syncBlocks", {
+          start_block_number: lastBlockNumber + 1,
+          end_block_number: waitingBlockNumber - 1,
+        });
+        console.info(`Sync result`, result);
+      } else if (lastBlockNumber > waitingBlockNumber + 1) {
+        // commit blocks needed (ahead)
+        console.info(`Local block number is ahead remote, waiting...`);
+        let txs = await db.all(`SELECT * FROM transactions WHERE block_number >= ? AND block_number <= ?;`, [
+          waitingBlockNumber,
+          lastBlockNumber,
+        ]);
+        let txRequests = txs.map((tx) => {
+          return makeTransaction(tx.type, tx.data, tx.block_number);
+        });
+        let result = await emitSync("waiting", txRequests);
+        console.info(`Waiting result`, result);
+      } else {
+        // no sync needed (already synced)
+        console.info(`Local block number is already synced with remote`);
+      }
+    } catch (err) {
+      console.error(`Waiting block number error`, err);
+    }
   });
 
   register("error", (err) => {
@@ -280,11 +337,16 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
 
   register("close", (code) => {
     console.info("Disconnect with socket, reason: " + code);
+    emiter("socket/disconnected", null, { code });
   });
 
   on("test", ({ data }) => {
     console.debug(data);
   });
 
-  return socket;
+  on("broadcast_transaction", ({ data }) => {
+    console.log(data);
+  });
+
+  return socketCtx;
 };

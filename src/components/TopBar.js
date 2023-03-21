@@ -9,9 +9,11 @@ import { useDispatch, useSelector } from "react-redux";
 import { accountInfoSlice, removeAccount, removeAuth } from "store/accountSlice";
 import { useNavigate } from "react-router-dom";
 import Toast, { Toaster } from "molecules/Toast";
+import JsxUtil from "utils/JsxUtil";
 
 const TopBar = () => {
   const accountInfo = useSelector(accountInfoSlice);
+  const offlineMode = accountInfo.offlineMode;
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -77,6 +79,9 @@ const TopBar = () => {
     <div className="component top-bar">
       <div className="drag-section"></div>
       <div className="title">Memorial - {PackageJson.version}v</div>
+      <div className={"server-status" + JsxUtil.classByCondition(offlineMode, "offline")}>
+        <div className="status">{offlineMode ? "오프라인" : "온라인"} 모드</div>
+      </div>
       <div className="menu-section">
         <div className="menu-item" onClick={logout}>
           <IoLogOutOutline />

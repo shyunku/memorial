@@ -23,6 +23,8 @@ const silentTopics = [];
 const PackageJson = require("../../../package.json");
 const AppServerSocket = require("../user_modules/appServerSocket");
 const { reqIdTag } = require("../modules/util");
+const { createTaskTx } = require("../user_modules/transaction");
+const Exec = require("../user_modules/execute");
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
@@ -49,6 +51,8 @@ let mainWindow = null;
  *
  */
 let socket = null;
+
+let lastBlockNumberMap = {};
 
 const color = console.RGB(78, 119, 138);
 const coloredIpcMain = console.wrap("IpcMain", color);
@@ -142,8 +146,13 @@ const fastSilentSender = (topic, socketResponse) => {
 };
 
 /* ---------------------------------------- Websocket (Custom) ---------------------------------------- */
-const sendTransaction = async (type, data) => {
+const sendTransaction = async (tx) => {
   if (socket == null) throw new Error("Socket is not connected");
+  try {
+    return await socket.emitSync("transaction", tx);
+  } catch (err) {
+    console.error(err);
+  }
 };
 
 /* ---------------------------------------- System ---------------------------------------- */
@@ -354,6 +363,7 @@ register("auth/initializeDatabase", async (event, reqId, userId) => {
   try {
     await databaseContext.initialize(userId);
     db = await databaseContext.getContext(userId);
+    console.log(db);
     sender("auth/initializeDatabase", reqId, true);
   } catch (err) {
     sender("auth/initializeDatabase", reqId, false);
@@ -425,7 +435,8 @@ register("auth/signUp", async (event, reqId, signupRequest) => {
       ]);
 
       // create database for user
-      db = await databaseContext.initialize(uid);
+      await databaseContext.initialize(uid);
+      db = await databaseContext.getContext(uid);
     } else {
       // user already exists in local db
       let [user] = users;
@@ -576,6 +587,17 @@ register("auth/login", async (event, reqId, signinRequest) => {
 
 register("socket/connect", async (event, reqId, userId, accessToken, refreshToken) => {
   try {
+    // find last blocknumber
+    let transactions = await db.all("SELECT * FROM transactions ORDER BY txid DESC, timestamp DESC LIMIT 1;");
+    if (transactions.length === 0) {
+      lastBlockNumber = 0;
+    } else {
+      let [transaction] = transactions;
+      lastBlockNumber = transaction.block_number;
+    }
+    console.debug(`current last block number: ${lastBlockNumber} for user ${userId}`);
+    lastBlockNumberMap[userId] = lastBlockNumber;
+
     socket = await AppServerSocket(userId, accessToken, refreshToken, Ipc, rootDB, db);
     sender("socket/connect", reqId, true);
   } catch (err) {
@@ -608,55 +630,12 @@ register("task/getAllSubtaskList", async (event, reqId) => {
 // 3.next = 4
 register("task/addTask", async (event, reqId, task) => {
   try {
-    // find tid is null
-    let lastTidList = await db.all("SELECT tid FROM tasks WHERE next IS NULL LIMIT 2;");
-    if (lastTidList.length > 1) {
-      console.log(lastTidList);
-      throw new Error(`tasks that ID is null is more than 1. (${lastTidList.length})`);
-    }
-
-    let [lastTask] = lastTidList;
-
-    // transaction
-    await db.begin();
-
-    try {
-      let result = await db.run(
-        "INSERT INTO tasks (title, created_at, done_at, memo, done, due_date, repeat_period, repeat_start_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        task.title,
-        task.created_at,
-        task.done_at,
-        task.memo,
-        task.done,
-        task.due_date,
-        task.repeat_period,
-        task.due_date
-      );
-
-      if (lastTask != null) {
-        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, result.lastID, lastTask.tid);
-      }
-
-      // add category to task
-      const categories = task.categories;
-      if (categories) {
-        for (let cid in categories) {
-          await db.run(`INSERT INTO tasks_categories (tid, cid) VALUES (?, ?);`, result.lastID, cid);
-        }
-      }
-
-      await db.commit();
-      sender("task/addTask", reqId, true, {
-        tid: result.lastID,
-        prevTaskId: lastTask ? lastTask.tid : null,
-      });
-    } catch (err) {
-      await db.rollback();
-      throw err;
-    }
+    await Exec.createTask(db, task);
   } catch (err) {
     sender("task/addTask", reqId, false);
     throw err;
+  } finally {
+    sendTransaction(createTaskTx(task));
   }
 });
 
@@ -1106,6 +1085,12 @@ const Ipc = {
   },
   setMainWindow: (mainWindow_) => {
     mainWindow = mainWindow_;
+  },
+  setLastBlockNumber: (userId, lastBlockNumber_) => {
+    lastBlockNumberMap[userId] = lastBlockNumber_;
+  },
+  getLastBlockNumber: (userId) => {
+    return lastBlockNumberMap[userId] ?? 0;
   },
 };
 
