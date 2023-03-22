@@ -5,6 +5,7 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
   if (tx == null) throw new Error("Transaction is null");
   if (tx.type == null) throw new Error("Transaction type is null");
 
+  const { setLastBlockNumberWithoutUserId } = Ipc;
   const args = [db, reqId, Ipc];
 
   // decode tx.content
@@ -18,6 +19,8 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
     decodedBuffer,
     blockNumber,
   ]);
+
+  setLastBlockNumberWithoutUserId(blockNumber);
 
   console.debug(tx);
 

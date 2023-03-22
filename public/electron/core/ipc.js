@@ -1107,8 +1107,10 @@ const Ipc = {
     mainWindow = mainWindow_;
   },
   setLastBlockNumber: (userId, lastBlockNumber_) => {
-    console.log("set", userId, "to", lastBlockNumber_);
     lastBlockNumberMap[userId] = lastBlockNumber_;
+  },
+  setLastBlockNumberWithoutUserId: (lastBlockNumber_) => {
+    lastBlockNumberMap[currentUserId] = lastBlockNumber_;
   },
   getLastBlockNumber,
 };
