@@ -289,7 +289,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
   const saveBlockAndExecute = async (block) => {
     try {
-      let { tx, number, state, prevBlockHash } = block;
+      let { tx, number } = block;
       await txExecutor(db, null, ipc, tx, number);
       setLastBlockNumber(userId, number);
     } catch (err) {
@@ -323,7 +323,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
         const blocks = result;
         const sortedBlocks = blocks.sort((a, b) => a.number - b.number);
         for (let block of sortedBlocks) {
-          saveBlockAndExecute(block);
+          await saveBlockAndExecute(block);
         }
       } else if (lastBlockNumber > waitingBlockNumber + 1) {
         // commit blocks needed (ahead)
