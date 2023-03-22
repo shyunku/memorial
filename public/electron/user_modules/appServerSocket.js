@@ -299,9 +299,8 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
       await db.run(`INSERT INTO transactions (type, timestamp, content, block_number) VALUES (?, ?, ?, ?);`, [
         tx.type,
         tx.timestamp,
-        tx.content,
+        decodedBuffer,
         number,
-        state,
       ]);
 
       txExecutor(db, null, ipc, tx);

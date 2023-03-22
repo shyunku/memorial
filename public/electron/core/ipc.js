@@ -589,7 +589,7 @@ register("socket/connect", async (event, reqId, userId, accessToken, refreshToke
     currentUserId = userId;
 
     // find last blocknumber
-    let transactions = await db.all("SELECT * FROM transactions ORDER BY txid DESC, timestamp DESC LIMIT 1;");
+    let transactions = await db.all("SELECT * FROM transactions ORDER BY block_number DESC LIMIT 1;");
     if (transactions.length === 0) {
       lastBlockNumber = 0;
     } else {
