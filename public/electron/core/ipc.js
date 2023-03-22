@@ -647,6 +647,7 @@ register("task/addTask", async (event, reqId, task) => {
     );
     const tx = makeTransaction(TX_TYPE.CREATE_TASK, txContent, curLastBlockNumber());
     Exec.txExecutor(db, reqId, Ipc, tx);
+    sendTx(tx);
   } catch (err) {
     sender("task/addTask", reqId, false);
     throw err;
