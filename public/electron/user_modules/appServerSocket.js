@@ -290,20 +290,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
   const saveBlockAndExecute = async (block) => {
     try {
       let { tx, number, state, prevBlockHash } = block;
-      // decode tx.content
-      const rawContent = tx.content;
-      const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
-      // tx.content = JSON.parse(decodedBuffer.toString("utf-8"));
-
-      // insert block (as transaction) into local db
-      await db.run(`INSERT INTO transactions (type, timestamp, content, block_number) VALUES (?, ?, ?, ?);`, [
-        tx.type,
-        tx.timestamp,
-        decodedBuffer,
-        number,
-      ]);
-
-      txExecutor(db, null, ipc, tx);
+      await txExecutor(db, null, ipc, tx, number);
       setLastBlockNumber(userId, number);
     } catch (err) {
       console.error(err);

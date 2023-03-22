@@ -3,14 +3,14 @@ const TX_TYPE = {
   CREATE_TASK: 1,
 };
 
-const makeTransaction = (type, data, curLastBlockNumber) => {
+const makeTransaction = (type, data, targetBlockNumber) => {
   const timestamp = Date.now();
 
   return {
     type,
     content: data,
     timestamp,
-    targetBlockNumber: curLastBlockNumber + 1,
+    targetBlockNumber: targetBlockNumber,
   };
 };
 

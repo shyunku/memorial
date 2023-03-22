@@ -56,6 +56,9 @@ let socket = null;
 let lastBlockNumberMap = {};
 let currentUserId = null;
 const curLastBlockNumber = () => lastBlockNumberMap[currentUserId] ?? 0;
+const getLastBlockNumber = (userId) => {
+  return lastBlockNumberMap[userId] ?? 0;
+};
 
 const color = console.RGB(78, 119, 138);
 const coloredIpcMain = console.wrap("IpcMain", color);
@@ -645,7 +648,9 @@ register("task/addTask", async (event, reqId, task) => {
       task.categories,
       preResult.prevTaskId
     );
-    const tx = makeTransaction(TX_TYPE.CREATE_TASK, txContent, curLastBlockNumber());
+    console.debug(lastBlockNumberMap);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = makeTransaction(TX_TYPE.CREATE_TASK, txContent, targetBlockNumber);
     Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
@@ -1102,11 +1107,10 @@ const Ipc = {
     mainWindow = mainWindow_;
   },
   setLastBlockNumber: (userId, lastBlockNumber_) => {
+    console.log("set", userId, "to", lastBlockNumber_);
     lastBlockNumberMap[userId] = lastBlockNumber_;
   },
-  getLastBlockNumber: (userId) => {
-    return lastBlockNumberMap[userId] ?? 0;
-  },
+  getLastBlockNumber,
 };
 
 module.exports = Ipc;
