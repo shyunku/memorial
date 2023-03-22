@@ -38,6 +38,7 @@ const TodoItemAddSection = ({ onTaskAdd, category }) => {
           onFocus={(e) => setNewTodoItemFocused(true)}
           onChange={(e) => setNewTodoItemContent(e.target.value)}
           onKeyDown={(e) => {
+            if (e.isComposing || e.keyCode === 229) return;
             if (e.key === "Enter") {
               onAddTodoItem();
             }
