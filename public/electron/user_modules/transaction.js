@@ -1,4 +1,4 @@
-const TRANSACTION_TYPE = {
+const TX_TYPE = {
   INITIALIZE: 0,
   CREATE_TASK: 1,
 };
@@ -15,20 +15,11 @@ const makeTransaction = (type, data, curLastBlockNumber) => {
 };
 
 const makeInitializeTx = (data, curLastBlockNumber) => {
-  return makeTransaction(TRANSACTION_TYPE.INITIALIZE, data, curLastBlockNumber);
-};
-
-const createTaskTx = (data, curLastBlockNumber) => {
-  return makeTransaction(
-    TRANSACTION_TYPE.CREATE_TASK,
-    data,
-    curLastBlockNumber
-  );
+  return makeTransaction(TX_TYPE.INITIALIZE, data, curLastBlockNumber);
 };
 
 module.exports = {
-  TRANSACTION_TYPE,
+  TX_TYPE,
   makeTransaction,
   makeInitializeTx,
-  createTaskTx,
 };

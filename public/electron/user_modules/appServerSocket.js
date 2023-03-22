@@ -4,15 +4,13 @@ const Request = require("../core/request");
 const { v4 } = require("uuid");
 const { reqIdTag } = require("../modules/util");
 const { makeTransaction } = require("./transaction");
+const { txExecutor } = require("./executeRouter");
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
 const appServerFinalEndpoint = `${appServerEndpoint}/${appServerApiVersion}`;
 
-const appServerSocketFinalEndpoint = `${appServerFinalEndpoint.replace(
-  /http/g,
-  "ws"
-)}/websocket/connect`;
+const appServerSocketFinalEndpoint = `${appServerFinalEndpoint.replace(/http/g, "ws")}/websocket/connect`;
 
 let socket;
 
@@ -59,10 +57,10 @@ function initializeSocket(socket) {
 
       let timeoutHandler = setTimeout(() => {
         console.info(
-          `${coloredSocket} ${console.wrap(
-            `|-${reqIdTag(reqId)}--`,
-            console.ORANGE
-          )} ${console.wrap(topic, console.MAGENTA)}`
+          `${coloredSocket} ${console.wrap(`|-${reqIdTag(reqId)}--`, console.ORANGE)} ${console.wrap(
+            topic,
+            console.MAGENTA
+          )}`
         );
         reject(`Request timeout`);
       }, timeout);
@@ -79,10 +77,10 @@ function initializeSocket(socket) {
       }
 
       console.info(
-        `${coloredSocket} ${console.wrap(
-          `--${reqIdTag(reqId)}->`,
-          console.CYAN
-        )} ${console.wrap(topic, console.MAGENTA)}`,
+        `${coloredSocket} ${console.wrap(`--${reqIdTag(reqId)}->`, console.CYAN)} ${console.wrap(
+          topic,
+          console.MAGENTA
+        )}`,
         data
       );
     });
@@ -104,10 +102,10 @@ function initializeSocket(socket) {
     }
 
     console.info(
-      `${coloredSocket} ${console.wrap(
-        `--${reqIdTag(reqId)}->`,
-        console.CYAN
-      )} ${console.wrap(topic, console.MAGENTA)}`,
+      `${coloredSocket} ${console.wrap(`--${reqIdTag(reqId)}->`, console.CYAN)} ${console.wrap(
+        topic,
+        console.MAGENTA
+      )}`,
       data
     );
   };
@@ -136,20 +134,18 @@ function initializeSocket(socket) {
 
       if (success) {
         console.info(
-          `${coloredSocket} ${console.wrap(
-            `<-${reqIdTag(reqId)}--`,
-            console.GREEN
-          )} ${console.wrap(topic, console.MAGENTA)}`,
+          `${coloredSocket} ${console.wrap(`<-${reqIdTag(reqId)}--`, console.GREEN)} ${console.wrap(
+            topic,
+            console.MAGENTA
+          )}`,
           data?.data
         );
       } else {
         console.info(
-          `${coloredSocket} ${console.wrap(
-            `<-${reqIdTag(reqId)}--`,
-            console.RED
-          )} ${console.wrap(topic, console.MAGENTA)} ${
-            data?.err_message ?? "unknown fail error"
-          }`
+          `${coloredSocket} ${console.wrap(`<-${reqIdTag(reqId)}--`, console.RED)} ${console.wrap(
+            topic,
+            console.MAGENTA
+          )} ${data?.err_message ?? "unknown fail error"}`
         );
       }
 
@@ -191,10 +187,7 @@ function initializeSocket(socket) {
           return;
         }
 
-        if (
-          handlers[data.topic] != null &&
-          typeof handlers[data.topic] === "function"
-        ) {
+        if (handlers[data.topic] != null && typeof handlers[data.topic] === "function") {
           const handler = handlers[data?.topic];
           handler(data);
         } else {
@@ -217,11 +210,11 @@ function initializeSocket(socket) {
   };
 }
 
-module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
+const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db, reconnect = false) => {
   if (userId == null) throw new Error("User ID is required");
   if (accessToken == null) throw new Error("Access token is required");
   if (ipc == null) throw new Error("IPC is required");
-  if (socket != null) {
+  if (!reconnect && socket != null) {
     console.warn("Socket is already connected. Disconnecting previous...");
     socket.close(1000, "Reorganize socket connection");
     socket = null;
@@ -240,9 +233,7 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
     });
   } catch (err) {
     try {
-      let users = await rootDB.all(`SELECT * FROM users WHERE uid = ?;`, [
-        userId,
-      ]);
+      let users = await rootDB.all(`SELECT * FROM users WHERE uid = ?;`, [userId]);
       if (users.length == 0) throw new Error("User not found");
       let [user] = users;
 
@@ -256,28 +247,24 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
     console.debug(err?.response?.status, err?.response?.data, refreshToken_);
     if (err?.response?.status === 401 && refreshToken_ != null) {
       try {
-        let result = await Request.post(
-          appServerFinalEndpoint,
-          "/auth/refreshToken",
-          null,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken_}`,
-              "X-Refresh-Token": refreshToken_,
-            },
-            withCredentials: true,
-          }
-        );
+        let result = await Request.post(appServerFinalEndpoint, "/auth/refreshToken", null, {
+          headers: {
+            Authorization: `Bearer ${accessToken_}`,
+            "X-Refresh-Token": refreshToken_,
+          },
+          withCredentials: true,
+        });
         let { access_token, refresh_token } = result;
 
         accessToken_ = access_token.token;
         refreshToken_ = refresh_token.token;
 
         // register updated tokens on local
-        await rootDB.run(
-          `UPDATE users SET access_token = ?, refresh_token = ? WHERE uid = ?;`,
-          [accessToken_, refreshToken_, userId]
-        );
+        await rootDB.run(`UPDATE users SET access_token = ?, refresh_token = ? WHERE uid = ?;`, [
+          accessToken_,
+          refreshToken_,
+          userId,
+        ]);
 
         // update access token & refresh token to ipc
         sender("auth/tokenUpdated", null, true, {
@@ -311,12 +298,7 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
   const { emit, emitSync, on, register } = socketCtx;
 
   register("open", async () => {
-    console.system(
-      console.wrap(
-        `Websocket connected to (${appServerSocketFinalEndpoint})`,
-        console.CYAN
-      )
-    );
+    console.system(console.wrap(`Websocket connected to (${appServerSocketFinalEndpoint})`, console.CYAN));
     emiter("socket/connected", null, null);
     // emit("test", "Hello world");
     try {
@@ -341,10 +323,10 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
       } else if (lastBlockNumber > waitingBlockNumber + 1) {
         // commit blocks needed (ahead)
         console.info(`Local block number is ahead remote, waiting...`);
-        let txs = await db.all(
-          `SELECT * FROM transactions WHERE block_number >= ? AND block_number <= ?;`,
-          [waitingBlockNumber, lastBlockNumber]
-        );
+        let txs = await db.all(`SELECT * FROM transactions WHERE block_number >= ? AND block_number <= ?;`, [
+          waitingBlockNumber,
+          lastBlockNumber,
+        ]);
         let txRequests = txs.map((tx) => {
           return makeTransaction(tx.type, tx.data, tx.block_number);
         });
@@ -366,6 +348,16 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
   register("close", (code) => {
     console.info("Disconnect with socket, reason: " + code);
     emiter("socket/disconnected", null, { code });
+
+    // reconnect?
+    setTimeout(() => {
+      console.system("Reconnecting to socket...");
+      try {
+        connectSocket(userId, accessToken_, refreshToken_, ipc, rootDB, db, true);
+      } catch (err) {
+        console.error(err);
+      }
+    }, 3000);
   });
 
   on("test", ({ data }) => {
@@ -373,8 +365,15 @@ module.exports = async (userId, accessToken, refreshToken, ipc, rootDB, db) => {
   });
 
   on("broadcast_transaction", ({ data }) => {
-    console.log(data);
+    try {
+      console.debug(data);
+      txExecutor(db, null, ipc, data.tx);
+    } catch (err) {
+      console.error(err);
+    }
   });
 
   return socketCtx;
 };
+
+module.exports = connectSocket;

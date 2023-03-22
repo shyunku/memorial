@@ -23,8 +23,9 @@ const silentTopics = [];
 const PackageJson = require("../../../package.json");
 const AppServerSocket = require("../user_modules/appServerSocket");
 const { reqIdTag } = require("../modules/util");
-const { createTaskTx } = require("../user_modules/transaction");
-const Exec = require("../user_modules/execute");
+const { createTaskTx, makeTransaction, TX_TYPE } = require("../user_modules/transaction");
+const Exec = require("../user_modules/executeRouter");
+const { createTaskPre, CreateTaskTxContent } = require("../executors/createTask.exec");
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
@@ -63,15 +64,13 @@ const register = (topic, callback, ...arg) => {
   const originalCallback = callback;
   callback = async (event, reqId, ...arg) => {
     if (!silentTopics.includes(topic)) {
-      let mergedArguments = arg
-        .map((param) => console.shorten(param))
-        .join(" ");
+      let mergedArguments = arg.map((param) => console.shorten(param)).join(" ");
 
       console.system(
-        `${coloredIpcMain} ${console.wrap(
-          `<-${reqIdTag(reqId)}--`,
-          console.GREEN
-        )} ${console.wrap(topic, console.MAGENTA)} ${mergedArguments}`
+        `${coloredIpcMain} ${console.wrap(`<-${reqIdTag(reqId)}--`, console.GREEN)} ${console.wrap(
+          topic,
+          console.MAGENTA
+        )} ${mergedArguments}`
       );
     }
     try {
@@ -92,12 +91,7 @@ const silentRegister = (topic, ...arg) => {
 // send data with success flag
 const sender = (topic, reqId, success, data = null, ...extra) => {
   if (typeof success !== "boolean")
-    console.error(
-      `[IpcMain]: success flag is not boolean (${console.wrap(
-        topic,
-        console.MAGENTA
-      )})`
-    );
+    console.error(`[IpcMain]: success flag is not boolean (${console.wrap(topic, console.MAGENTA)})`);
   let packagedData = { success, data };
   let sendeeCount = IpcRouter.broadcast(topic, reqId, packagedData, ...extra);
 
@@ -106,10 +100,9 @@ const sender = (topic, reqId, success, data = null, ...extra) => {
     `${coloredIpcMain} ${console.wrap(
       `--${reqIdTag(reqId)}-${success ? ">" : "X"}`,
       success ? console.CYAN : console.RED
-    )} ${console.wrap(topic, console.MAGENTA)} ${console.wrap(
-      `(${sendeeCount})`,
-      console.BLUE
-    )} ${JSON.stringify(data)}`
+    )} ${console.wrap(topic, console.MAGENTA)} ${console.wrap(`(${sendeeCount})`, console.BLUE)} ${JSON.stringify(
+      data
+    )}`
   );
 };
 
@@ -119,34 +112,27 @@ const emiter = (topic, reqId, data) => {
 
   if (silentTopics.includes(topic)) return;
   console.system(
-    `${coloredIpcMain} --${reqIdTag(reqId)}-> ${console.wrap(
-      topic,
-      console.MAGENTA
-    )} ${console.wrap(`(${sendeeCount})`, console.BLUE)}`,
+    `${coloredIpcMain} --${reqIdTag(reqId)}-> ${console.wrap(topic, console.MAGENTA)} ${console.wrap(
+      `(${sendeeCount})`,
+      console.BLUE
+    )}`,
     data
   );
 };
 
 const fastSender = (topic, socketResponse) => {
   let success = socketResponse.code === Request.ok;
-  let data = socketResponse
-    ? success
-      ? socketResponse.data
-      : socketResponse.code
-    : null;
+  let data = socketResponse ? (success ? socketResponse.data : socketResponse.code) : null;
 
   let packagedData = { success, data };
   let sendeeCount = IpcRouter.broadcast(topic, packagedData);
 
   if (silentTopics.includes(topic)) return;
   console.system(
-    `${coloredIpcMain} ${console.wrap(
-      `--${reqIdTag("NIL")}->`,
-      console.CYAN
-    )} ${console.wrap(topic, console.MAGENTA)} ${console.wrap(
-      `(${sendeeCount})`,
-      console.BLUE
-    )} ${data}`
+    `${coloredIpcMain} ${console.wrap(`--${reqIdTag("NIL")}->`, console.CYAN)} ${console.wrap(
+      topic,
+      console.MAGENTA
+    )} ${console.wrap(`(${sendeeCount})`, console.BLUE)} ${data}`
   );
 };
 
@@ -157,11 +143,7 @@ const silentSender = (topic, success, data) => {
 
 const fastSilentSender = (topic, socketResponse) => {
   let success = socketResponse.code === Request.ok;
-  let data = socketResponse
-    ? success
-      ? socketResponse.data
-      : socketResponse.code
-    : null;
+  let data = socketResponse ? (success ? socketResponse.data : socketResponse.code) : null;
 
   let packagedData = { success, data };
   IpcRouter.broadcast(topic, packagedData);
@@ -209,8 +191,7 @@ register("system/restore_window", (event, reqId, param) => {
 
 register("system/isMaximizable", (event, reqId, param) => {
   let currentWindow = BrowserWindow.fromId(param);
-  if (currentWindow)
-    sender("isMaximizable", reqId, true, currentWindow.isMaximizable());
+  if (currentWindow) sender("isMaximizable", reqId, true, currentWindow.isMaximizable());
 });
 
 register("system/modal", (event, reqId, ...arg) => {
@@ -275,16 +256,12 @@ register("system/setAsLoginWindow", (event, reqId) => {
 register("auth/sendGoogleOauthResult", async (event, reqId, data) => {
   try {
     let { googleUserInfo } = data;
-    let { email: google_email, picture: google_profile_image_url } =
-      googleUserInfo;
+    let { email: google_email, picture: google_profile_image_url } = googleUserInfo;
     let user;
 
     // check if user exists already
     let isSignupNeeded = false;
-    let users = await rootDB.all(
-      "SELECT * FROM users WHERE google_email = ?;",
-      google_email
-    );
+    let users = await rootDB.all("SELECT * FROM users WHERE google_email = ?;", google_email);
     if (users.length === 0) {
       // newly created user
       isSignupNeeded = true;
@@ -304,43 +281,35 @@ register("auth/sendGoogleOauthResult", async (event, reqId, data) => {
   }
 });
 
-register(
-  "auth/registerAuthInfoSync",
-  async (event, reqId, userId, accessToken, refreshToken) => {
-    try {
-      if (userId == null) throw new Error("userId is null");
-      if (accessToken == null) throw new Error("accessToken is null");
-      if (refreshToken == null) throw new Error("refreshToken is null");
+register("auth/registerAuthInfoSync", async (event, reqId, userId, accessToken, refreshToken) => {
+  try {
+    if (userId == null) throw new Error("userId is null");
+    if (accessToken == null) throw new Error("accessToken is null");
+    if (refreshToken == null) throw new Error("refreshToken is null");
 
-      // check if user exists already
-      let users = await rootDB.all(
-        "SELECT * FROM users WHERE uid = ?;",
-        userId
-      );
-      if (users.length === 0) {
-        // retry
-        sender("auth/registerAuthInfoSync", reqId, false, "NOT_IN_LOCAL");
-        return;
-      }
-
-      await rootDB.run(
-        "UPDATE users SET access_token = ?, refresh_token = ? WHERE uid = ?;",
-        [accessToken, refreshToken, userId]
-      );
-      sender("auth/registerAuthInfoSync", reqId, true);
-    } catch (err) {
-      sender("auth/registerAuthInfoSync", reqId, false, err.message);
-      throw err;
+    // check if user exists already
+    let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", userId);
+    if (users.length === 0) {
+      // retry
+      sender("auth/registerAuthInfoSync", reqId, false, "NOT_IN_LOCAL");
+      return;
     }
+
+    await rootDB.run("UPDATE users SET access_token = ?, refresh_token = ? WHERE uid = ?;", [
+      accessToken,
+      refreshToken,
+      userId,
+    ]);
+    sender("auth/registerAuthInfoSync", reqId, true);
+  } catch (err) {
+    sender("auth/registerAuthInfoSync", reqId, false, err.message);
+    throw err;
   }
-);
+});
 
 register("auth/deleteAuthInfo", async (event, reqId, userId) => {
   try {
-    await rootDB.run(
-      "UPDATE users SET access_token = NULL, refresh_token = NULL WHERE uid = ?;",
-      [userId]
-    );
+    await rootDB.run("UPDATE users SET access_token = NULL, refresh_token = NULL WHERE uid = ?;", [userId]);
     sender("auth/deleteAuthInfo", reqId, true);
   } catch (err) {
     sender("auth/deleteAuthInfo", reqId, false);
@@ -350,9 +319,7 @@ register("auth/deleteAuthInfo", async (event, reqId, userId) => {
 
 register("auth/loadAuthInfoSync", async (event, reqId, userId) => {
   try {
-    let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", [
-      userId,
-    ]);
+    let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", [userId]);
     if (users.length === 0) throw new Error("user not found");
     let [user] = users;
     sender("auth/loadAuthInfoSync", reqId, true, {
@@ -390,18 +357,14 @@ register("auth/signUpWithGoogleAuth", async (event, reqId, signupRequest) => {
   try {
     let result;
     try {
-      result = await Request.post(
-        appServerFinalEndpoint,
-        "/google_auth/signup",
-        {
-          username: signupRequest.username,
-          auth_id: signupRequest.authId,
-          encrypted_password: sha256(signupRequest.encryptedPassword),
-          google_auth_id: signupRequest.googleAuthId,
-          google_email: signupRequest.googleEmail,
-          google_profile_image_url: signupRequest.googleProfileImageUrl,
-        }
-      );
+      result = await Request.post(appServerFinalEndpoint, "/google_auth/signup", {
+        username: signupRequest.username,
+        auth_id: signupRequest.authId,
+        encrypted_password: sha256(signupRequest.encryptedPassword),
+        google_auth_id: signupRequest.googleAuthId,
+        google_email: signupRequest.googleEmail,
+        google_profile_image_url: signupRequest.googleProfileImageUrl,
+      });
     } catch (err) {
       console.error(err);
       console.debug(err?.response?.data);
@@ -411,10 +374,7 @@ register("auth/signUpWithGoogleAuth", async (event, reqId, signupRequest) => {
 
     // first update user info to local db
     // check if user exists already in local db
-    let users = await rootDB.all(
-      "SELECT * FROM users WHERE uid = ?;",
-      result.userId
-    );
+    let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", result.userId);
     if (users.length === 0) {
       // create new
       await rootDB.run(
@@ -433,12 +393,7 @@ register("auth/signUpWithGoogleAuth", async (event, reqId, signupRequest) => {
       // update google info (already registered without google)
       await rootDB.run(
         "UPDATE users SET google_auth_id = ?, google_email = ?, google_profile_image_url = ? WHERE uid = ?;",
-        [
-          result.googleAuthId,
-          result.googleEmail,
-          result.googleProfileImageUrl,
-          result.userId,
-        ]
+        [result.googleAuthId, result.googleEmail, result.googleProfileImageUrl, result.userId]
       );
     }
 
@@ -470,10 +425,12 @@ register("auth/signUp", async (event, reqId, signupRequest) => {
     if (users.length === 0) {
       // newly created user
       // need to create secret key to encrypt/decrypt data
-      await rootDB.run(
-        "INSERT INTO users (uid, auth_id, auth_encrypted_pw, username) VALUES (?, ?, ?, ?);",
-        [uid, result.auth_id, signupRequest.encryptedPassword, result.username]
-      );
+      await rootDB.run("INSERT INTO users (uid, auth_id, auth_encrypted_pw, username) VALUES (?, ?, ?, ?);", [
+        uid,
+        result.auth_id,
+        signupRequest.encryptedPassword,
+        result.username,
+      ]);
 
       // create database for user
       await databaseContext.initialize(uid);
@@ -482,37 +439,25 @@ register("auth/signUp", async (event, reqId, signupRequest) => {
       let [user] = users;
       if (user.auth_id != null && user.auth_encrypted_pw != null) {
         // already exists in local (but not was in server)
-        console.warn(
-          "auth/signUp: already exists in local (but newly created in server)"
-        );
-        if (
-          user.auth_id != signupRequest.authId ||
-          user.auth_encrypted_pw != signupRequest.encryptedPassword
-        ) {
+        console.warn("auth/signUp: already exists in local (but newly created in server)");
+        if (user.auth_id != signupRequest.authId || user.auth_encrypted_pw != signupRequest.encryptedPassword) {
           // but info mismatch, automatically update re-create
-          console.warn(
-            "auth/signUp: info mismatch, automatically update re-create"
-          );
-          await rootDB.run(
-            "UPDATE users SET auth_id = ?, auth_encrypted_pw = ? WHERE uid = ?;",
-            [signupRequest.authId, signupRequest.encryptedPassword, uid]
-          );
+          console.warn("auth/signUp: info mismatch, automatically update re-create");
+          await rootDB.run("UPDATE users SET auth_id = ?, auth_encrypted_pw = ? WHERE uid = ?;", [
+            signupRequest.authId,
+            signupRequest.encryptedPassword,
+            uid,
+          ]);
         } else {
           // no need to update
         }
       }
 
-      if (
-        user.google_auth_id != null ||
-        user.google_email != null ||
-        user.google_profile_image_url != null
-      ) {
+      if (user.google_auth_id != null || user.google_email != null || user.google_profile_image_url != null) {
         // google auth exists or remains
         // trying to bind auth to google auth (but there was no google auth in server)
         // delete google auth in local db
-        console.warn(
-          "auth/signUp: trying to bind auth to google auth (but there was no google auth in server)"
-        );
+        console.warn("auth/signUp: trying to bind auth to google auth (but there was no google auth in server)");
         try {
           await rootDB.run(
             "UPDATE users SET google_auth_id = NULL, google_email = NULL, google_profile_image_url = NULL WHERE uid = ?;",
@@ -528,13 +473,12 @@ register("auth/signUp", async (event, reqId, signupRequest) => {
 
       // already exists in local but wtf is happening?
       // update all anyway
-      console.warn(
-        "auth/signUp: already exists in local but wtf is happening? (no data in it)"
-      );
-      await rootDB.run(
-        "UPDATE users SET auth_id = ?, auth_encrypted_pw = ? WHERE uid = ?;",
-        [signupRequest.authId, signupRequest.encryptedPassword, uid]
-      );
+      console.warn("auth/signUp: already exists in local but wtf is happening? (no data in it)");
+      await rootDB.run("UPDATE users SET auth_id = ?, auth_encrypted_pw = ? WHERE uid = ?;", [
+        signupRequest.authId,
+        signupRequest.encryptedPassword,
+        uid,
+      ]);
     }
 
     sender("auth/signUp", reqId, true);
@@ -548,10 +492,7 @@ register("auth/login", async (event, reqId, signinRequest) => {
   let canLoginWithLocal = false;
   try {
     // try login in local
-    let localUsers = await rootDB.all(
-      "SELECT * FROM users WHERE auth_id = ?;",
-      signinRequest.authId
-    );
+    let localUsers = await rootDB.all("SELECT * FROM users WHERE auth_id = ?;", signinRequest.authId);
     if (localUsers.length > 0) {
       let [localUser] = localUsers;
       if (localUser.auth_encrypted_pw === signinRequest.encryptedPassword) {
@@ -587,13 +528,7 @@ register("auth/login", async (event, reqId, signinRequest) => {
 
     let { auth, user } = result;
     let { access_token, refresh_token } = auth;
-    let {
-      auth_id,
-      uid,
-      google_auth_id,
-      google_email,
-      google_profile_image_url,
-    } = user;
+    let { auth_id, uid, google_auth_id, google_email, google_profile_image_url } = user;
 
     // check if user exists already
     let users = await rootDB.all("SELECT * FROM users WHERE uid = ?;", uid);
@@ -618,9 +553,7 @@ register("auth/login", async (event, reqId, signinRequest) => {
     } else {
       let [user] = users;
       // filter null options
-      const nullProperties = Object.keys(user).filter(
-        (key) => user[key] == null
-      );
+      const nullProperties = Object.keys(user).filter((key) => user[key] == null);
       const newProperties = {
         auth_id,
         auth_encrypted_pw: signinRequest.encryptedPassword,
@@ -633,12 +566,10 @@ register("auth/login", async (event, reqId, signinRequest) => {
 
       if (nullProperties.length > 0) {
         // update null properties
-        await rootDB.run(
-          `UPDATE users SET ${nullProperties
-            .map((key) => `${key} = ?`)
-            .join(", ")} WHERE uid = ?;`,
-          [...nullProperties.map((key) => newProperties[key]), uid]
-        );
+        await rootDB.run(`UPDATE users SET ${nullProperties.map((key) => `${key} = ?`).join(", ")} WHERE uid = ?;`, [
+          ...nullProperties.map((key) => newProperties[key]),
+          uid,
+        ]);
       }
     }
     db = await databaseContext.getContext(uid);
@@ -649,46 +580,32 @@ register("auth/login", async (event, reqId, signinRequest) => {
   }
 });
 
-register(
-  "socket/connect",
-  async (event, reqId, userId, accessToken, refreshToken) => {
-    try {
-      if (db == null) {
-        db = await databaseContext.getContext(userId);
-      }
-
-      currentUserId = userId;
-
-      // find last blocknumber
-      let transactions = await db.all(
-        "SELECT * FROM transactions ORDER BY txid DESC, timestamp DESC LIMIT 1;"
-      );
-      if (transactions.length === 0) {
-        lastBlockNumber = 0;
-      } else {
-        let [transaction] = transactions;
-        lastBlockNumber = transaction.block_number;
-      }
-      console.debug(
-        `current last block number: ${lastBlockNumber} for user ${userId}`
-      );
-      lastBlockNumberMap[userId] = lastBlockNumber;
-
-      socket = await AppServerSocket(
-        userId,
-        accessToken,
-        refreshToken,
-        Ipc,
-        rootDB,
-        db
-      );
-      sender("socket/connect", reqId, true);
-    } catch (err) {
-      sender("socket/connect", reqId, false, err);
-      throw err;
+register("socket/connect", async (event, reqId, userId, accessToken, refreshToken) => {
+  try {
+    if (db == null) {
+      db = await databaseContext.getContext(userId);
     }
+
+    currentUserId = userId;
+
+    // find last blocknumber
+    let transactions = await db.all("SELECT * FROM transactions ORDER BY txid DESC, timestamp DESC LIMIT 1;");
+    if (transactions.length === 0) {
+      lastBlockNumber = 0;
+    } else {
+      let [transaction] = transactions;
+      lastBlockNumber = transaction.block_number;
+    }
+    console.debug(`current last block number: ${lastBlockNumber} for user ${userId}`);
+    lastBlockNumberMap[userId] = lastBlockNumber;
+
+    socket = await AppServerSocket(userId, accessToken, refreshToken, Ipc, rootDB, db);
+    sender("socket/connect", reqId, true);
+  } catch (err) {
+    sender("socket/connect", reqId, false, err);
+    throw err;
   }
-);
+});
 
 register("task/getAllTaskList", async (event, reqId) => {
   try {
@@ -713,26 +630,23 @@ register("task/getAllSubtaskList", async (event, reqId) => {
 // 3 -> 5 (add 4)
 // 3.next = 4
 register("task/addTask", async (event, reqId, task) => {
-  let result;
   try {
-    result = await Exec.createTask(db, reqId, sender, task);
-    sendTx(
-      createTaskTx(
-        {
-          tid: result.tid,
-          title: task.title,
-          createdAt: task.created_at,
-          doneAt: task.done_at,
-          memo: task.memo,
-          done: task.done,
-          dueDate: task.due_date,
-          repeatPeriod: task.repeat_period,
-          repeatStartAt: task.repeat_start_at,
-          categories: task.categories,
-        },
-        curLastBlockNumber()
-      )
+    let preResult = await createTaskPre(db);
+    const txContent = new CreateTaskTxContent(
+      preResult.tid,
+      task.title,
+      task.created_at,
+      task.done_at,
+      task.memo,
+      task.done,
+      task.due_date,
+      task.repeat_period,
+      task.repeat_start_at,
+      task.categories,
+      preResult.prevTaskId
     );
+    const tx = makeTransaction(TX_TYPE.CREATE_TASK, txContent, curLastBlockNumber());
+    Exec.txExecutor(db, reqId, Ipc, tx);
   } catch (err) {
     sender("task/addTask", reqId, false);
     throw err;
@@ -743,15 +657,10 @@ register("task/addTask", async (event, reqId, task) => {
 // 3.next = 5
 register("task/deleteTask", async (event, reqId, taskId) => {
   try {
-    let prevTaskList = await db.all(
-      "SELECT * FROM tasks WHERE next = ?;",
-      taskId
-    );
+    let prevTaskList = await db.all("SELECT * FROM tasks WHERE next = ?;", taskId);
     if (prevTaskList.length > 1) {
       console.log(prevTaskList);
-      throw new Error(
-        `tasks that ID is null is more than 1. (${prevTaskList.length})`
-      );
+      throw new Error(`tasks that ID is null is more than 1. (${prevTaskList.length})`);
     }
 
     let [prevTask] = prevTaskList;
@@ -768,10 +677,7 @@ register("task/deleteTask", async (event, reqId, taskId) => {
       await db.run("DELETE FROM subtasks WHERE tid = ?", taskId);
 
       // get next task
-      let [curTask] = await db.all(
-        "SELECT * FROM tasks WHERE tid = ? LIMIT 1;",
-        taskId
-      );
+      let [curTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", taskId);
       let nextTaskId = curTask.next ?? null;
 
       await db.run("UPDATE tasks SET next = NULL WHERE next = ?;", taskId);
@@ -781,11 +687,7 @@ register("task/deleteTask", async (event, reqId, taskId) => {
 
       // update previous task's next
       if (prevTask != null) {
-        await db.run(
-          `UPDATE tasks SET next = ? WHERE tid = ?;`,
-          nextTaskId,
-          prevTask.tid
-        );
+        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, prevTask.tid);
       }
       await db.commit();
       sender("task/deleteTask", reqId, true, {
@@ -808,128 +710,82 @@ register("task/deleteTask", async (event, reqId, taskId) => {
 // 2 -> 3 -> 4 -> 5 (move 4 before 2)
 // 4.next = 2
 // 3.next = 5
-register(
-  "task/updateTaskOrder",
-  async (event, reqId, taskId, targetTaskId, afterTarget) => {
-    try {
-      let prevTaskList = await db.all(
-        "SELECT * FROM tasks WHERE next = ?;",
-        taskId
-      );
-      if (prevTaskList.length > 1) {
-        console.log(prevTaskList);
-        throw new Error(
-          `tasks that ID is null is more than 1. (${prevTaskList.length})`
-        );
-      }
-
-      let [prevTask] = prevTaskList;
-
-      // transaction
-      await db.begin();
-
-      try {
-        // get next task
-        let [curTask] = await db.all(
-          "SELECT * FROM tasks WHERE tid = ? LIMIT 1;",
-          taskId
-        );
-        let nextTaskId = curTask.next ?? null;
-
-        // delete current task's next
-        await db.run(`UPDATE tasks SET next = NULL WHERE tid = ?;`, taskId);
-
-        // update previous task's next
-        if (prevTask != null) {
-          // prev.next = current.next
-          if (nextTaskId != null) {
-            await db.run(
-              `UPDATE tasks SET next = ? WHERE tid = ?;`,
-              nextTaskId,
-              prevTask.tid
-            );
-          } else {
-            await db.run(
-              `UPDATE tasks SET next = NULL WHERE tid = ?;`,
-              prevTask.tid
-            );
-          }
-        }
-
-        let targetPrevTask;
-        // update target task's next
-        if (afterTarget) {
-          let [targetTask] = await db.all(
-            "SELECT * FROM tasks WHERE tid = ? LIMIT 1;",
-            targetTaskId
-          );
-          let targetNextTaskId = targetTask.next ?? null;
-
-          // target.next = current.id
-          await db.run(
-            `UPDATE tasks SET next = ? WHERE tid = ?;`,
-            taskId,
-            targetTaskId
-          );
-          // current.next = target.next.id
-          await db.run(
-            `UPDATE tasks SET next = ? WHERE tid = ?;`,
-            targetNextTaskId,
-            taskId
-          );
-          // console.log(targetTaskId, targetNextTaskId, prevTask.tid, taskId, nextTaskId);
-        } else {
-          let targetPrevTaskList = await db.all(
-            "SELECT * FROM tasks WHERE next = ?;",
-            targetTaskId
-          );
-          if (targetPrevTaskList.length > 1) {
-            console.log(targetPrevTaskList);
-            throw new Error(
-              `tasks that ID is null is more than 1. (${targetPrevTaskList.length})`
-            );
-          }
-
-          [targetPrevTask] = targetPrevTaskList;
-          if (targetPrevTask) {
-            await db.run(
-              `UPDATE tasks SET next = ? WHERE tid = ?;`,
-              taskId,
-              targetPrevTask.tid
-            );
-          }
-
-          // current.next = target.id
-          await db.run(
-            `UPDATE tasks SET next = ? WHERE tid = ?;`,
-            targetTaskId,
-            taskId
-          );
-        }
-
-        await db.commit();
-        sender("task/updateTaskOrder", reqId, true, {
-          tid: taskId,
-          targetPrevTid: targetPrevTask ? targetPrevTask.tid : null,
-        });
-      } catch (err) {
-        await db.rollback();
-        throw err;
-      }
-    } catch (err) {
-      sender("task/updateTaskOrder", reqId, false);
-      console.error(err);
+register("task/updateTaskOrder", async (event, reqId, taskId, targetTaskId, afterTarget) => {
+  try {
+    let prevTaskList = await db.all("SELECT * FROM tasks WHERE next = ?;", taskId);
+    if (prevTaskList.length > 1) {
+      console.log(prevTaskList);
+      throw new Error(`tasks that ID is null is more than 1. (${prevTaskList.length})`);
     }
+
+    let [prevTask] = prevTaskList;
+
+    // transaction
+    await db.begin();
+
+    try {
+      // get next task
+      let [curTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", taskId);
+      let nextTaskId = curTask.next ?? null;
+
+      // delete current task's next
+      await db.run(`UPDATE tasks SET next = NULL WHERE tid = ?;`, taskId);
+
+      // update previous task's next
+      if (prevTask != null) {
+        // prev.next = current.next
+        if (nextTaskId != null) {
+          await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, prevTask.tid);
+        } else {
+          await db.run(`UPDATE tasks SET next = NULL WHERE tid = ?;`, prevTask.tid);
+        }
+      }
+
+      let targetPrevTask;
+      // update target task's next
+      if (afterTarget) {
+        let [targetTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", targetTaskId);
+        let targetNextTaskId = targetTask.next ?? null;
+
+        // target.next = current.id
+        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, taskId, targetTaskId);
+        // current.next = target.next.id
+        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, targetNextTaskId, taskId);
+        // console.log(targetTaskId, targetNextTaskId, prevTask.tid, taskId, nextTaskId);
+      } else {
+        let targetPrevTaskList = await db.all("SELECT * FROM tasks WHERE next = ?;", targetTaskId);
+        if (targetPrevTaskList.length > 1) {
+          console.log(targetPrevTaskList);
+          throw new Error(`tasks that ID is null is more than 1. (${targetPrevTaskList.length})`);
+        }
+
+        [targetPrevTask] = targetPrevTaskList;
+        if (targetPrevTask) {
+          await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, taskId, targetPrevTask.tid);
+        }
+
+        // current.next = target.id
+        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, targetTaskId, taskId);
+      }
+
+      await db.commit();
+      sender("task/updateTaskOrder", reqId, true, {
+        tid: taskId,
+        targetPrevTid: targetPrevTask ? targetPrevTask.tid : null,
+      });
+    } catch (err) {
+      await db.rollback();
+      throw err;
+    }
+  } catch (err) {
+    sender("task/updateTaskOrder", reqId, false);
+    console.error(err);
   }
-);
+});
 
 register("task/updateTaskTitle", async (event, reqId, taskId, title) => {
   try {
-    let result = await db.run(
-      "UPDATE tasks SET title = ? WHERE tid = ?",
-      title,
-      taskId
-    );
+    let result = await db.run("UPDATE tasks SET title = ? WHERE tid = ?", title, taskId);
     sender("task/updateTaskTitle", reqId, true, result);
   } catch (err) {
     sender("task/updateTaskTitle", reqId, false);
@@ -943,22 +799,11 @@ register("task/updateTaskDueDate", async (event, reqId, taskId, dueDate) => {
 
     try {
       if (dueDate == null) {
-        await db.run(
-          "UPDATE tasks SET repeat_period = NULL, repeat_start_at = NULL WHERE tid = ?",
-          taskId
-        );
+        await db.run("UPDATE tasks SET repeat_period = NULL, repeat_start_at = NULL WHERE tid = ?", taskId);
       } else {
-        await db.run(
-          "UPDATE tasks SET repeat_start_at = ? WHERE tid = ?",
-          dueDate,
-          taskId
-        );
+        await db.run("UPDATE tasks SET repeat_start_at = ? WHERE tid = ?", dueDate, taskId);
       }
-      let result = await db.run(
-        "UPDATE tasks SET due_date = ? WHERE tid = ?",
-        dueDate,
-        taskId
-      );
+      let result = await db.run("UPDATE tasks SET due_date = ? WHERE tid = ?", dueDate, taskId);
       await db.commit();
       sender("task/updateTaskDueDate", reqId, true, result);
     } catch (err) {
@@ -973,11 +818,7 @@ register("task/updateTaskDueDate", async (event, reqId, taskId, dueDate) => {
 
 register("task/updateTaskMemo", async (event, reqId, taskId, memo) => {
   try {
-    let result = await db.run(
-      "UPDATE tasks SET memo = ? WHERE tid = ?",
-      memo,
-      taskId
-    );
+    let result = await db.run("UPDATE tasks SET memo = ? WHERE tid = ?", memo, taskId);
     sender("task/updateTaskMemo", reqId, true, result);
   } catch (err) {
     sender("task/updateTaskMemo", reqId, false);
@@ -987,10 +828,7 @@ register("task/updateTaskMemo", async (event, reqId, taskId, memo) => {
 
 register("task/updateTaskDone", async (event, reqId, taskId, done, doneAt) => {
   try {
-    let task = await db.get(
-      "SELECT * FROM tasks WHERE tid = ? LIMIT 1",
-      taskId
-    );
+    let task = await db.get("SELECT * FROM tasks WHERE tid = ? LIMIT 1", taskId);
     if (task != null && task.repeat_period != null) {
       let repeatStartAt = task.repeat_start_at ?? task.due_date;
       let repeatPeriod = task.repeat_period;
@@ -1008,10 +846,7 @@ register("task/updateTaskDone", async (event, reqId, taskId, done, doneAt) => {
 
       if (repeatPeriodUnit != null) {
         nextDueDate = moment(repeatStartAt);
-        while (
-          nextDueDate.isBefore(moment()) ||
-          nextDueDate.isSameOrBefore(moment(task.due_date))
-        ) {
+        while (nextDueDate.isBefore(moment()) || nextDueDate.isSameOrBefore(moment(task.due_date))) {
           nextDueDate = moment(nextDueDate).add(1, repeatPeriodUnit);
         }
         nextDueDate = nextDueDate.valueOf();
@@ -1032,12 +867,7 @@ register("task/updateTaskDone", async (event, reqId, taskId, done, doneAt) => {
         throw new Error("nextDueDate is null");
       }
     } else {
-      let result = await db.run(
-        "UPDATE tasks SET done = ?, done_at = ? WHERE tid = ?",
-        done,
-        doneAt,
-        taskId
-      );
+      let result = await db.run("UPDATE tasks SET done = ?, done_at = ? WHERE tid = ?", done, doneAt, taskId);
       sender("task/updateTaskDone", reqId, true, result, false);
     }
   } catch (err) {
@@ -1048,11 +878,7 @@ register("task/updateTaskDone", async (event, reqId, taskId, done, doneAt) => {
 
 register("task/addTaskCategory", async (event, reqId, taskId, categoryId) => {
   try {
-    let result = await db.run(
-      "INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)",
-      taskId,
-      categoryId
-    );
+    let result = await db.run("INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)", taskId, categoryId);
     sender("task/addTaskCategory", reqId, true, result);
   } catch (err) {
     sender("task/addTaskCategory", reqId, false);
@@ -1060,77 +886,48 @@ register("task/addTaskCategory", async (event, reqId, taskId, categoryId) => {
   }
 });
 
-register(
-  "task/deleteTaskCategory",
-  async (event, reqId, taskId, categoryId) => {
-    try {
-      let result = await db.run(
-        "DELETE FROM tasks_categories WHERE tid = ? AND cid = ?",
-        taskId,
-        categoryId
-      );
-      sender("task/deleteTaskCategory", reqId, true, result);
-    } catch (err) {
-      sender("task/deleteTaskCategory", reqId, false);
-      throw err;
-    }
+register("task/deleteTaskCategory", async (event, reqId, taskId, categoryId) => {
+  try {
+    let result = await db.run("DELETE FROM tasks_categories WHERE tid = ? AND cid = ?", taskId, categoryId);
+    sender("task/deleteTaskCategory", reqId, true, result);
+  } catch (err) {
+    sender("task/deleteTaskCategory", reqId, false);
+    throw err;
   }
-);
+});
 
-register(
-  "task/updateTaskRepeatPeriod",
-  async (event, reqId, taskId, repeatPeriod) => {
+register("task/updateTaskRepeatPeriod", async (event, reqId, taskId, repeatPeriod) => {
+  try {
+    await db.begin();
+
+    let result;
     try {
-      await db.begin();
-
-      let result;
-      try {
-        if (repeatPeriod == null) {
-          result = await db.run(
-            "UPDATE tasks SET repeat_period = NULL, repeat_start_at = NULL WHERE tid = ?",
-            taskId
-          );
-        } else {
-          let repeatStartAt = await db.get(
-            "SELECT repeat_start_at FROM tasks WHERE tid = ?",
-            taskId
-          );
-          if (repeatStartAt == null) {
-            repeatStartAt = await db.get(
-              "SELECT due_date FROM tasks WHERE tid = ?",
-              taskId
-            );
-            if (repeatStartAt != null) {
-              await db.run(
-                "UPDATE tasks SET repeat_start_at = ? WHERE tid = ?",
-                repeatStartAt,
-                taskId
-              );
-            } else {
-              throw Error(
-                `Trying to update repeat period of task that has no due date. (tid: ${taskId})`
-              );
-            }
+      if (repeatPeriod == null) {
+        result = await db.run("UPDATE tasks SET repeat_period = NULL, repeat_start_at = NULL WHERE tid = ?", taskId);
+      } else {
+        let repeatStartAt = await db.get("SELECT repeat_start_at FROM tasks WHERE tid = ?", taskId);
+        if (repeatStartAt == null) {
+          repeatStartAt = await db.get("SELECT due_date FROM tasks WHERE tid = ?", taskId);
+          if (repeatStartAt != null) {
+            await db.run("UPDATE tasks SET repeat_start_at = ? WHERE tid = ?", repeatStartAt, taskId);
+          } else {
+            throw Error(`Trying to update repeat period of task that has no due date. (tid: ${taskId})`);
           }
-          result = await db.run(
-            "UPDATE tasks SET repeat_period = ? WHERE tid = ?",
-            repeatPeriod,
-            taskId
-          );
         }
-
-        await db.commit();
-        sender("task/updateTaskRepeatPeriod", reqId, true, result);
-      } catch (err) {
-        await db.rollback();
-        throw err;
+        result = await db.run("UPDATE tasks SET repeat_period = ? WHERE tid = ?", repeatPeriod, taskId);
       }
+
+      await db.commit();
+      sender("task/updateTaskRepeatPeriod", reqId, true, result);
     } catch (err) {
-      sender("task/updateTaskRepeatPeriod", reqId, false);
+      await db.rollback();
       throw err;
     }
+  } catch (err) {
+    sender("task/updateTaskRepeatPeriod", reqId, false);
+    throw err;
   }
-);
+});
 
 register("task/addSubtask", async (event, reqId, subtask, taskId) => {
   try {
@@ -1163,11 +960,7 @@ register("task/deleteSubtask", async (event, reqId, subtaskId) => {
 
 register("task/updateSubtaskTitle", async (event, reqId, subtaskId, title) => {
   try {
-    let result = await db.run(
-      "UPDATE subtasks SET title = ? WHERE sid = ?",
-      title,
-      subtaskId
-    );
+    let result = await db.run("UPDATE subtasks SET title = ? WHERE sid = ?", title, subtaskId);
     sender("task/updateSubtaskTitle", reqId, true, result);
   } catch (err) {
     sender("task/updateSubtaskTitle", reqId, false);
@@ -1175,40 +968,25 @@ register("task/updateSubtaskTitle", async (event, reqId, subtaskId, title) => {
   }
 });
 
-register(
-  "task/updateSubtaskDueDate",
-  async (event, reqId, subtaskId, dueDate) => {
-    try {
-      let result = await db.run(
-        "UPDATE subtasks SET due_date = ? WHERE sid = ?",
-        dueDate,
-        subtaskId
-      );
-      sender("task/updateSubtaskDueDate", reqId, true, result);
-    } catch (err) {
-      sender("task/updateSubtaskDueDate", reqId, false);
-      throw err;
-    }
+register("task/updateSubtaskDueDate", async (event, reqId, subtaskId, dueDate) => {
+  try {
+    let result = await db.run("UPDATE subtasks SET due_date = ? WHERE sid = ?", dueDate, subtaskId);
+    sender("task/updateSubtaskDueDate", reqId, true, result);
+  } catch (err) {
+    sender("task/updateSubtaskDueDate", reqId, false);
+    throw err;
   }
-);
+});
 
-register(
-  "task/updateSubtaskDone",
-  async (event, reqId, subtaskId, done, doneAt) => {
-    try {
-      let result = await db.run(
-        "UPDATE subtasks SET done = ?, done_at = ? WHERE sid = ?",
-        done,
-        doneAt,
-        subtaskId
-      );
-      sender("task/updateSubtaskDone", reqId, true, result);
-    } catch (err) {
-      sender("task/updateSubtaskDone", reqId, false);
-      throw err;
-    }
+register("task/updateSubtaskDone", async (event, reqId, subtaskId, done, doneAt) => {
+  try {
+    let result = await db.run("UPDATE subtasks SET done = ?, done_at = ? WHERE sid = ?", done, doneAt, subtaskId);
+    sender("task/updateSubtaskDone", reqId, true, result);
+  } catch (err) {
+    sender("task/updateSubtaskDone", reqId, false);
+    throw err;
   }
-);
+});
 
 register("category/getCategoryList", async (event, reqId) => {
   try {
@@ -1241,10 +1019,7 @@ register("category/deleteCategory", async (event, reqId, categoryId) => {
     await db.begin();
 
     try {
-      let result = await db.run(
-        "DELETE FROM tasks_categories WHERE cid = ?",
-        categoryId
-      );
+      let result = await db.run("DELETE FROM tasks_categories WHERE cid = ?", categoryId);
       result = await db.run("DELETE FROM categories WHERE cid = ?", categoryId);
       db.commit();
       sender("category/deleteCategory", reqId, true, result);
@@ -1258,31 +1033,25 @@ register("category/deleteCategory", async (event, reqId, categoryId) => {
   }
 });
 
-register(
-  "category/checkCategoryPassword",
-  async (event, reqId, categoryId, hashedPassword) => {
-    try {
-      const doubleHashedPassword = sha256(hashedPassword);
-      let results = await db.all(
-        "SELECT * FROM categories WHERE cid = ? AND encrypted_pw = ?",
-        categoryId,
-        doubleHashedPassword
-      );
-      let ok = results.length > 0;
-      sender("category/checkCategoryPassword", reqId, true, ok);
-    } catch (err) {
-      sender("category/checkCategoryPassword", reqId, false);
-      throw err;
-    }
+register("category/checkCategoryPassword", async (event, reqId, categoryId, hashedPassword) => {
+  try {
+    const doubleHashedPassword = sha256(hashedPassword);
+    let results = await db.all(
+      "SELECT * FROM categories WHERE cid = ? AND encrypted_pw = ?",
+      categoryId,
+      doubleHashedPassword
+    );
+    let ok = results.length > 0;
+    sender("category/checkCategoryPassword", reqId, true, ok);
+  } catch (err) {
+    sender("category/checkCategoryPassword", reqId, false);
+    throw err;
   }
-);
+});
 
 register("category/getCategoryTasks", async (event, reqId, categoryId) => {
   try {
-    let result = await db.all(
-      "SELECT * FROM tasks_categories WHERE cid = ?",
-      categoryId
-    );
+    let result = await db.all("SELECT * FROM tasks_categories WHERE cid = ?", categoryId);
     sender("category/getCategoryTasks", reqId, true, result);
   } catch (err) {
     sender("category/getCategoryTasks", reqId, false);
@@ -1290,22 +1059,15 @@ register("category/getCategoryTasks", async (event, reqId, categoryId) => {
   }
 });
 
-register(
-  "category/updateCategoryTitle",
-  async (event, reqId, categoryId, title) => {
-    try {
-      let result = await db.run(
-        "UPDATE categories SET title = ? WHERE cid = ?",
-        title,
-        categoryId
-      );
-      sender("category/updateCategoryTitle", reqId, true, result);
-    } catch (err) {
-      sender("category/updateCategoryTitle", reqId, false);
-      throw err;
-    }
+register("category/updateCategoryTitle", async (event, reqId, categoryId, title) => {
+  try {
+    let result = await db.run("UPDATE categories SET title = ? WHERE cid = ?", title, categoryId);
+    sender("category/updateCategoryTitle", reqId, true, result);
+  } catch (err) {
+    sender("category/updateCategoryTitle", reqId, false);
+    throw err;
   }
-);
+});
 
 register("tasks_categories/getTasksCategoriesList", async (event, reqId) => {
   try {

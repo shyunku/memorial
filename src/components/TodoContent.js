@@ -222,30 +222,12 @@ const TodoContent = () => {
 
   // printf("taskMap", taskMap);
 
-  // handlers
+  /* ------------------------------ Handlers ------------------------------ */
   const onTaskAdd = (task) => {
     if (!(task instanceof Task)) {
       return;
     }
-    IpcSender.req.task.addTask(task.toEntity(), ({ success, data }) => {
-      if (success) {
-        task.id = data.tid;
-        setTaskMap((taskMap) => {
-          const updated = { ...taskMap };
-          let prevTask = taskMap[data.prevTaskId];
-          if (prevTask) {
-            prevTask.next = task;
-            updated[prevTask.id] = prevTask;
-          }
-          task.prev = prevTask;
-          updated[task.id] = task;
-          console.log(updated, task);
-          return updated;
-        });
-      } else {
-        console.error("failed to add task");
-      }
-    });
+    IpcSender.req.task.addTask(task.toEntity(), null);
   };
 
   const onTaskDelete = (tid) => {
@@ -534,6 +516,43 @@ const TodoContent = () => {
   };
 
   // printf("taskMap", taskMap);
+
+  useEffect(() => {
+    IpcSender.onAll("task/addTask", ({ success, data }) => {
+      if (success) {
+        const task = new Task();
+        task.id = data.tid;
+        task.createdAt = data.createdAt;
+        task.doneAt = data.doneAt;
+        task.dueDate = data.dueDate;
+        task.title = data.title;
+        task.memo = data.memo;
+        task.done = data.done;
+        task.categories = data.categories;
+        task.repeatPeriod = data.repeatPeriod;
+        task.repeatStartAt = data.repeatStartAt;
+
+        setTaskMap((taskMap) => {
+          const updated = { ...taskMap };
+          let prevTask = taskMap[data.prevTaskId];
+          if (prevTask) {
+            prevTask.next = task;
+            updated[prevTask.id] = prevTask;
+          }
+          task.prev = prevTask;
+          updated[task.id] = task;
+          console.log(updated, task);
+          return updated;
+        });
+      } else {
+        console.error("failed to add task");
+      }
+    });
+
+    return () => {
+      IpcSender.removeAllListeners();
+    };
+  }, []);
 
   return (
     <div className="todo-content">
