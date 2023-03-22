@@ -292,8 +292,8 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
       let { tx, number, state, prevBlockHash } = block;
       // decode tx.content
       const rawContent = tx.content;
-      const decodedBuffer = Buffer.from(rawContent, "base64");
-      tx.content = JSON.parse(decodedBuffer.toString("utf-8"));
+      const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
+      // tx.content = JSON.parse(decodedBuffer.toString("utf-8"));
 
       // insert block (as transaction) into local db
       await db.run(`INSERT INTO transactions (type, timestamp, content, block_number) VALUES (?, ?, ?, ?);`, [
@@ -324,7 +324,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
         // TODO :: implment this
       }
 
-      let lastBlockNumber = getLastBlockNumber();
+      let lastBlockNumber = getLastBlockNumber(userId);
       if (lastBlockNumber < waitingBlockNumber - 1) {
         // sync blocks needed (behind)
         console.info(`Local block number is behind remote, syncing...`);
