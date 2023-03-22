@@ -28,7 +28,9 @@ const sender = (topic, callback, ...arg) => {
   const sendId = uuid.v4();
   if (!DISABLE_SENDER_LOG && topic !== "system/subscribe") {
     console.log(
-      `IpcRenderer --> ${colorize.yellow(`[${sendId?.substring(0, 3) ?? "unknown"}]`)} ${colorize.magenta(topic)}`,
+      `IpcRenderer --> ${colorize.yellow(
+        `[${sendId?.substring(0, 3) ?? "unknown"}]`
+      )} ${colorize.magenta(topic)}`,
       ...arg
     );
   }
@@ -69,10 +71,24 @@ const IpcSender = {
       sender("system/isMaximizable", callback, currentWindow.id);
     },
     modal: (url, windowProperty = {}, parameter) => {
-      sender("system/modal", null, currentWindow.id, url, windowProperty, parameter);
+      sender(
+        "system/modal",
+        null,
+        currentWindow.id,
+        url,
+        windowProperty,
+        parameter
+      );
     },
     modeless: (url, windowProperty = {}, parameter) => {
-      sender("system/modeless", null, currentWindow.id, url, windowProperty, parameter);
+      sender(
+        "system/modeless",
+        null,
+        currentWindow.id,
+        url,
+        windowProperty,
+        parameter
+      );
     },
     innerModal: (route, data) => {
       sender("system/inner-modal", null, route, data);
@@ -179,7 +195,13 @@ const IpcSender = {
         sender("task/deleteTask", callback, taskId);
       },
       updateTaskOrder: (taskId, targetTaskId, afterTarget, callback) => {
-        sender("task/updateTaskOrder", callback, taskId, targetTaskId, afterTarget);
+        sender(
+          "task/updateTaskOrder",
+          callback,
+          taskId,
+          targetTaskId,
+          afterTarget
+        );
       },
       updateTaskTitle: (taskId, title, callback) => {
         sender("task/updateTaskTitle", callback, taskId, title);
@@ -229,7 +251,12 @@ const IpcSender = {
         sender("category/deleteCategory", callback, categoryId);
       },
       checkCategoryPassword: (categoryId, hashedPassword, callback) => {
-        sender("category/checkCategoryPassword", callback, categoryId, hashedPassword);
+        sender(
+          "category/checkCategoryPassword",
+          callback,
+          categoryId,
+          hashedPassword
+        );
       },
       updateCategoryTitle: (categoryId, title, callback) => {
         sender("category/updateCategoryTitle", callback, categoryId, title);
@@ -268,7 +295,9 @@ const IpcSender = {
     const newCallback = (e, reqId, ...data) => {
       if (reqId == null) return;
       console.log(
-        `IpcRenderer <-- ${colorize.cyan(`[${reqId?.substr(0, 3) ?? "unknown"}]`)} ${colorize.magenta(topic)}`,
+        `IpcRenderer <-- ${colorize.cyan(
+          `[${reqId?.substr(0, 3) ?? "unknown"}]`
+        )} ${colorize.magenta(topic)}`,
         ...data
       );
       originalCallback(reqId, ...data);
@@ -279,13 +308,17 @@ const IpcSender = {
   // listen for all request ID
   onAll: (topic, callback) => {
     autoSubscribe(topic);
-    const originalCallback = callback;
     const newCallback = (e, reqId, ...data) => {
-      console.log(`IpcRenderer <-- ${colorize.yellow(`[ALL]`)} ${colorize.magenta(topic)}`, ...data);
-      originalCallback(...data);
+      console.log(e, reqId, ...data);
+      console.log(
+        `IpcRenderer <-- ${colorize.yellow(`[ALL]`)} ${colorize.magenta(
+          topic
+        )}`,
+        ...data
+      );
+      return callback(...data);
     };
     ipcRenderer.on(topic, newCallback);
-    return newCallback;
   },
   once: (topic, callback) => {
     const originalCallback = callback.bind({});
