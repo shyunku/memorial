@@ -1,4 +1,5 @@
 const { createTask } = require("../executors/createTask.exec");
+const { deleteTask } = require("../executors/deleteTask.exec");
 
 const TX_TYPE = {
   INITIALIZE: 1,
@@ -24,6 +25,19 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
   const { setLastBlockNumberWithoutUserId } = Ipc;
   const args = [db, reqId, Ipc];
 
+  console.debug(tx);
+
+  switch (tx.type) {
+    case TX_TYPE.CREATE_TASK:
+      await createTask(...args, tx.content);
+      break;
+    case TX_TYPE.DELETE_TASK:
+      await deleteTask(...args, tx.content);
+      break;
+    default:
+      throw new Error("Transaction type is not supported");
+  }
+
   // decode tx.content
   const rawContent = tx.content;
   const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
@@ -37,17 +51,6 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
   ]);
 
   setLastBlockNumberWithoutUserId(blockNumber);
-
-  console.debug(tx);
-
-  switch (tx.type) {
-    case TX_TYPE.CREATE_TASK:
-      return await createTask(...args, tx.content);
-    case TX_TYPE.DELETE_TASK:
-      return await deleteTask(...args, tx.content);
-    default:
-      throw new Error("Transaction type is not supported");
-  }
 };
 
 module.exports = { txExecutor, TX_TYPE, makeTransaction };
