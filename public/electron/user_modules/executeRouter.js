@@ -1,8 +1,9 @@
 const { createTask } = require("../executors/createTask.exec");
 
 const TX_TYPE = {
-  INITIALIZE: 0,
-  CREATE_TASK: 1,
+  INITIALIZE: 1,
+  CREATE_TASK: 2,
+  DELETE_TASK: 3,
 };
 
 const makeTransaction = (type, data, targetBlockNumber) => {
