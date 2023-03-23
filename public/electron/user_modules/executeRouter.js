@@ -26,17 +26,17 @@ const TX_TYPE = {
   UPDATE_TASK_TITLE: 5,
   UPDATE_TASK_DUE_DATE: 6,
   UPDATE_TASK_MEMO: 7,
-  ADD_CATEGORY: 8,
-  DELETE_CATEGORY: 9,
+  UPDATE_TASK_DONE: 8,
+  UPDATE_TASK_REPEAT_PERIOD: 9,
   ADD_TASK_CATEGORY: 10,
-  UPDATE_TASK_DONE: 11,
-  DELETE_TASK_CATEGORY: 12,
-  UPDATE_TASK_REPEAT_PERIOD: 13,
-  ADD_SUBTASK: 14,
-  DELETE_SUBTASK: 15,
-  UPDATE_SUBTASK_TITLE: 16,
-  UPDATE_SUBTASK_DUE_DATE: 17,
-  UPDATE_SUBTASK_DONE: 18,
+  DELETE_TASK_CATEGORY: 11,
+  CREATE_SUBTASK: 12,
+  DELETE_SUBTASK: 13,
+  UPDATE_SUBTASK_TITLE: 14,
+  UPDATE_SUBTASK_DUE_DATE: 15,
+  UPDATE_SUBTASK_DONE: 16,
+  CREATE_CATEGORY: 17,
+  DELETE_CATEGORY: 18,
 };
 
 const makeTransaction = (type, data, targetBlockNumber) => {
@@ -80,7 +80,7 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
     case TX_TYPE.UPDATE_TASK_MEMO:
       await updateTaskMemo(...args, tx.content);
       break;
-    case TX_TYPE.ADD_CATEGORY:
+    case TX_TYPE.CREATE_CATEGORY:
       await addCategory(...args, tx.content);
       break;
     case TX_TYPE.DELETE_CATEGORY:
@@ -98,7 +98,7 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
     case TX_TYPE.UPDATE_TASK_REPEAT_PERIOD:
       await updateTaskRepeatPeriod(...args, tx.content);
       break;
-    case TX_TYPE.ADD_SUBTASK:
+    case TX_TYPE.CREATE_SUBTASK:
       await addSubtask(...args, tx.content);
       break;
     case TX_TYPE.DELETE_SUBTASK:

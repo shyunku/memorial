@@ -48,7 +48,7 @@ const AuthRouter = () => {
   }, []);
 
   if (isAuthorized || offlineMode) {
-    return <Outlet />;
+    return <Outlet context={{ isAuthorized }} />;
   } else {
     console.log("not accessible");
     return <Navigate to="/login" />;

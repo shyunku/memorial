@@ -140,6 +140,7 @@ const Login = () => {
               },
               onCancel: () => {
                 // redirect to login page
+                setGoogleBinding(false);
                 goBackToLogin();
               },
             }

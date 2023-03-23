@@ -636,7 +636,9 @@ register("socket/connect", async (event, reqId, userId, accessToken, refreshToke
     console.debug(`current last block number: ${lastBlockNumber} for user ${userId}`);
     lastBlockNumberMap[userId] = lastBlockNumber;
 
-    socket = await AppServerSocket(userId, accessToken, refreshToken, Ipc, rootDB, db);
+    await AppServerSocket(userId, accessToken, refreshToken, Ipc, rootDB, db, false, (socket_) => {
+      socket = socket_;
+    });
     sender("socket/connect", reqId, true);
   } catch (err) {
     sender("socket/connect", reqId, false, err);
@@ -839,7 +841,7 @@ register("task/addSubtask", async (event, reqId, subtask, taskId) => {
       subtask.done
     );
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
-    const tx = Exec.makeTransaction(TX_TYPE.ADD_SUBTASK, txContent, targetBlockNumber);
+    const tx = Exec.makeTransaction(TX_TYPE.CREATE_SUBTASK, txContent, targetBlockNumber);
     Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
     sendTx(tx);
   } catch (err) {
@@ -921,7 +923,7 @@ register("category/addCategory", async (event, reqId, category) => {
       category.color
     );
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
-    const tx = Exec.makeTransaction(TX_TYPE.ADD_CATEGORY, txContent, targetBlockNumber);
+    const tx = Exec.makeTransaction(TX_TYPE.CREATE_CATEGORY, txContent, targetBlockNumber);
     Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
     sendTx(tx);
   } catch (err) {

@@ -17,6 +17,7 @@ const color = console.RGB(190, 75, 255);
 const coloredSocket = console.wrap("Websocket", color);
 
 let queue = {};
+let socketHandlers = {};
 
 function initializeSocket(socket) {
   // initialize previous queue
@@ -26,6 +27,7 @@ function initializeSocket(socket) {
   }
 
   queue = {};
+  socketHandlers = {};
 
   const sendSync = (topic, data, timeout = 3000) => {
     return new Promise((resolve, reject) => {
@@ -107,7 +109,17 @@ function initializeSocket(socket) {
       // );
       return callback(...args);
     };
+    if (socketHandlers[topic] == null) socketHandlers[topic] = [];
+    socketHandlers[topic].push(newCalllback);
     socket.on(topic, newCalllback);
+  };
+
+  const wsUnregister = (topic) => {
+    if (socketHandlers[topic] != null) {
+      for (const callback of socketHandlers[topic]) {
+        socket.off(topic, callback);
+      }
+    }
   };
 
   // websocket message handler
@@ -195,18 +207,34 @@ function initializeSocket(socket) {
     emit: wsEmiter,
     on: wsMessageRegister,
     register: wsRegister,
+    unregister: wsUnregister,
     emitSync: sendSync,
   };
 }
 
-const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db, reconnect = false) => {
+let alreadyAuthorized = false;
+let reconnectTimeout = 500;
+
+const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db, reconnect = false, resolveSocket) => {
   if (userId == null) throw new Error("User ID is required");
   if (accessToken == null) throw new Error("Access token is required");
   if (ipc == null) throw new Error("IPC is required");
   if (!reconnect && socket != null) {
     console.warn("Socket is already connected. Disconnecting previous...");
+    socket?.unregister("close");
     socket.close(1000, "Reorganize socket connection");
     socket = null;
+  }
+
+  if (reconnect) {
+    reconnectTimeout = reconnectTimeout * 2;
+    if (reconnectTimeout > 10000) reconnectTimeout = 10000;
+  } else {
+    reconnectTimeout = 500;
+  }
+
+  if (reconnect === false && alreadyAuthorized === true) {
+    alreadyAuthorized = false;
   }
 
   const { sender, emiter, getLastBlockNumber, setLastBlockNumber } = ipc;
@@ -215,11 +243,13 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
   let refreshToken_ = refreshToken;
 
   try {
-    await Request.post(appServerFinalEndpoint, "/token/test", null, {
-      headers: {
-        Authorization: `Bearer ${accessToken_}`,
-      },
-    });
+    if (!alreadyAuthorized) {
+      await Request.post(appServerFinalEndpoint, "/token/test", null, {
+        headers: {
+          Authorization: `Bearer ${accessToken_}`,
+        },
+      });
+    }
   } catch (err) {
     try {
       let users = await rootDB.all(`SELECT * FROM users WHERE uid = ?;`, [userId]);
@@ -282,9 +312,11 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
   });
 
   /* ---------------------------------------- Default ---------------------------------------- */
+  alreadyAuthorized = true;
   console.system(`Websocket connecting to ${appServerSocketFinalEndpoint}`);
   const socketCtx = initializeSocket(socket);
-  const { emit, emitSync, on, register } = socketCtx;
+  const { emit, emitSync, on, register, unregister } = socketCtx;
+  socket.unregister = unregister;
 
   const saveBlockAndExecute = async (block) => {
     try {
@@ -357,15 +389,12 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     console.info("Disconnect with socket, reason: " + code);
     emiter("socket/disconnected", null, { code });
 
-    // reconnect?
-    // setTimeout(() => {
-    //   console.system("Reconnecting to socket...");
-    //   try {
-    //     connectSocket(userId, accessToken_, refreshToken_, ipc, rootDB, db, true);
-    //   } catch (err) {
-    //     console.error(err);
-    //   }
-    // }, 3000);
+    console.error(`Reconnecting socket in ${reconnectTimeout}ms...`);
+
+    // reconnect
+    setTimeout(() => {
+      connectSocket(userId, accessToken, refreshToken, ipc, rootDB, db, true, resolveSocket);
+    }, reconnectTimeout);
   });
 
   on("test", ({ data }) => {
@@ -376,7 +405,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     saveBlockAndExecute(data);
   });
 
-  return socketCtx;
+  resolveSocket?.(socketCtx);
 };
 
 module.exports = connectSocket;
