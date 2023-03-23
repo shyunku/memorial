@@ -650,7 +650,7 @@ register("task/addTask", async (event, reqId, task) => {
       preResult.prevTaskId
     );
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
-    const tx = makeTransaction(TX_TYPE.CREATE_TASK, txContent, targetBlockNumber);
+    const tx = Exec.makeTransaction(TX_TYPE.CREATE_TASK, txContent, targetBlockNumber);
     Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
     sendTx(tx);
   } catch (err) {
