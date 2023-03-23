@@ -25,6 +25,7 @@ const AppServerSocket = require("../user_modules/appServerSocket");
 const { reqIdTag } = require("../modules/util");
 const Exec = require("../user_modules/executeRouter");
 const { createTaskPre, CreateTaskTxContent } = require("../executors/createTask.exec");
+const { deleteTaskPre } = require("../executors/deleteTask.exec");
 const { TX_TYPE } = Exec;
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
