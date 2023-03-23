@@ -383,6 +383,12 @@ const TodoItem = ({
                                 newMap[subtask.id] = e.target.value;
                                 setSubTaskTitleInputMap(newMap);
                               }}
+                              onBlur={(e) => {
+                                const newMap = { ...subTaskTitleInputMap };
+                                // return to original title
+                                newMap[subtask.id] = subtask.title;
+                                setSubTaskTitleInputMap(newMap);
+                              }}
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                   onSubtaskTitleDecision(subtask, titleInput);

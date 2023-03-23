@@ -38,7 +38,7 @@ const SubmitInput = ({
         warn();
         return;
       }
-      const success = (await onSubmit?.(input)) ?? false;
+      const success = (await onSubmit?.(input)) ?? true;
       if (success) setInput("");
       else {
         // TODO :: popup error

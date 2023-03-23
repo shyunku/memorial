@@ -12,7 +12,7 @@ import moment from "moment";
 import Category from "objects/Category";
 import TaskCalendarView from "views/TaskCalendarView";
 import Toast from "molecules/Toast";
-import { printf } from "utils/Common";
+import { fastInterval, fromRelativeTime, printf, toRelativeTime } from "utils/Common";
 import { useSelector } from "react-redux";
 import { accountAuthSlice, accountInfoSlice } from "store/accountSlice";
 
@@ -35,6 +35,14 @@ const TodoContent = () => {
   const { selectedTodoMenuType, category: passedCategory, categories } = props;
 
   const [currentSortMode, setCurrentSortMode] = useState(SORT_MODE.IMPORTANT);
+  const [timer, setTimer] = useState(0);
+  const [lastTxUpdateTime, setLastTxUpdateTime] = useState(null);
+  const lastUpdateTimeText = useMemo(() => {
+    if (lastTxUpdateTime == null) return null;
+    const now = Date.now();
+    const diff = now - lastTxUpdateTime;
+    return fromRelativeTime(diff, { showLayerCount: 1 }) + (diff > 0 ? " 전" : " 후");
+  }, [lastTxUpdateTime, timer]);
 
   // main objects
   const [taskMap, setTaskMap] = useState({});
@@ -253,110 +261,34 @@ const TodoContent = () => {
   };
 
   const onTaskTitleChange = (tid, title) => {
-    console.log("----------------------------------------------------");
-    console.log(new Error());
     IpcSender.req.task.updateTaskTitle(tid, title, null);
   };
 
   const onTaskDueDateChange = (tid, dueDate) => {
-    IpcSender.req.task.updateTaskDueDate(tid, dueDate, ({ success, data }) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.dueDate = dueDate;
-          if (dueDate == null) {
-            task.repeatPeriod = null;
-            task.repeatStartAt = null;
-          } else {
-            task.repeatStartAt = dueDate;
-          }
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update task due date");
-      }
-    });
+    let newDueDate = dueDate;
+    if (newDueDate != null) newDueDate = moment(newDueDate).valueOf();
+    IpcSender.req.task.updateTaskDueDate(tid, newDueDate, null);
   };
 
   const onTaskMemoChange = (tid, memo) => {
-    IpcSender.req.task.updateTaskMemo(tid, memo, ({ success, data }) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.memo = memo;
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update task memo");
-      }
-    });
-  };
-
-  const onTaskCategoryAdd = (tid, category) => {
-    IpcSender.req.task.addTaskCategory(tid, category.id, ({ success, data }) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.addCategory(category);
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to add task category");
-      }
-    });
-  };
-
-  const onTaskCategoryDelete = (tid, cid) => {
-    IpcSender.req.task.deleteTaskCategory(tid, cid, ({ success, data }) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.deleteCategory(cid);
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to delete task category");
-      }
-    });
-  };
-
-  const onTaskRepeatChange = (tid, repeat) => {
-    IpcSender.req.task.updateTaskRepeatPeriod(tid, repeat, ({ success, data }) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.repeatPeriod = repeat;
-          if (task.repeatStartAt == null) {
-            task.repeatStartAt = task.dueDate;
-          }
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        Toast.error("failed to update task repeat period");
-        console.error("failed to update task repeat period");
-      }
-    });
+    IpcSender.req.task.updateTaskMemo(tid, memo, null);
   };
 
   const onTaskDone = (tid, done) => {
     const now = new Date();
-    IpcSender.req.task.updateTaskDone(tid, done, now.getTime(), ({ success, data }, isRepeated, newDueDate) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          if (isRepeated) {
-            task.done = false;
-            task.dueDate = new Date(newDueDate);
-          } else {
-            task.done = done;
-            task.doneAt = now;
-          }
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update task done");
-      }
-    });
+    IpcSender.req.task.updateTaskDone(tid, done, now.getTime(), null);
+  };
+
+  const onTaskCategoryAdd = (tid, category) => {
+    IpcSender.req.task.addTaskCategory(tid, category.id, null);
+  };
+
+  const onTaskCategoryDelete = (tid, cid) => {
+    IpcSender.req.task.deleteTaskCategory(tid, cid, null);
+  };
+
+  const onTaskRepeatChange = (tid, repeat) => {
+    IpcSender.req.task.updateTaskRepeatPeriod(tid, repeat, null);
   };
 
   const onSubtaskAdded = (tid, subtask) => {
@@ -364,95 +296,36 @@ const TodoContent = () => {
       return;
     }
 
-    IpcSender.req.task.addSubtask(subtask.toEntity(), tid, ({ success, data }) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.addSubtask(subtask);
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to add subtask");
-      }
-    });
+    IpcSender.req.task.addSubtask(subtask.toEntity(), tid, null);
   };
 
   const onSubtaskDelete = (tid, sid) => {
-    IpcSender.req.task.deleteSubtask(sid, ({ success, data }) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.deleteSubtask(sid);
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to delete subtask");
-      }
-    });
+    IpcSender.req.task.deleteSubtask(tid, sid, null);
   };
 
   const onSubtaskTitleChange = (tid, sid, title) => {
-    IpcSender.req.task.updateSubtaskTitle(sid, title, ({ success, data }) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          const subtask = task.subtasks[sid];
-          if (subtask == null) {
-            console.error("subtask is null", tid, sid, title);
-            return taskMap;
-          }
-          subtask.title = title;
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update subtask title");
-      }
-    });
+    IpcSender.req.task.updateSubtaskTitle(tid, sid, title, null);
   };
 
   const onSubtaskDueDateChange = (tid, sid, dueDate) => {
-    IpcSender.req.task.updateSubtaskDueDate(sid, dueDate, ({ success, data }) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          const subtask = task.subtasks[sid];
-          if (subtask == null) {
-            console.error("subtask is null", tid, sid, dueDate);
-            return taskMap;
-          }
-          subtask.dueDate = dueDate;
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update subtask due date");
-      }
-    });
+    const newDate = moment(dueDate).valueOf();
+    IpcSender.req.task.updateSubtaskDueDate(tid, sid, newDate, null);
   };
 
   const onSubtaskDone = (tid, sid, done) => {
     const now = new Date();
-    IpcSender.req.task.updateSubtaskDone(sid, done, now.getTime(), ({ success, data }) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          const subtask = task.subtasks[sid];
-          if (subtask == null) {
-            console.error("subtask is null", tid, sid, done, now);
-            return taskMap;
-          }
-          subtask.done = done;
-          subtask.doneAt = now;
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update subtask done");
-      }
-    });
+    IpcSender.req.task.updateSubtaskDone(tid, sid, done, now.getTime());
   };
 
   // printf("taskMap", taskMap);
 
   useEffect(() => {
+    // get last update time
+    IpcSender.req.system.getLastTxUpdateTime(null);
+    IpcSender.onAll("system/lastTxUpdateTime", ({ success, data }) => {
+      setLastTxUpdateTime(data);
+    });
+
     IpcSender.onAll("task/addTask", ({ success, data }) => {
       if (success) {
         const task = new Task();
@@ -555,10 +428,226 @@ const TodoContent = () => {
       }
     });
 
+    IpcSender.onAll("task/updateTaskDueDate", ({ success, data }) => {
+      if (success) {
+        let { tid, dueDate } = data;
+        if (dueDate != null) {
+          dueDate = new Date(dueDate);
+        }
+
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.dueDate = dueDate;
+          if (dueDate == null) {
+            task.repeatPeriod = null;
+            task.repeatStartAt = null;
+          } else {
+            task.repeatStartAt = dueDate;
+          }
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update task due date");
+      }
+    });
+
+    IpcSender.onAll("task/updateTaskMemo", ({ success, data }) => {
+      if (success) {
+        const { tid, memo } = data;
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.memo = memo;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update task memo");
+      }
+    });
+
+    IpcSender.onAll("task/updateTaskDone", ({ success, data }, isRepeated, newDueDate) => {
+      if (success) {
+        const { tid, done, doneAt } = data;
+
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          if (isRepeated) {
+            task.done = false;
+            task.dueDate = new Date(newDueDate);
+          } else {
+            task.done = done;
+            task.doneAt = doneAt;
+          }
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update task done");
+      }
+    });
+
+    IpcSender.onAll("task/updateTaskRepeatPeriod", ({ success, data }) => {
+      if (success) {
+        const { tid, repeatPeriod } = data;
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.repeatPeriod = repeatPeriod;
+          if (task.repeatStartAt == null) {
+            task.repeatStartAt = task.dueDate;
+          }
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        Toast.error("failed to update task repeat period");
+        console.error("failed to update task repeat period");
+      }
+    });
+
+    IpcSender.onAll("task/addSubtask", ({ success, data }) => {
+      if (success) {
+        const { tid, sid, title, createdAt, doneAt, dueDate, done } = data;
+        const subtask = new Subtask();
+        subtask.id = sid;
+        subtask.title = title;
+        subtask.createdAt = new Date(createdAt);
+        subtask.doneAt = doneAt ? new Date(doneAt) : null;
+        subtask.dueDate = dueDate ? new Date(dueDate) : null;
+        subtask.done = done;
+
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.addSubtask(subtask);
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to add subtask");
+      }
+    });
+
+    IpcSender.onAll("task/deleteSubtask", ({ success, data }) => {
+      if (success) {
+        const { tid, sid } = data;
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.deleteSubtask(sid);
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to delete subtask");
+      }
+    });
+
+    IpcSender.onAll("task/updateSubtaskTitle", ({ success, data }) => {
+      if (success) {
+        const { tid, sid, title } = data;
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          const subtask = task.subtasks[sid];
+          if (subtask == null) {
+            console.error("subtask is null", tid, sid, title);
+            return taskMap;
+          }
+          subtask.title = title;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update subtask title");
+      }
+    });
+
+    IpcSender.onAll("task/updateSubtaskDueDate", ({ success, data }) => {
+      if (success) {
+        const { tid, sid, dueDate } = data;
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          const subtask = task.subtasks[sid];
+          if (subtask == null) {
+            console.error("subtask is null", tid, sid, dueDate);
+            return taskMap;
+          }
+          subtask.dueDate = dueDate ? new Date(dueDate) : null;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update subtask due date");
+      }
+    });
+
+    IpcSender.onAll("task/updateSubtaskDone", ({ success, data }) => {
+      if (success) {
+        const { tid, sid, done, doneAt } = data;
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          const subtask = task.subtasks[sid];
+          if (subtask == null) {
+            console.error("subtask is null", tid, sid, done, doneAt);
+            return taskMap;
+          }
+          subtask.done = done;
+          subtask.doneAt = doneAt ? new Date(doneAt) : null;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update subtask done");
+      }
+    });
+
+    let timerThread = fastInterval(() => {
+      setTimer((timer) => timer + 1);
+    }, 1000);
+
     return () => {
-      IpcSender.removeAllListeners();
+      IpcSender.offAll("system/lastTxUpdateTime");
+      IpcSender.offAll("task/addTask");
+      IpcSender.offAll("task/deleteTask");
+      IpcSender.offAll("task/updateTaskOrder");
+      IpcSender.offAll("task/updateTaskTitle");
+      IpcSender.offAll("task/updateTaskDueDate");
+      IpcSender.offAll("task/updateTaskMemo");
+      IpcSender.offAll("task/updateTaskDone");
+      IpcSender.offAll("task/updateTaskRepeatPeriod");
+      IpcSender.offAll("task/addSubtask");
+      IpcSender.offAll("task/deleteSubtask");
+      IpcSender.offAll("task/updateSubtaskTitle");
+      IpcSender.offAll("task/updateSubtaskDueDate");
+      IpcSender.offAll("task/updateSubtaskDone");
+
+      clearInterval(timerThread);
     };
-  }, []);
+  }, [categories]);
+
+  useEffect(() => {
+    IpcSender.onAll("task/addTaskCategory", ({ success, data }) => {
+      if (success) {
+        const { tid, cid } = data;
+        console.log(categories);
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          const category = categories[cid];
+          task.addCategory(category);
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to add task category");
+      }
+    });
+
+    IpcSender.onAll("task/deleteTaskCategory", ({ success, data }) => {
+      if (success) {
+        const { tid, cid } = data;
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.deleteCategory(cid);
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to delete task category");
+      }
+    });
+
+    return () => {
+      IpcSender.offAll("task/addTaskCategory");
+      IpcSender.offAll("task/deleteTaskCategory");
+    };
+  }, [categories]);
 
   return (
     <div className="todo-content">
@@ -567,7 +656,7 @@ const TodoContent = () => {
           {category?.title ?? "-"} ({Object.keys(filteredTaskMap).length})
         </div>
         <div className="metadata">
-          <div className="last-modified">마지막 수정: -</div>
+          <div className="last-modified">마지막 수정: {lastUpdateTimeText ?? "-"}</div>
         </div>
         <div className="options">
           <div className="view-modes">

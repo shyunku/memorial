@@ -3,7 +3,7 @@ import Prompt from "molecules/Prompt";
 import SubmitInput from "molecules/SubmitInput";
 import Toast from "molecules/Toast";
 import Category from "objects/Category";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IoAdd, IoClose, IoKey, IoKeySharp, IoLogoBuffer, IoReader, IoToday } from "react-icons/io5";
 import { useSelector } from "react-redux";
 import sha256 from "sha256";
@@ -42,45 +42,17 @@ const LeftSidebar = ({
 
   const addCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
   const addSecretCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
-  const addSecretCategoryRef = useRef();
 
   const tryAddCategory = (categoryName) => {
     const category = new Category(categoryName, false);
-    return new Promise((resolve, reject) => {
-      IpcSender.req.category.addCategory(category.toEntity(), ({ success, data }) => {
-        if (success) {
-          addCategoryCxt.closer();
-          onCategoryAdd?.(category, data.lastID);
-          resolve(true);
-        } else {
-          resolve(false);
-        }
-      });
-    });
+    IpcSender.req.category.addCategory(category.toEntity(), null);
+    addCategoryCxt.closer();
   };
 
-  const tryAddSecretCategory = (rawPassword) => {
-    const categoryName = addSecretCategoryRef.current.valueOf();
-    if (rawPassword.length === 0) {
-      addSecretCategoryRef.current.warn();
-      return false;
-    }
-
+  const tryAddSecretCategory = (categoryName) => {
     const category = new Category(categoryName, true);
-    category.setPassword(rawPassword);
-
-    return new Promise((resolve, reject) => {
-      IpcSender.req.category.addCategory(category.toEntity(), ({ success, data }) => {
-        if (success) {
-          addSecretCategoryRef.current.clear();
-          addSecretCategoryCxt.closer();
-          onCategoryAdd?.(category, data.lastID);
-          resolve(true);
-        } else {
-          resolve(false);
-        }
-      });
-    });
+    IpcSender.req.category.addCategory(category.toEntity(), null);
+    addSecretCategoryCxt.closer();
   };
 
   const tryDeleteCategory = (e, categoryId) => {
@@ -92,13 +64,7 @@ const LeftSidebar = ({
           return;
         }
 
-        IpcSender.req.category.deleteCategory(categoryId, ({ success }) => {
-          if (success) {
-            onCategoryDelete?.(categoryId);
-          } else {
-            console.error("Failed to delete category");
-          }
-        });
+        IpcSender.req.category.deleteCategory(categoryId, null);
       }
     });
   };
@@ -114,7 +80,7 @@ const LeftSidebar = ({
             const hashedPassword = sha256(password);
 
             return new Promise((resolve, reject) => {
-              IpcSender.req.category.checkCategoryPassword(categoryId, hashedPassword, ({ success, data }) => {
+              IpcSender.req.category.checkCategoryPassword(hashedPassword, ({ success, data }) => {
                 if (success) {
                   if (data) {
                     setSelectedTodoMenuType(categoryId);
@@ -135,6 +101,30 @@ const LeftSidebar = ({
       }
     }
   };
+
+  useEffect(() => {
+    IpcSender.onAll("category/addCategory", ({ success, data }) => {
+      if (success) {
+        const category = new Category();
+        category.id = data.cid;
+        category.title = data.title;
+        category.secret = data.secret;
+        category.locked = data.locked;
+        category.color = data.color;
+        onCategoryAdd?.(category, data.cid);
+      } else {
+        Toast.error("카테고리 생성에 실패했습니다.");
+      }
+    });
+
+    IpcSender.onAll("category/deleteCategory", ({ success, data }) => {
+      if (success) {
+        onCategoryDelete?.(data.cid);
+      } else {
+        Toast.error("카테고리 삭제에 실패했습니다.");
+      }
+    });
+  }, []);
 
   return (
     <div className="component left-sidebar">
@@ -174,9 +164,7 @@ const LeftSidebar = ({
                   <IoKey />
                 </div>
                 <ContextMenu defaultStyle={true} sticky={true} reference={addSecretCategoryCxt.ref}>
-                  <SubmitInput placeholder="새로운 보안 카테고리 생성" innerRef={addSecretCategoryRef} maxLength={20} />
-                  <Seperator />
-                  <SubmitInput placeholder="암호" onSubmit={tryAddSecretCategory} secret={true} maxLength={30} />
+                  <SubmitInput placeholder="새로운 보안 카테고리 생성" maxLength={20} onSubmit={tryAddSecretCategory} />
                 </ContextMenu>
               </div>
             </div>

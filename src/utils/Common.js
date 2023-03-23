@@ -32,7 +32,7 @@ export function toRelativeTime(milli, progress = false) {
   const now = Date.now();
   let diff = now - milli;
 
-  let rel = diff < 0 ? "left" : "ago";
+  let rel = diff < 0 ? "전" : "후";
   if (diff < 0) {
     diff = -diff;
   }
@@ -45,16 +45,16 @@ export function toRelativeTime(milli, progress = false) {
   const month = Math.floor(day / 30);
   const year = Math.floor(day / 365);
 
-  if (year > 10) return `> 10 years ${rel}`;
-  if (year > 0) return `${year} years ${rel}`;
-  if (month > 0) return `${month} months ${rel}`;
-  if (week > 0) return `${week} weeks ${rel}`;
-  if (day > 0) return `${day} days ${rel}`;
-  if (hour > 0) return `${hour} hours ${rel}`;
-  if (min > 0) return `${min} minutes ${rel}`;
-  if (sec > 0) return `${sec} seconds ${rel}`;
-  if (diff > 0) return `0 second ${rel}`;
-  return progress ? "Done" : "Just now";
+  if (year > 10) return `> 10년 ${rel}`;
+  if (year > 0) return `${year}년 ${rel}`;
+  if (month > 0) return `${month}개월 ${rel}`;
+  if (week > 0) return `${week}주 ${rel}`;
+  if (day > 0) return `${day}일 ${rel}`;
+  if (hour > 0) return `${hour}시간 ${rel}`;
+  if (min > 0) return `${min}분 ${rel}`;
+  if (sec > 0) return `${sec}초 ${rel}`;
+  if (diff > 0) return `0 밀리초 ${rel}`;
+  return progress ? "완료" : "방금 전";
 }
 
 const YEAR = 365 * 24 * 60 * 60 * 1000;

@@ -28,6 +28,19 @@ const { createTaskPre, CreateTaskTxContent } = require("../executors/createTask.
 const { deleteTaskPre, DeleteTaskTxContent } = require("../executors/deleteTask.exec");
 const { UpdateTaskOrderTxContent, updateTaskOrderPre } = require("../executors/updateTaskOrder.exec");
 const { UpdateTaskTitleTxContent } = require("../executors/updateTaskTitle.exec");
+const { UpdateTaskDueDateTxContent } = require("../executors/updateTaskDueDate.exec");
+const { UpdateTaskMemoTxContent } = require("../executors/updateTaskMemo.exec");
+const { addCategoryPre, AddCategoryTxContent } = require("../executors/addCategory.exec");
+const { DeleteCategoryTxContent } = require("../executors/deleteCategory.exec");
+const { AddTaskCategoryTxContent } = require("../executors/addTaskCategory.exec");
+const { UpdateTaskDoneTxContent } = require("../executors/updateTaskDone.exec");
+const { DeleteTaskCategoryTxContent } = require("../executors/deleteTaskCategory.exec");
+const { UpdateTaskRepeatPeriodTxContent } = require("../executors/updateTaskRepeatPeriod.exec");
+const { AddSubtaskTxContent, addSubtaskPre } = require("../executors/addSubtask.exec");
+const { DeleteSubtaskTxContent } = require("../executors/deleteSubtask.exec");
+const { UpdateSubtaskTitleTxContent } = require("../executors/updateSubtaskTitle.exec");
+const { UpdateSubtaskDueDateTxContent } = require("../executors/updateSubtaskDueDate.exec");
+const { UpdateSubtaskDoneTxContent } = require("../executors/updateSubtaskDone.exec");
 const { TX_TYPE } = Exec;
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
@@ -259,6 +272,23 @@ register("system/setAsLoginWindow", (event, reqId) => {
   }
 });
 
+register("system/lastTxUpdateTime", async (event, reqId) => {
+  try {
+    let transactions = await db.all("SELECT * FROM transactions ORDER BY block_number DESC LIMIT 1;");
+    let lastTxUpdateTime;
+    if (transactions.length === 0) {
+      lastTxUpdateTime = null;
+    } else {
+      let [transaction] = transactions;
+      lastTxUpdateTime = transaction.timestamp;
+    }
+    sender("system/lastTxUpdateTime", reqId, true, lastTxUpdateTime);
+  } catch (err) {
+    sender("system/lastTxUpdateTime", reqId, false, err);
+    throw err;
+  }
+});
+
 register("auth/sendGoogleOauthResult", async (event, reqId, data) => {
   try {
     let { googleUserInfo } = data;
@@ -384,7 +414,7 @@ register("auth/signUpWithGoogleAuth", async (event, reqId, signupRequest) => {
     if (users.length === 0) {
       // create new
       await rootDB.run(
-        "INSERT INTO users (uid, auth_id, username, auth_encrypted_pw, google_auth_id, google_email, google_profile_image_url) VALUES (?, ?, ?, ?, ?, ?, ?);",
+        "INSERT INTO users (uid, auth_id, username, auth_encrypted_pw, google_auth_id, google_email, google_profile_image_url, auth_hashed_pw) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
         [
           result.userId,
           result.authId,
@@ -393,6 +423,7 @@ register("auth/signUpWithGoogleAuth", async (event, reqId, signupRequest) => {
           result.googleAuthId,
           result.googleEmail,
           result.googleProfileImageUrl,
+          signupRequest.hashedPassword,
         ]
       );
     } else {
@@ -431,12 +462,10 @@ register("auth/signUp", async (event, reqId, signupRequest) => {
     if (users.length === 0) {
       // newly created user
       // need to create secret key to encrypt/decrypt data
-      await rootDB.run("INSERT INTO users (uid, auth_id, auth_encrypted_pw, username) VALUES (?, ?, ?, ?);", [
-        uid,
-        result.auth_id,
-        signupRequest.encryptedPassword,
-        result.username,
-      ]);
+      await rootDB.run(
+        "INSERT INTO users (uid, auth_id, auth_encrypted_pw, username, auth_hashed_pw) VALUES (?, ?, ?, ?, ?);",
+        [uid, result.auth_id, signupRequest.encryptedPassword, result.username, signupRequest.hashedPassword]
+      );
 
       // create database for user
       await databaseContext.initialize(uid);
@@ -542,7 +571,7 @@ register("auth/login", async (event, reqId, signinRequest) => {
       // newly created user
       // need to create secret key to encrypt/decrypt data
       await rootDB.run(
-        "INSERT INTO users (uid, auth_id, auth_encrypted_pw, google_auth_id, google_email, google_profile_image_url, access_token, refresh_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+        "INSERT INTO users (uid, auth_id, auth_encrypted_pw, google_auth_id, google_email, google_profile_image_url, access_token, refresh_token, auth_hashed_pw) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
         [
           uid,
           auth_id,
@@ -552,6 +581,7 @@ register("auth/login", async (event, reqId, signinRequest) => {
           google_profile_image_url,
           access_token?.token,
           refresh_token?.token,
+          signinRequest.hashedPassword,
         ]
       );
       // create database for user
@@ -601,6 +631,7 @@ register("socket/connect", async (event, reqId, userId, accessToken, refreshToke
     } else {
       let [transaction] = transactions;
       lastBlockNumber = transaction.block_number;
+      sender("system/lastTxUpdateTime", null, true, transaction.timestamp);
     }
     console.debug(`current last block number: ${lastBlockNumber} for user ${userId}`);
     lastBlockNumberMap[userId] = lastBlockNumber;
@@ -719,21 +750,11 @@ register("task/updateTaskTitle", async (event, reqId, taskId, title) => {
 
 register("task/updateTaskDueDate", async (event, reqId, taskId, dueDate) => {
   try {
-    await db.begin();
-
-    try {
-      if (dueDate == null) {
-        await db.run("UPDATE tasks SET repeat_period = NULL, repeat_start_at = NULL WHERE tid = ?", taskId);
-      } else {
-        await db.run("UPDATE tasks SET repeat_start_at = ? WHERE tid = ?", dueDate, taskId);
-      }
-      let result = await db.run("UPDATE tasks SET due_date = ? WHERE tid = ?", dueDate, taskId);
-      await db.commit();
-      sender("task/updateTaskDueDate", reqId, true, result);
-    } catch (err) {
-      await db.rollback();
-      throw err;
-    }
+    const txContent = new UpdateTaskDueDateTxContent(taskId, dueDate);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_DUE_DATE, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/updateTaskDueDate", reqId, false);
     throw err;
@@ -742,8 +763,11 @@ register("task/updateTaskDueDate", async (event, reqId, taskId, dueDate) => {
 
 register("task/updateTaskMemo", async (event, reqId, taskId, memo) => {
   try {
-    let result = await db.run("UPDATE tasks SET memo = ? WHERE tid = ?", memo, taskId);
-    sender("task/updateTaskMemo", reqId, true, result);
+    const txContent = new UpdateTaskMemoTxContent(taskId, memo);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_MEMO, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/updateTaskMemo", reqId, false);
     throw err;
@@ -752,48 +776,11 @@ register("task/updateTaskMemo", async (event, reqId, taskId, memo) => {
 
 register("task/updateTaskDone", async (event, reqId, taskId, done, doneAt) => {
   try {
-    let task = await db.get("SELECT * FROM tasks WHERE tid = ? LIMIT 1", taskId);
-    if (task != null && task.repeat_period != null) {
-      let repeatStartAt = task.repeat_start_at ?? task.due_date;
-      let repeatPeriod = task.repeat_period;
-
-      // find next due date with period, just update due_date
-      const unitMap = {
-        day: "days",
-        week: "weeks",
-        month: "months",
-        year: "years",
-      };
-
-      let nextDueDate = null;
-      let repeatPeriodUnit = unitMap[repeatPeriod] ?? null;
-
-      if (repeatPeriodUnit != null) {
-        nextDueDate = moment(repeatStartAt);
-        while (nextDueDate.isBefore(moment()) || nextDueDate.isSameOrBefore(moment(task.due_date))) {
-          nextDueDate = moment(nextDueDate).add(1, repeatPeriodUnit);
-        }
-        nextDueDate = nextDueDate.valueOf();
-      } else {
-        throw new Error(`repeat period unit not found: (${repeatPeriodUnit})`);
-      }
-
-      if (nextDueDate != null) {
-        let result = await db.run(
-          "UPDATE tasks SET done = ?, done_at = ?, due_date = ? WHERE tid = ?",
-          false,
-          doneAt,
-          nextDueDate,
-          taskId
-        );
-        sender("task/updateTaskDone", reqId, true, result, true, nextDueDate);
-      } else {
-        throw new Error("nextDueDate is null");
-      }
-    } else {
-      let result = await db.run("UPDATE tasks SET done = ?, done_at = ? WHERE tid = ?", done, doneAt, taskId);
-      sender("task/updateTaskDone", reqId, true, result, false);
-    }
+    const txContent = new UpdateTaskDoneTxContent(taskId, done, doneAt);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_DONE, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/updateTaskDone", reqId, false);
     throw err;
@@ -802,8 +789,11 @@ register("task/updateTaskDone", async (event, reqId, taskId, done, doneAt) => {
 
 register("task/addTaskCategory", async (event, reqId, taskId, categoryId) => {
   try {
-    let result = await db.run("INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)", taskId, categoryId);
-    sender("task/addTaskCategory", reqId, true, result);
+    const txContent = new AddTaskCategoryTxContent(taskId, categoryId);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.ADD_TASK_CATEGORY, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/addTaskCategory", reqId, false);
     throw err;
@@ -812,8 +802,11 @@ register("task/addTaskCategory", async (event, reqId, taskId, categoryId) => {
 
 register("task/deleteTaskCategory", async (event, reqId, taskId, categoryId) => {
   try {
-    let result = await db.run("DELETE FROM tasks_categories WHERE tid = ? AND cid = ?", taskId, categoryId);
-    sender("task/deleteTaskCategory", reqId, true, result);
+    const txContent = new DeleteTaskCategoryTxContent(taskId, categoryId);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.DELETE_TASK_CATEGORY, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/deleteTaskCategory", reqId, false);
     throw err;
@@ -822,31 +815,11 @@ register("task/deleteTaskCategory", async (event, reqId, taskId, categoryId) => 
 
 register("task/updateTaskRepeatPeriod", async (event, reqId, taskId, repeatPeriod) => {
   try {
-    await db.begin();
-
-    let result;
-    try {
-      if (repeatPeriod == null) {
-        result = await db.run("UPDATE tasks SET repeat_period = NULL, repeat_start_at = NULL WHERE tid = ?", taskId);
-      } else {
-        let repeatStartAt = await db.get("SELECT repeat_start_at FROM tasks WHERE tid = ?", taskId);
-        if (repeatStartAt == null) {
-          repeatStartAt = await db.get("SELECT due_date FROM tasks WHERE tid = ?", taskId);
-          if (repeatStartAt != null) {
-            await db.run("UPDATE tasks SET repeat_start_at = ? WHERE tid = ?", repeatStartAt, taskId);
-          } else {
-            throw Error(`Trying to update repeat period of task that has no due date. (tid: ${taskId})`);
-          }
-        }
-        result = await db.run("UPDATE tasks SET repeat_period = ? WHERE tid = ?", repeatPeriod, taskId);
-      }
-
-      await db.commit();
-      sender("task/updateTaskRepeatPeriod", reqId, true, result);
-    } catch (err) {
-      await db.rollback();
-      throw err;
-    }
+    const txContent = new UpdateTaskRepeatPeriodTxContent(taskId, repeatPeriod);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_REPEAT_PERIOD, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/updateTaskRepeatPeriod", reqId, false);
     throw err;
@@ -855,57 +828,72 @@ register("task/updateTaskRepeatPeriod", async (event, reqId, taskId, repeatPerio
 
 register("task/addSubtask", async (event, reqId, subtask, taskId) => {
   try {
-    let result = await db.run(
-      "INSERT INTO subtasks (title, created_at, done_at, due_date, done, tid) VALUES (?, ?, ?, ?, ?, ?)",
+    const preResult = await addSubtaskPre();
+    const txContent = new AddSubtaskTxContent(
+      taskId,
+      preResult.sid,
       subtask.title,
       subtask.created_at,
       subtask.done_at,
       subtask.due_date,
-      subtask.done,
-      taskId
+      subtask.done
     );
-
-    sender("task/addSubtask", reqId, true, result);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.ADD_SUBTASK, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/addSubtask", reqId, false);
     throw err;
   }
 });
 
-register("task/deleteSubtask", async (event, reqId, subtaskId) => {
+register("task/deleteSubtask", async (event, reqId, taskId, subtaskId) => {
   try {
-    let result = await db.run("DELETE FROM subtasks WHERE sid = ?", subtaskId);
-    sender("task/deleteSubtask", reqId, true, result);
+    const txContent = new DeleteSubtaskTxContent(taskId, subtaskId);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.DELETE_SUBTASK, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/deleteSubtask", reqId, false);
     throw err;
   }
 });
 
-register("task/updateSubtaskTitle", async (event, reqId, subtaskId, title) => {
+register("task/updateSubtaskTitle", async (event, reqId, taskId, subtaskId, title) => {
   try {
-    let result = await db.run("UPDATE subtasks SET title = ? WHERE sid = ?", title, subtaskId);
-    sender("task/updateSubtaskTitle", reqId, true, result);
+    const txContent = new UpdateSubtaskTitleTxContent(taskId, subtaskId, title);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.UPDATE_SUBTASK_TITLE, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/updateSubtaskTitle", reqId, false);
     throw err;
   }
 });
 
-register("task/updateSubtaskDueDate", async (event, reqId, subtaskId, dueDate) => {
+register("task/updateSubtaskDueDate", async (event, reqId, taskId, subtaskId, dueDate) => {
   try {
-    let result = await db.run("UPDATE subtasks SET due_date = ? WHERE sid = ?", dueDate, subtaskId);
-    sender("task/updateSubtaskDueDate", reqId, true, result);
+    const txContent = new UpdateSubtaskDueDateTxContent(taskId, subtaskId, dueDate);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.UPDATE_SUBTASK_DUE_DATE, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/updateSubtaskDueDate", reqId, false);
     throw err;
   }
 });
 
-register("task/updateSubtaskDone", async (event, reqId, subtaskId, done, doneAt) => {
+register("task/updateSubtaskDone", async (event, reqId, taskId, subtaskId, done, doneAt) => {
   try {
-    let result = await db.run("UPDATE subtasks SET done = ?, done_at = ? WHERE sid = ?", done, doneAt, subtaskId);
-    sender("task/updateSubtaskDone", reqId, true, result);
+    const txContent = new UpdateSubtaskDoneTxContent(taskId, subtaskId, done, doneAt);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.UPDATE_SUBTASK_DONE, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/updateSubtaskDone", reqId, false);
     throw err;
@@ -924,14 +912,18 @@ register("category/getCategoryList", async (event, reqId) => {
 
 register("category/addCategory", async (event, reqId, category) => {
   try {
-    let result = await db.run(
-      "INSERT INTO categories (title, secret, encrypted_pw, color) VALUES (?, ?, ?, ?)",
+    let preResult = await addCategoryPre();
+    const txContent = new AddCategoryTxContent(
+      preResult.cid,
       category.title,
       category.secret,
-      category.encrypted_pw,
+      category.locked,
       category.color
     );
-    sender("category/addCategory", reqId, true, result);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.ADD_CATEGORY, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("category/addCategory", reqId, false);
     throw err;
@@ -940,45 +932,13 @@ register("category/addCategory", async (event, reqId, category) => {
 
 register("category/deleteCategory", async (event, reqId, categoryId) => {
   try {
-    await db.begin();
-
-    try {
-      let result = await db.run("DELETE FROM tasks_categories WHERE cid = ?", categoryId);
-      result = await db.run("DELETE FROM categories WHERE cid = ?", categoryId);
-      db.commit();
-      sender("category/deleteCategory", reqId, true, result);
-    } catch (err) {
-      await db.rollback();
-      throw err;
-    }
+    const txContent = new DeleteCategoryTxContent(categoryId);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.DELETE_CATEGORY, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("category/deleteCategory", reqId, false);
-    throw err;
-  }
-});
-
-register("category/checkCategoryPassword", async (event, reqId, categoryId, hashedPassword) => {
-  try {
-    const doubleHashedPassword = sha256(hashedPassword);
-    let results = await db.all(
-      "SELECT * FROM categories WHERE cid = ? AND encrypted_pw = ?",
-      categoryId,
-      doubleHashedPassword
-    );
-    let ok = results.length > 0;
-    sender("category/checkCategoryPassword", reqId, true, ok);
-  } catch (err) {
-    sender("category/checkCategoryPassword", reqId, false);
-    throw err;
-  }
-});
-
-register("category/getCategoryTasks", async (event, reqId, categoryId) => {
-  try {
-    let result = await db.all("SELECT * FROM tasks_categories WHERE cid = ?", categoryId);
-    sender("category/getCategoryTasks", reqId, true, result);
-  } catch (err) {
-    sender("category/getCategoryTasks", reqId, false);
     throw err;
   }
 });
@@ -993,12 +953,34 @@ register("category/updateCategoryTitle", async (event, reqId, categoryId, title)
   }
 });
 
+register("category/getCategoryTasks", async (event, reqId, categoryId) => {
+  try {
+    let result = await db.all("SELECT * FROM tasks_categories WHERE cid = ?", categoryId);
+    sender("category/getCategoryTasks", reqId, true, result);
+  } catch (err) {
+    sender("category/getCategoryTasks", reqId, false);
+    throw err;
+  }
+});
+
 register("tasks_categories/getTasksCategoriesList", async (event, reqId) => {
   try {
     let result = await db.all("SELECT * FROM tasks_categories;");
     sender("tasks_categories/getTasksCategoriesList", reqId, true, result);
   } catch (err) {
     sender("tasks_categories/getTasksCategoriesList", reqId, false);
+    throw err;
+  }
+});
+
+register("category/checkCategoryPassword", async (event, reqId, hashedPassword) => {
+  try {
+    // TODO :: change to comparison with user password
+    let results = await rootDB.all("SELECT * FROM users WHERE auth_hashed_pw = ?", hashedPassword);
+    let ok = results.length > 0;
+    sender("category/checkCategoryPassword", reqId, true, ok);
+  } catch (err) {
+    sender("category/checkCategoryPassword", reqId, false);
     throw err;
   }
 });

@@ -196,6 +196,7 @@ const Login = () => {
     // try sign up process
     // sign up with google auth binding
     const singleEncryptedPassword = sha256(sha256(signupId) + signupPassword);
+    const hashedPassword = sha256(signupPassword);
     if (googleBinding === true) {
       if (currentUserInfo == null) {
         console.error(`currentUserInfo is null`);
@@ -211,6 +212,7 @@ const Login = () => {
           googleAuthId: currentUserInfo.googleAuthId,
           googleEmail: currentUserInfo.googleEmail,
           googleProfileImageUrl: currentUserInfo.googleProfileImageUrl,
+          hashedPassword,
         },
         ({ success, data }) => {
           if (success) {
@@ -252,6 +254,7 @@ const Login = () => {
           username: signupUserName,
           authId: signupId,
           encryptedPassword: singleEncryptedPassword,
+          hashedPassword,
         },
         ({ success, data }) => {
           if (success) {
@@ -292,9 +295,12 @@ const Login = () => {
     }
 
     const singleEncryptedPassword = sha256(sha256(signinId) + signinPassword);
+    const hashedPassword = sha256(signinPassword);
+
     const loginRequest = {
       authId: signinId,
       encryptedPassword: singleEncryptedPassword,
+      hashedPassword,
     };
 
     if (googleBinding) {

@@ -7,20 +7,16 @@ class Category extends Mutatable {
       cid: "id",
       title: "title",
       secret: "secret",
-      encrypted_pw: "encryptedPw",
+      locked: "locked",
       color: "color",
     });
 
     this.id = null;
     this.title = title;
     this.secret = secret;
-    this.encryptedPw = null;
+    this.locked = secret;
     this.color = null;
     this.default = default_;
-  }
-
-  setPassword(password) {
-    this.encryptedPw = sha256(sha256(password));
   }
 }
 

@@ -12,6 +12,8 @@ const subscribed = {
 const currentWebContents = remote.getCurrentWebContents();
 const currentWindow = remote.getCurrentWindow();
 
+const topicHandlers = {};
+
 const autoSubscribe = (topic) => {
   if (subscribed.hasOwnProperty(topic)) return;
   IpcSender.subscribe(topic);
@@ -99,6 +101,9 @@ const IpcSender = {
       },
       setAsLoginWindow: (callback) => {
         sender("system/setAsLoginWindow", callback);
+      },
+      getLastTxUpdateTime: (callback) => {
+        sender("system/lastTxUpdateTime", callback);
       },
     },
     auth: {
@@ -205,17 +210,17 @@ const IpcSender = {
       addSubtask: (subtask, taskId, callback) => {
         sender("task/addSubtask", callback, subtask, taskId);
       },
-      deleteSubtask: (subtaskId, callback) => {
-        sender("task/deleteSubtask", callback, subtaskId);
+      deleteSubtask: (taskId, subtaskId, callback) => {
+        sender("task/deleteSubtask", callback, taskId, subtaskId);
       },
-      updateSubtaskTitle: (subtaskId, title, callback) => {
-        sender("task/updateSubtaskTitle", callback, subtaskId, title);
+      updateSubtaskTitle: (taskId, subtaskId, title, callback) => {
+        sender("task/updateSubtaskTitle", callback, taskId, subtaskId, title);
       },
-      updateSubtaskDueDate: (subtaskId, dueDate, callback) => {
-        sender("task/updateSubtaskDueDate", callback, subtaskId, dueDate);
+      updateSubtaskDueDate: (taskId, subtaskId, dueDate, callback) => {
+        sender("task/updateSubtaskDueDate", callback, taskId, subtaskId, dueDate);
       },
-      updateSubtaskDone: (subtaskId, done, doneAt, callback) => {
-        sender("task/updateSubtaskDone", callback, subtaskId, done, doneAt);
+      updateSubtaskDone: (taskId, subtaskId, done, doneAt, callback) => {
+        sender("task/updateSubtaskDone", callback, taskId, subtaskId, done, doneAt);
       },
     },
     category: {
@@ -228,8 +233,8 @@ const IpcSender = {
       deleteCategory: (categoryId, callback) => {
         sender("category/deleteCategory", callback, categoryId);
       },
-      checkCategoryPassword: (categoryId, hashedPassword, callback) => {
-        sender("category/checkCategoryPassword", callback, categoryId, hashedPassword);
+      checkCategoryPassword: (hashedPassword, callback) => {
+        sender("category/checkCategoryPassword", callback, hashedPassword);
       },
       updateCategoryTitle: (categoryId, title, callback) => {
         sender("category/updateCategoryTitle", callback, categoryId, title);
@@ -252,10 +257,20 @@ const IpcSender = {
   subscribe: (topics) => {
     sender("system/subscribe", null, currentWebContents.id, topics);
   },
+  // unsubscribe: (topics) => {
+  //   sender("system/unsubscribe", null, currentWebContents.id, topics);
+  // },
   off: (topic, callback) => {
     return ipcRenderer.removeListener(topic, callback);
   },
+  offAll: (topic) => {
+    let handlers = topicHandlers[topic] ?? [];
+    handlers.forEach((handler) => {
+      ipcRenderer.removeListener(topic, handler);
+    });
+  },
   removeAllListeners: () => {
+    console.warn(`Do not use removeAllListeners() as possible. It interferes with the internal logic.`);
     ipcRenderer.removeAllListeners();
   },
   sendCallback: (topic, data) => {
@@ -280,10 +295,12 @@ const IpcSender = {
   onAll: (topic, callback) => {
     autoSubscribe(topic);
     const newCallback = (e, reqId, ...data) => {
-      console.log(e, reqId, ...data);
       console.log(`IpcRenderer <-- ${colorize.yellow(`[ALL]`)} ${colorize.magenta(topic)}`, ...data);
       return callback(...data);
     };
+
+    if (topicHandlers[topic] == null) topicHandlers[topic] = [];
+    topicHandlers[topic].push(newCallback);
     ipcRenderer.on(topic, newCallback);
   },
   once: (topic, callback) => {

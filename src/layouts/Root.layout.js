@@ -4,11 +4,7 @@ import Toast from "molecules/Toast";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Outlet, useNavigate } from "react-router-dom";
-import {
-  accountAuthSlice,
-  accountInfoSlice,
-  setAccount,
-} from "store/accountSlice";
+import { accountAuthSlice, accountInfoSlice, setAccount } from "store/accountSlice";
 import IpcSender from "utils/IpcSender";
 import "./Root.layout.scss";
 
@@ -42,30 +38,22 @@ const RootLayout = () => {
           reject("서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }, 3000);
 
-        IpcSender.req.socket.tryConnect(
-          userId,
-          accessToken,
-          refreshToken,
-          ({ success, data }) => {
-            if (success) {
-              setSocketReady(true);
-              resolve();
-            } else {
-              reject(data);
-            }
-            clearInterval(timeout);
+        IpcSender.req.socket.tryConnect(userId, accessToken, refreshToken, ({ success, data }) => {
+          if (success) {
+            setSocketReady(true);
+            resolve();
+          } else {
+            reject(data);
           }
-        );
+          clearInterval(timeout);
+        });
       } catch (err) {
         reject(err);
       }
     });
 
     try {
-      await Loading.float(
-        "서버 연결 중입니다. 잠시만 기다려주세요...",
-        connectSocketPromise
-      );
+      await Loading.float("서버 연결 중입니다. 잠시만 기다려주세요...", connectSocketPromise);
     } catch (err) {
       switch (err?.message) {
         case "401":
@@ -74,9 +62,7 @@ const RootLayout = () => {
           break;
         default:
           console.log(err);
-          Toast.warn(
-            "서버가 연결되지 않았습니다. 오프라인에서 작업할 수 있습니다."
-          );
+          Toast.warn("서버가 연결되지 않았습니다. 오프라인에서 작업할 수 있습니다.");
           break;
       }
     }
@@ -87,45 +73,33 @@ const RootLayout = () => {
     console.log(userId);
     (async () => {
       const checkDatabasePromise = new Promise((resolve, reject) => {
-        IpcSender.req.auth.isDatabaseReady(
-          userId,
-          ({ success, data: ready }) => {
-            if (!success) {
-              reject("데이터베이스 접근에 실패했습니다.");
-              return;
-            }
-            if (!ready) {
-              IpcSender.req.auth.initializeDatabase(
-                userId,
-                ({ success, data }) => {
-                  if (!success) {
-                    reject("데이터베이스 설정에 실패했습니다.");
-                    return;
-                  }
-                  resolve();
-                }
-              );
-              return;
-            }
-            // ready for database
-            resolve();
+        IpcSender.req.auth.isDatabaseReady(userId, ({ success, data: ready }) => {
+          if (!success) {
+            reject("데이터베이스 접근에 실패했습니다.");
+            return;
           }
-        );
+          if (!ready) {
+            IpcSender.req.auth.initializeDatabase(userId, ({ success, data }) => {
+              if (!success) {
+                reject("데이터베이스 설정에 실패했습니다.");
+                return;
+              }
+              resolve();
+            });
+            return;
+          }
+          // ready for database
+          resolve();
+        });
       });
 
       try {
-        await Loading.float(
-          "데이터베이스 접근 중입니다. 잠시만 기다려주세요...",
-          checkDatabasePromise
-        );
+        await Loading.float("데이터베이스 접근 중입니다. 잠시만 기다려주세요...", checkDatabasePromise);
         setDatabaseReady(true);
         trySocketConnection();
       } catch (err) {
         console.error(err);
-        Toast.error(
-          err?.message ??
-            "알 수 없는 오류가 발생했습니다. 로그인 화면으로 이동합니다."
-        );
+        Toast.error(err?.message ?? "알 수 없는 오류가 발생했습니다. 로그인 화면으로 이동합니다.");
         goBackToLoginPage();
       }
     })();
@@ -141,7 +115,8 @@ const RootLayout = () => {
     });
 
     return () => {
-      IpcSender.removeAllListeners();
+      IpcSender.offAll("socket/disconnected");
+      IpcSender.offAll("socket/connected");
     };
   }, []);
 
@@ -149,13 +124,7 @@ const RootLayout = () => {
     dispatch(setAccount({ offlineMode: tryAtOffline }));
   }, [tryAtOffline]);
 
-  console.log(
-    "visible",
-    databaseReady,
-    socketReady,
-    socketConnected,
-    tryAtOffline
-  );
+  console.log("visible", databaseReady, socketReady, socketConnected, tryAtOffline);
 
   return (
     <div className="root-layout">
