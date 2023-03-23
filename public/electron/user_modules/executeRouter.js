@@ -43,7 +43,8 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
   switch (tx.type) {
     case TX_TYPE.CREATE_TASK:
       return await createTask(...args, tx.content);
-
+    case TX_TYPE.DELETE_TASK:
+      return await deleteTask(...args, tx.content);
     default:
       throw new Error("Transaction type is not supported");
   }
