@@ -330,15 +330,15 @@ const TodoContent = () => {
       if (success) {
         const task = new Task();
         task.id = data.tid;
-        task.createdAt = data.createdAt;
-        task.doneAt = data.doneAt;
-        task.dueDate = data.dueDate;
+        task.createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
+        task.doneAt = data.doneAt ? new Date(data.doneAt) : null;
+        task.dueDate = data.dueDate ? new Date(data.dueDate) : null;
         task.title = data.title;
         task.memo = data.memo;
         task.done = data.done;
         task.categories = data.categories;
         task.repeatPeriod = data.repeatPeriod;
-        task.repeatStartAt = data.repeatStartAt;
+        task.repeatStartAt = data.repeatStartAt ? new Date(data.repeatStartAt) : null;
 
         setTaskMap((taskMap) => {
           const updated = { ...taskMap };
