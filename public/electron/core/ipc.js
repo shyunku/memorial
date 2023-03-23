@@ -685,8 +685,14 @@ register("task/deleteTask", async (event, reqId, taskId) => {
 // 3.next = 5
 register("task/updateTaskOrder", async (event, reqId, taskId, targetTaskId, afterTarget) => {
   try {
-    let preResult = await updateTaskOrderPre(db, taskId);
-    const txContent = new UpdateTaskOrderTxContent(taskId, targetTaskId, afterTarget, preResult.prevTaskId);
+    let preResult = await updateTaskOrderPre(db, taskId, targetTaskId);
+    const txContent = new UpdateTaskOrderTxContent(
+      taskId,
+      targetTaskId,
+      afterTarget,
+      preResult.prevTaskId,
+      preResult.targetPrevTaskId
+    );
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_ORDER, txContent, targetBlockNumber);
     Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);

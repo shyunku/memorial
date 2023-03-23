@@ -236,10 +236,7 @@ const TodoContent = () => {
     const { targetId, currentId, afterTarget } = result;
     let targetTaskId = document.getElementById(targetId)?.getAttribute("todo-id");
     let currentTaskId = document.getElementById(currentId)?.getAttribute("todo-id");
-    if (targetTaskId && currentTaskId) {
-      targetTaskId = parseInt(targetTaskId);
-      currentTaskId = parseInt(currentTaskId);
-
+    if (targetTaskId != null && currentTaskId != null) {
       // check if the target.next is current when afterTarget
       if (afterTarget === true && taskMap[targetTaskId].next?.id == currentTaskId) {
         return;
