@@ -253,17 +253,9 @@ const TodoContent = () => {
   };
 
   const onTaskTitleChange = (tid, title) => {
-    IpcSender.req.task.updateTaskTitle(tid, title, ({ success, data }) => {
-      if (success) {
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.title = title;
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update task title");
-      }
-    });
+    console.log("----------------------------------------------------");
+    console.log(new Error());
+    IpcSender.req.task.updateTaskTitle(tid, title, null);
   };
 
   const onTaskDueDateChange = (tid, dueDate) => {
@@ -547,6 +539,19 @@ const TodoContent = () => {
         });
       } else {
         console.error("failed to update task order");
+      }
+    });
+
+    IpcSender.onAll("task/updateTaskTitle", ({ success, data }) => {
+      if (success) {
+        const { tid, title } = data;
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          task.title = title;
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update task title");
       }
     });
 

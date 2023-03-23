@@ -27,6 +27,7 @@ const Exec = require("../user_modules/executeRouter");
 const { createTaskPre, CreateTaskTxContent } = require("../executors/createTask.exec");
 const { deleteTaskPre, DeleteTaskTxContent } = require("../executors/deleteTask.exec");
 const { UpdateTaskOrderTxContent, updateTaskOrderPre } = require("../executors/updateTaskOrder.exec");
+const { UpdateTaskTitleTxContent } = require("../executors/updateTaskTitle.exec");
 const { TX_TYPE } = Exec;
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
@@ -705,8 +706,11 @@ register("task/updateTaskOrder", async (event, reqId, taskId, targetTaskId, afte
 
 register("task/updateTaskTitle", async (event, reqId, taskId, title) => {
   try {
-    let result = await db.run("UPDATE tasks SET title = ? WHERE tid = ?", title, taskId);
-    sender("task/updateTaskTitle", reqId, true, result);
+    const txContent = new UpdateTaskTitleTxContent(taskId, title);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_TITLE, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/updateTaskTitle", reqId, false);
     throw err;

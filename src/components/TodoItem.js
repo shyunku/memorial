@@ -269,7 +269,6 @@ const TodoItem = ({
                 value={editedTitle}
                 onKeyDown={onTitleEditKeyDown}
                 onChange={(e) => setEditedTitle(e.target.value)}
-                onBlur={onTitleEdit}
               ></input>
               <div className="options">
                 <DueDateMenu
@@ -379,10 +378,6 @@ const TodoItem = ({
                           <div className="sub-task-title">
                             <input
                               value={titleInput}
-                              onBlur={(e) => {
-                                if (titleInput === subtask.title) return;
-                                onSubtaskTitleDecision(subtask, titleInput);
-                              }}
                               onChange={(e) => {
                                 const newMap = { ...subTaskTitleInputMap };
                                 newMap[subtask.id] = e.target.value;
