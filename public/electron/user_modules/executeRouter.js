@@ -1,5 +1,20 @@
 const { createTask } = require("../executors/createTask.exec");
-const { TX_TYPE } = require("./transaction");
+
+const TX_TYPE = {
+  INITIALIZE: 0,
+  CREATE_TASK: 1,
+};
+
+const makeTransaction = (type, data, targetBlockNumber) => {
+  const timestamp = Date.now();
+
+  return {
+    type,
+    content: data,
+    timestamp,
+    targetBlockNumber: targetBlockNumber,
+  };
+};
 
 const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
   if (tx == null) throw new Error("Transaction is null");
@@ -27,9 +42,10 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
   switch (tx.type) {
     case TX_TYPE.CREATE_TASK:
       return await createTask(...args, tx.content);
+
     default:
       throw new Error("Transaction type is not supported");
   }
 };
 
-module.exports = { txExecutor };
+module.exports = { txExecutor, TX_TYPE, makeTransaction };

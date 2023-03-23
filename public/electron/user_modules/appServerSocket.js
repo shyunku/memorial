@@ -3,8 +3,7 @@ const WebSocket = require("ws");
 const Request = require("../core/request");
 const { v4 } = require("uuid");
 const { reqIdTag } = require("../modules/util");
-const { makeTransaction } = require("./transaction");
-const { txExecutor } = require("./executeRouter");
+const { txExecutor, makeTransaction } = require("./executeRouter");
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;

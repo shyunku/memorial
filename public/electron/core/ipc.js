@@ -23,9 +23,9 @@ const silentTopics = [];
 const PackageJson = require("../../../package.json");
 const AppServerSocket = require("../user_modules/appServerSocket");
 const { reqIdTag } = require("../modules/util");
-const { createTaskTx, makeTransaction, TX_TYPE } = require("../user_modules/transaction");
 const Exec = require("../user_modules/executeRouter");
 const { createTaskPre, CreateTaskTxContent } = require("../executors/createTask.exec");
+const { TX_TYPE } = Exec;
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
@@ -648,7 +648,6 @@ register("task/addTask", async (event, reqId, task) => {
       task.categories,
       preResult.prevTaskId
     );
-    console.debug(lastBlockNumberMap);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = makeTransaction(TX_TYPE.CREATE_TASK, txContent, targetBlockNumber);
     Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
@@ -663,46 +662,12 @@ register("task/addTask", async (event, reqId, task) => {
 // 3.next = 5
 register("task/deleteTask", async (event, reqId, taskId) => {
   try {
-    let prevTaskList = await db.all("SELECT * FROM tasks WHERE next = ?;", taskId);
-    if (prevTaskList.length > 1) {
-      console.log(prevTaskList);
-      throw new Error(`tasks that ID is null is more than 1. (${prevTaskList.length})`);
-    }
-
-    let [prevTask] = prevTaskList;
-
-    // transaction
-    try {
-      await db.begin();
-    } catch (err) {
-      throw err;
-    }
-
-    try {
-      // delete subtasks first
-      await db.run("DELETE FROM subtasks WHERE tid = ?", taskId);
-
-      // get next task
-      let [curTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", taskId);
-      let nextTaskId = curTask.next ?? null;
-
-      await db.run("UPDATE tasks SET next = NULL WHERE next = ?;", taskId);
-      await db.run("DELETE FROM tasks_categories WHERE tid = ?", taskId);
-
-      await db.run("DELETE FROM tasks WHERE tid = ?", taskId);
-
-      // update previous task's next
-      if (prevTask != null) {
-        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, prevTask.tid);
-      }
-      await db.commit();
-      sender("task/deleteTask", reqId, true, {
-        tid: taskId,
-      });
-    } catch (err) {
-      await db.rollback();
-      throw err;
-    }
+    let preResult = await deleteTaskPre(db, taskId);
+    const txContent = new DeleteTaskTxContent(taskId, preResult.prevTaskId);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.DELETE_TASK, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/deleteTask", reqId, false);
     throw err;
