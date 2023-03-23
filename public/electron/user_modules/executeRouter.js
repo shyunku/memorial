@@ -1,10 +1,12 @@
 const { createTask } = require("../executors/createTask.exec");
 const { deleteTask } = require("../executors/deleteTask.exec");
+const { updateTaskOrder } = require("../executors/updateTaskOrder.exec");
 
 const TX_TYPE = {
   INITIALIZE: 1,
   CREATE_TASK: 2,
   DELETE_TASK: 3,
+  UPDATE_TASK_ORDER: 4,
 };
 
 const makeTransaction = (type, data, targetBlockNumber) => {
@@ -33,6 +35,9 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
       break;
     case TX_TYPE.DELETE_TASK:
       await deleteTask(...args, tx.content);
+      break;
+    case TX_TYPE.UPDATE_TASK_ORDER:
+      await updateTaskOrder(...args, tx.content);
       break;
     default:
       throw new Error("Transaction type is not supported");

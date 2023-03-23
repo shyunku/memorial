@@ -26,6 +26,7 @@ const { reqIdTag } = require("../modules/util");
 const Exec = require("../user_modules/executeRouter");
 const { createTaskPre, CreateTaskTxContent } = require("../executors/createTask.exec");
 const { deleteTaskPre, DeleteTaskTxContent } = require("../executors/deleteTask.exec");
+const { UpdateTaskOrderTxContent, updateTaskOrderPre } = require("../executors/updateTaskOrder.exec");
 const { TX_TYPE } = Exec;
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
@@ -684,71 +685,12 @@ register("task/deleteTask", async (event, reqId, taskId) => {
 // 3.next = 5
 register("task/updateTaskOrder", async (event, reqId, taskId, targetTaskId, afterTarget) => {
   try {
-    let prevTaskList = await db.all("SELECT * FROM tasks WHERE next = ?;", taskId);
-    if (prevTaskList.length > 1) {
-      console.log(prevTaskList);
-      throw new Error(`tasks that ID is null is more than 1. (${prevTaskList.length})`);
-    }
-
-    let [prevTask] = prevTaskList;
-
-    // transaction
-    await db.begin();
-
-    try {
-      // get next task
-      let [curTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", taskId);
-      let nextTaskId = curTask.next ?? null;
-
-      // delete current task's next
-      await db.run(`UPDATE tasks SET next = NULL WHERE tid = ?;`, taskId);
-
-      // update previous task's next
-      if (prevTask != null) {
-        // prev.next = current.next
-        if (nextTaskId != null) {
-          await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, prevTask.tid);
-        } else {
-          await db.run(`UPDATE tasks SET next = NULL WHERE tid = ?;`, prevTask.tid);
-        }
-      }
-
-      let targetPrevTask;
-      // update target task's next
-      if (afterTarget) {
-        let [targetTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", targetTaskId);
-        let targetNextTaskId = targetTask.next ?? null;
-
-        // target.next = current.id
-        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, taskId, targetTaskId);
-        // current.next = target.next.id
-        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, targetNextTaskId, taskId);
-        // console.log(targetTaskId, targetNextTaskId, prevTask.tid, taskId, nextTaskId);
-      } else {
-        let targetPrevTaskList = await db.all("SELECT * FROM tasks WHERE next = ?;", targetTaskId);
-        if (targetPrevTaskList.length > 1) {
-          console.log(targetPrevTaskList);
-          throw new Error(`tasks that ID is null is more than 1. (${targetPrevTaskList.length})`);
-        }
-
-        [targetPrevTask] = targetPrevTaskList;
-        if (targetPrevTask) {
-          await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, taskId, targetPrevTask.tid);
-        }
-
-        // current.next = target.id
-        await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, targetTaskId, taskId);
-      }
-
-      await db.commit();
-      sender("task/updateTaskOrder", reqId, true, {
-        tid: taskId,
-        targetPrevTid: targetPrevTask ? targetPrevTask.tid : null,
-      });
-    } catch (err) {
-      await db.rollback();
-      throw err;
-    }
+    let preResult = await updateTaskOrderPre(db, taskId);
+    const txContent = new UpdateTaskOrderTxContent(taskId, targetTaskId, afterTarget, preResult.prevTaskId);
+    const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
+    const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_ORDER, txContent, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    sendTx(tx);
   } catch (err) {
     sender("task/updateTaskOrder", reqId, false);
     console.error(err);

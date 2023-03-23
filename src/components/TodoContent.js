@@ -224,33 +224,12 @@ const TodoContent = () => {
 
   /* ------------------------------ Handlers ------------------------------ */
   const onTaskAdd = (task) => {
-    if (!(task instanceof Task)) {
-      return;
-    }
+    if (!(task instanceof Task)) return;
     IpcSender.req.task.addTask(task.toEntity(), null);
   };
 
   const onTaskDelete = (tid) => {
-    IpcSender.req.task.deleteTask(tid, ({ success, data }) => {
-      if (success) {
-        let delTaskId = data.tid;
-        setTaskMap((taskMap) => {
-          const newTaskMap = { ...taskMap };
-          let origNext = newTaskMap[delTaskId]?.next;
-          let origPrev = newTaskMap[delTaskId]?.prev;
-          if (origNext) {
-            origNext.prev = origPrev;
-          }
-          if (origPrev) {
-            origPrev.next = origNext;
-          }
-          delete newTaskMap[delTaskId];
-          return newTaskMap;
-        });
-      } else {
-        console.error("failed to delete task");
-      }
-    });
+    IpcSender.req.task.deleteTask(tid, null);
   };
 
   const onTaskDragEndHandler = (result) => {
@@ -270,40 +249,7 @@ const TodoContent = () => {
         return;
       }
 
-      IpcSender.req.task.updateTaskOrder(currentTaskId, targetTaskId, afterTarget, ({ success, data }) => {
-        if (success) {
-          setTaskMap((taskMap) => {
-            const newTaskMap = { ...taskMap };
-            const targetTask = newTaskMap[targetTaskId];
-            const currentTask = newTaskMap[currentTaskId];
-            const prevTask = currentTask.prev;
-            const nextTask = currentTask.next;
-
-            if (prevTask) prevTask.next = nextTask;
-            if (nextTask) nextTask.prev = prevTask;
-
-            if (afterTarget) {
-              currentTask.prev = targetTask;
-              currentTask.next = targetTask.next;
-              if (targetTask.next) {
-                targetTask.next.prev = currentTask;
-              }
-              targetTask.next = currentTask;
-            } else {
-              currentTask.next = targetTask;
-              currentTask.prev = targetTask.prev;
-              if (targetTask.prev) {
-                targetTask.prev.next = currentTask;
-              }
-              targetTask.prev = currentTask;
-            }
-
-            return newTaskMap;
-          });
-        } else {
-          console.error("failed to update task order");
-        }
-      });
+      IpcSender.req.task.updateTaskOrder(currentTaskId, targetTaskId, afterTarget, null);
     } else {
       console.log(result);
     }
@@ -546,6 +492,64 @@ const TodoContent = () => {
         });
       } else {
         console.error("failed to add task");
+      }
+    });
+
+    IpcSender.onAll("task/deleteTask", ({ success, data }) => {
+      if (success) {
+        let delTaskId = data.tid;
+        setTaskMap((taskMap) => {
+          const newTaskMap = { ...taskMap };
+          let origNext = newTaskMap[delTaskId]?.next;
+          let origPrev = newTaskMap[delTaskId]?.prev;
+          if (origNext) {
+            origNext.prev = origPrev;
+          }
+          if (origPrev) {
+            origPrev.next = origNext;
+          }
+          delete newTaskMap[delTaskId];
+          return newTaskMap;
+        });
+      } else {
+        console.error("failed to delete task");
+      }
+    });
+
+    IpcSender.onAll("task/updateTaskOrder", ({ success, data }) => {
+      if (success) {
+        const { tid: currentTaskId, targetTaskId, afterTarget } = data;
+
+        setTaskMap((taskMap) => {
+          const newTaskMap = { ...taskMap };
+          const targetTask = newTaskMap[targetTaskId];
+          const currentTask = newTaskMap[currentTaskId];
+          const prevTask = currentTask.prev;
+          const nextTask = currentTask.next;
+
+          if (prevTask) prevTask.next = nextTask;
+          if (nextTask) nextTask.prev = prevTask;
+
+          if (afterTarget) {
+            currentTask.prev = targetTask;
+            currentTask.next = targetTask.next;
+            if (targetTask.next) {
+              targetTask.next.prev = currentTask;
+            }
+            targetTask.next = currentTask;
+          } else {
+            currentTask.next = targetTask;
+            currentTask.prev = targetTask.prev;
+            if (targetTask.prev) {
+              targetTask.prev.next = currentTask;
+            }
+            targetTask.prev = currentTask;
+          }
+
+          return newTaskMap;
+        });
+      } else {
+        console.error("failed to update task order");
       }
     });
 

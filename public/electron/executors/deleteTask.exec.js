@@ -29,7 +29,7 @@ const deleteTaskPre = async (db, taskId) => {
  */
 const deleteTask = async (db, reqId, { sender }, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new DeleteTaskTxContent().instanceOf(txReq), "Transaction request is not instance of CreateTaskTxReq");
+  assert(new DeleteTaskTxContent().instanceOf(txReq), "Transaction request is not instance of class");
 
   // transaction
   await db.begin();
