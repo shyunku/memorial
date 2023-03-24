@@ -225,9 +225,18 @@ const RootLayout = () => {
               mismatchEndBlockNumber,
               ({ success, data }) => {
                 if (success) {
-                  Toast.success("데이터베이스 충돌 해결이 완료되었습니다.");
-                  // reconnect socket
-                  trySocketConnection();
+                  Prompt.float(
+                    "데이터베이스 충돌 해결",
+                    "데이터베이스 충돌 해결이 완료되었습니다.\n페이지를 새로고침합니다.",
+                    {
+                      ignorable: false,
+                      confirmText: "새로고침",
+                      onConfirm: () => {
+                        window.location.reload();
+                      },
+                      cancelBtn: false,
+                    }
+                  );
                 } else {
                   Toast.error("데이터베이스 충돌 해결에 실패했습니다.");
                 }
@@ -251,9 +260,18 @@ const RootLayout = () => {
                   mismatchEndBlockNumber,
                   ({ success, data }) => {
                     if (success) {
-                      Toast.success("데이터베이스 충돌 해결이 완료되었습니다.");
-                      // reconnect socket
-                      trySocketConnection();
+                      Prompt.float(
+                        "데이터베이스 충돌 해결",
+                        "데이터베이스 충돌 해결이 완료되었습니다.\n페이지를 새로고침합니다.",
+                        {
+                          ignorable: false,
+                          confirmText: "새로고침",
+                          onConfirm: () => {
+                            window.location.reload();
+                          },
+                          cancelBtn: false,
+                        }
+                      );
                     } else {
                       Toast.error("데이터베이스 충돌 해결에 실패했습니다.");
                     }
@@ -269,8 +287,18 @@ const RootLayout = () => {
     IpcSender.onAll("system/stateRollbacked", ({ success, data }) => {
       if (!success) return;
       Toast.info("다른 기기에서 데이터 충돌에 대해 롤백을 수행했습니다.");
-      // reconnect socket
-      trySocketConnection();
+      Prompt.float(
+        "데이터 롤백 완료",
+        "다른 기기에서 데이터 충돌에 대해 롤백을 수행했습니다.\n페이지를 새로고침합니다.",
+        {
+          ignorable: false,
+          confirmText: "새로고침",
+          onConfirm: () => {
+            window.location.reload();
+          },
+          cancelBtn: false,
+        }
+      );
     });
 
     return () => {

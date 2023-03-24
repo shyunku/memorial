@@ -16,10 +16,7 @@ class InitializeStateTxContent extends TxContent {
  */
 const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(
-    new InitializeStateTxContent().instanceOf(txReq),
-    "Transaction request is not instance of class"
-  );
+  assert(new InitializeStateTxContent().instanceOf(txReq), "Transaction request is not instance of class");
 
   if (blockNumber !== 1) {
     throw new Error("InitializeState can be executed only at block 1");
@@ -57,9 +54,7 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
 
     // sort tasks
     let reverseSortedTasks = [];
-    let lastTask = Object.values(bidirectionalTasks).find(
-      (task) => task.next == ""
-    );
+    let lastTask = Object.values(bidirectionalTasks).find((task) => task.next == "");
     let iter = lastTask;
     while (iter != null) {
       reverseSortedTasks.push(iter);
@@ -77,11 +72,11 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
         "INSERT INTO tasks (tid, title, created_at, done_at, memo, done, due_date, next, repeat_period, repeat_start_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         task.tid,
         task.title,
-        task.createdAt,
-        task.doneAt,
-        task.memo,
-        task.done,
-        task.dueDate,
+        task.createdAt == 0 ? null : task.createdAt,
+        task.doneAt == 0 ? null : task.doneAt,
+        task.memo == "" ? null : task.memo,
+        task.done == 1,
+        task.dueDate == 0 ? null : task.dueDate,
         task.next == "" ? null : task.next,
         task.repeatPeriod == "" ? null : task.repeatPeriod,
         task.repeatStartAt == 0 ? null : task.repeatStartAt
@@ -95,9 +90,9 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
         "INSERT INTO categories (cid, title, secret, locked, color) VALUES (?, ?, ?, ?, ?)",
         category.cid,
         category.title,
-        category.secret,
-        category.locked,
-        category.color
+        category.secret == 1,
+        category.locked == 1,
+        category.color == "" ? null : category.color
       );
     }
 
@@ -107,11 +102,7 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
     for (const tid in tasks) {
       const task = tasks[tid];
       for (const cid in task.categories) {
-        await db.run(
-          "INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)",
-          task.tid,
-          cid
-        );
+        await db.run("INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)", task.tid, cid);
       }
       for (const sid in task.subtasks) {
         const subtask = task.subtasks[sid];
@@ -129,10 +120,10 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
         "INSERT INTO subtasks (sid, title, created_at, done_at, due_date, done, tid) VALUES (?, ?, ?, ?, ?, ?, ?)",
         sid,
         subtask.title,
-        subtask.createdAt,
-        subtask.doneAt,
-        subtask.dueDate,
-        subtask.done,
+        subtask.createdAt == 0 ? null : subtask.createdAt,
+        subtask.doneAt == 0 ? null : subtask.doneAt,
+        subtask.dueDate == 0 ? null : subtask.dueDate,
+        subtask.done == 1,
         subtask.tid
       );
     }
