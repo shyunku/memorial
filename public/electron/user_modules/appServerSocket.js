@@ -359,6 +359,13 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     return tx.hash;
   };
 
+  const getOldestLocalBlockNumber = async () => {
+    let transactions = await db.all(`SELECT * FROM transactions ORDER BY block_number ASC LIMIT 1;`);
+    if (transactions.length == 0) return null;
+    let [tx] = transactions;
+    return tx.block_number;
+  };
+
   const findTxHashMismatchStartNumber = async (start, end) => {
     let left = start;
     let right = end;
@@ -370,6 +377,12 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
       const remoteTxHash = await emitSync("txHashByBlockNumber", {
         blockNumber: mid,
       });
+
+      if (localTxHash == null) {
+        // local db has no transaction here... (maybe truncated)
+        // so, we can't find mismatch start number
+        return null;
+      }
 
       if (localTxHash === remoteTxHash) {
         left = mid + 1;
@@ -391,6 +404,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
     // local last block number
     let lastBlockNumber = getLastBlockNumber(userId);
+    let oldestLocalBlockNumber = await getOldestLocalBlockNumber();
     let commonChainLastBlockNumber = Math.min(lastBlockNumber, remoteLastBlockNumber);
 
     if (commonChainLastBlockNumber > 0) {
@@ -403,7 +417,14 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
           `Mismatch transaction hash detected at ${commonChainLastBlockNumber}, finding mismatch start block number...`
         );
         // last common mismatch, need to find un-dirty block
-        const mismatchStartBlockNumber = await findTxHashMismatchStartNumber(1, remoteLastBlockNumber);
+        if (oldestLocalBlockNumber == null) {
+          throw new Error("Cannot find oldest local block number");
+        }
+
+        const mismatchStartBlockNumber = await findTxHashMismatchStartNumber(
+          oldestLocalBlockNumber,
+          remoteLastBlockNumber
+        );
         if (mismatchStartBlockNumber == null) {
           throw new Error("Cannot find mismatch start block number");
         }
