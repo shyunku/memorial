@@ -3,7 +3,6 @@ import { colorize } from "./Common";
 const electron = window.require("electron");
 const { ipcRenderer } = electron;
 const remote = window.require("@electron/remote");
-const DISABLE_SENDER_LOG = true;
 
 const subscribed = {
   "system/subscribe": {},
@@ -28,8 +27,8 @@ const senderSync = (topic, ...arg) => {
 const sender = (topic, callback, ...arg) => {
   autoSubscribe(topic);
   const sendId = uuid.v4();
-  if (!DISABLE_SENDER_LOG && topic !== "system/subscribe") {
-    console.log(
+  if (topic !== "system/subscribe") {
+    console.debug(
       `IpcRenderer --> ${colorize.yellow(`[${sendId?.substring(0, 3) ?? "unknown"}]`)} ${colorize.magenta(topic)}`,
       ...arg
     );
@@ -297,7 +296,7 @@ const IpcSender = {
     const originalCallback = callback;
     const newCallback = (e, reqId, ...data) => {
       if (reqId == null) return;
-      console.log(
+      console.debug(
         `IpcRenderer <-- ${colorize.cyan(`[${reqId?.substr(0, 3) ?? "unknown"}]`)} ${colorize.magenta(topic)}`,
         ...data
       );
@@ -310,7 +309,7 @@ const IpcSender = {
   onAll: (topic, callback) => {
     autoSubscribe(topic);
     const newCallback = (e, reqId, ...data) => {
-      console.log(`IpcRenderer <-- ${colorize.yellow(`[ALL]`)} ${colorize.magenta(topic)}`, ...data);
+      console.debug(`IpcRenderer <-- ${colorize.yellow(`[ALL]`)} ${colorize.magenta(topic)}`, ...data);
       return callback(...data);
     };
 

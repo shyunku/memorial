@@ -157,7 +157,6 @@ const TodoContent = () => {
               if (curTask) curTask.next = nextTask;
               if (nextTask) nextTask.prev = curTask;
             }
-
             return { ...taskMap, ...newTaskMap };
           });
           resolve();

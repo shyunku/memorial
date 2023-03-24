@@ -142,11 +142,11 @@ $std-text-color: rgb(128, 146, 184);
 
   & > .account-section {
     display: flex;
-    height: 60px;
+    height: 65px;
     width: 100%;
     padding: 0 10px;
     box-sizing: border-box;
-    background-color: #303b4f;
+    background-color: #25292f;
     align-items: center;
     overflow: hidden;
 
@@ -161,13 +161,14 @@ $std-text-color: rgb(128, 146, 184);
       padding-left: 10px;
 
       & > .email {
-        font-size: 12px;
+        font-size: 13px;
         text-overflow: ellipsis;
         overflow: hidden;
         width: 100%;
         padding-bottom: 3px;
         color: rgb(188, 204, 237);
         font-weight: 300;
+        white-space: nowrap;
       }
 
       & > .status {
@@ -175,14 +176,13 @@ $std-text-color: rgb(128, 146, 184);
         font-size: 13px;
         margin-top: 3px;
         padding-bottom: 2px;
-        font-weight: 400;
+        // font-weight: 300;
         align-items: center;
 
         $highlight-colors: (
-          "failed": rgb(255, 83, 83),
           "synchronizing": rgb(100, 255, 97),
           "synchronized": rgb(95, 196, 255),
-          "offline": rgb(155, 155, 155),
+          "offline": rgb(255, 105, 105),
         );
 
         @each $status, $color in $highlight-colors {
@@ -193,8 +193,8 @@ $std-text-color: rgb(128, 146, 184);
         $highlight-color: var(--highlight-color, rgb(255, 246, 67));
 
         & > .status-dot {
-          width: 10px;
-          height: 10px;
+          width: 9px;
+          height: 9px;
           border-radius: 50%;
           background-color: $highlight-color;
           margin-right: 5px;

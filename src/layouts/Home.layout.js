@@ -15,7 +15,7 @@ const HomeLayout = () => {
     return categories?.[selectedTodoMenuType];
   }, [selectedTodoMenuType, categories]);
 
-  useEffect(() => {
+  const fetchCategoryList = () => {
     IpcSender.req.category.getCategoryList(({ success, data }) => {
       if (success) {
         setCategories(() => {
@@ -32,6 +32,18 @@ const HomeLayout = () => {
         console.error(`Failed to get category list`);
       }
     });
+  };
+
+  useEffect(() => {
+    fetchCategoryList();
+
+    IpcSender.onAll("system/initializeState", async () => {
+      fetchCategoryList();
+    });
+
+    return () => {
+      IpcSender.offAll("system/initializeState");
+    };
   }, []);
 
   const onCategoryAdd = (category, cid) => {

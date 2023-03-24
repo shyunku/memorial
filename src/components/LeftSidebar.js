@@ -75,7 +75,9 @@ const LeftSidebar = ({
     });
   };
 
-  const onCustomCategorySelect = (categoryId) => {
+  const onCustomCategorySelect = (e, categoryId) => {
+    console.log("select");
+    e.stopPropagation();
     const category = categories[categoryId];
     if (category) {
       if (category.secret == true) {
@@ -130,7 +132,12 @@ const LeftSidebar = ({
         Toast.error("카테고리 삭제에 실패했습니다.");
       }
     });
-  }, []);
+
+    return () => {
+      IpcSender.offAll("category/createCategory");
+      IpcSender.offAll("category/deleteCategory");
+    };
+  }, [onCategoryDelete]);
 
   return (
     <div className="component left-sidebar">
@@ -180,7 +187,7 @@ const LeftSidebar = ({
               <div
                 className={"todo-menu" + JsxUtil.classByEqual(selectedTodoMenuType, category.id, "selected")}
                 key={category.id}
-                onClick={(e) => onCustomCategorySelect(category.id)}
+                onClick={(e) => onCustomCategorySelect(e, category.id)}
               >
                 <div className="icon-wrapper">{category.secret ? <IoKeySharp /> : <IoReader />}</div>
                 <div className="title">{category.title}</div>
@@ -193,7 +200,7 @@ const LeftSidebar = ({
         </div>
       </div>
       <div className="account-section">
-        <ProfileImage src={profileImageUrl} />
+        <ProfileImage src={profileImageUrl} size={36} />
         <div className="profile-summary">
           <div className="email">{username}</div>
           <div className={"status" + JsxUtil.class(syncStatus)}>
