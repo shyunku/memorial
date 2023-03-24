@@ -423,7 +423,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
         const mismatchStartBlockNumber = await findTxHashMismatchStartNumber(
           oldestLocalBlockNumber,
-          remoteLastBlockNumber
+          commonChainLastBlockNumber
         );
         if (mismatchStartBlockNumber == null) {
           throw new Error("Cannot find mismatch start block number");
