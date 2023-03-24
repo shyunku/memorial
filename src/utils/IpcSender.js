@@ -3,7 +3,7 @@ import { colorize } from "./Common";
 const electron = window.require("electron");
 const { ipcRenderer } = electron;
 const remote = window.require("@electron/remote");
-const DISABLE_SENDER_LOG = false;
+const DISABLE_SENDER_LOG = true;
 
 const subscribed = {
   "system/subscribe": {},
@@ -111,6 +111,15 @@ const IpcSender = {
       getWaitingBlockNumber: (callback) => {
         sender("system/waitingBlockNumber", callback);
       },
+      isDatabaseClear: (callback) => {
+        sender("system/isDatabaseClear", callback);
+      },
+      isMigratable: (callback) => {
+        sender("system/isMigratable", callback);
+      },
+      migrateDatabase: (callback) => {
+        sender("system/migrateDatabase", callback);
+      },
     },
     auth: {
       sendGoogleOauthResult: (result, callback) => {
@@ -213,8 +222,8 @@ const IpcSender = {
       updateTaskRepeatPeriod: (taskId, repeatPeriod, callback) => {
         sender("task/updateTaskRepeatPeriod", callback, taskId, repeatPeriod);
       },
-      addSubtask: (subtask, taskId, callback) => {
-        sender("task/addSubtask", callback, subtask, taskId);
+      createSubtask: (subtask, taskId, callback) => {
+        sender("task/createSubtask", callback, subtask, taskId);
       },
       deleteSubtask: (taskId, subtaskId, callback) => {
         sender("task/deleteSubtask", callback, taskId, subtaskId);
@@ -233,8 +242,8 @@ const IpcSender = {
       getCategoryList: (callback) => {
         sender("category/getCategoryList", callback);
       },
-      addCategory: (category, callback) => {
-        sender("category/addCategory", callback, category);
+      createCategory: (category, callback) => {
+        sender("category/createCategory", callback, category);
       },
       deleteCategory: (categoryId, callback) => {
         sender("category/deleteCategory", callback, categoryId);

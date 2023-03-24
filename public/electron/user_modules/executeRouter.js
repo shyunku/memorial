@@ -1,6 +1,6 @@
 const PackageJson = require("../../../package.json");
 
-const { addCategory } = require("../executors/addCategory.exec");
+const { createCategory } = require("../executors/createCategory.exec");
 const { addTaskCategory } = require("../executors/addTaskCategory.exec");
 const { createTask } = require("../executors/createTask.exec");
 const { deleteCategory } = require("../executors/deleteCategory.exec");
@@ -12,11 +12,12 @@ const { updateTaskOrder } = require("../executors/updateTaskOrder.exec");
 const { updateTaskTitle } = require("../executors/updateTaskTitle.exec");
 const { deleteTaskCategory } = require("../executors/deleteTaskCategory.exec");
 const { updateTaskRepeatPeriod } = require("../executors/updateTaskRepeatPeriod.exec");
-const { addSubtask } = require("../executors/addSubtask.exec");
+const { createSubtask } = require("../executors/createSubtask.exec");
 const { deleteSubtask } = require("../executors/deleteSubtask.exec");
 const { updateSubtaskTitle } = require("../executors/updateSubtaskTitle.exec");
 const { updateSubtaskDueDate } = require("../executors/updateSubtaskDueDate.exec");
 const { updateSubtaskDone } = require("../executors/updateSubtaskDone.exec");
+const { initializeState } = require("../executors/initializeState.exec");
 
 const TX_TYPE = {
   INITIALIZE: 1,
@@ -62,6 +63,9 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
   console.debug(tx);
 
   switch (tx.type) {
+    case TX_TYPE.INITIALIZE:
+      await initializeState(...args, tx.content, blockNumber);
+      break;
     case TX_TYPE.CREATE_TASK:
       await createTask(...args, tx.content);
       break;
@@ -81,7 +85,7 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
       await updateTaskMemo(...args, tx.content);
       break;
     case TX_TYPE.CREATE_CATEGORY:
-      await addCategory(...args, tx.content);
+      await createCategory(...args, tx.content);
       break;
     case TX_TYPE.DELETE_CATEGORY:
       await deleteCategory(...args, tx.content);
@@ -99,7 +103,7 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
       await updateTaskRepeatPeriod(...args, tx.content);
       break;
     case TX_TYPE.CREATE_SUBTASK:
-      await addSubtask(...args, tx.content);
+      await createSubtask(...args, tx.content);
       break;
     case TX_TYPE.DELETE_SUBTASK:
       await deleteSubtask(...args, tx.content);

@@ -12,7 +12,7 @@ const appDataPath = app.getAppPath();
 const PreloadResult = require("../modules/preload").all(isBuildMode, appDataPath);
 const Ipc = require("./ipc");
 const Window = require("./window");
-const Socket = require("./socket");
+// const Socket = require("./socket");
 const Updater = require("../modules/updater");
 const ArchCategory = require("../objects/ArchCategory.constants");
 const Util = require("../modules/util");
@@ -45,8 +45,8 @@ const userDataPath = FileSystem.getUserDataPath(buildLevel);
 const checkUpdate = true;
 
 /* ---------------------------------------- Pre-execute statements ---------------------------------------- */
-Ipc.setSockets(Socket.socket);
-Socket.setIpc(Ipc);
+// Ipc.setSockets(Socket.socket);
+// Socket.setIpc(Ipc);
 Updater.setIpc(Ipc);
 
 console.debug(`[Platform/OS] ${osLabel} (${osCategory})`);

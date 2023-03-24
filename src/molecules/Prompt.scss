@@ -21,6 +21,11 @@
       visibility: visible;
       transform: translateX(-50%) translateY(0);
     }
+
+    &.not-ignorable {
+      backdrop-filter: blur(3px);
+      background: rgba(0, 0, 0, 0.4);
+    }
   }
 }
 

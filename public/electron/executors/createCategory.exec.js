@@ -2,7 +2,7 @@ const { v4 } = require("uuid");
 const assert = require("assert");
 const TxContent = require("../user_modules/TxContent");
 
-class AddCategoryTxContent extends TxContent {
+class CreateCategoryTxContent extends TxContent {
   constructor(cid, title, secret, locked, color) {
     super();
 
@@ -14,18 +14,18 @@ class AddCategoryTxContent extends TxContent {
   }
 }
 
-const addCategoryPre = async () => {
+const createCategoryPre = async () => {
   return {
     cid: v4(),
   };
 };
 
 /**
- * @param {AddCategoryTxContent} txReq
+ * @param {CreateCategoryTxContent} txReq
  */
-const addCategory = async (db, reqId, { sender }, txReq) => {
+const createCategory = async (db, reqId, { sender }, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new AddCategoryTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(new CreateCategoryTxContent().instanceOf(txReq), "Transaction request is not instance of class");
 
   try {
     await db.run(
@@ -36,7 +36,7 @@ const addCategory = async (db, reqId, { sender }, txReq) => {
       txReq.locked,
       txReq.color
     );
-    sender("category/addCategory", reqId, true, {
+    sender("category/createCategory", reqId, true, {
       cid: txReq.cid,
       title: txReq.title,
       secret: txReq.secret,
@@ -49,7 +49,7 @@ const addCategory = async (db, reqId, { sender }, txReq) => {
 };
 
 module.exports = {
-  addCategory,
-  addCategoryPre,
-  AddCategoryTxContent,
+  createCategory,
+  createCategoryPre,
+  CreateCategoryTxContent,
 };

@@ -30,13 +30,13 @@ const { UpdateTaskOrderTxContent, updateTaskOrderPre } = require("../executors/u
 const { UpdateTaskTitleTxContent } = require("../executors/updateTaskTitle.exec");
 const { UpdateTaskDueDateTxContent } = require("../executors/updateTaskDueDate.exec");
 const { UpdateTaskMemoTxContent } = require("../executors/updateTaskMemo.exec");
-const { addCategoryPre, AddCategoryTxContent } = require("../executors/addCategory.exec");
+const { createCategoryPre, CreateCategoryTxContent } = require("../executors/createCategory.exec");
 const { DeleteCategoryTxContent } = require("../executors/deleteCategory.exec");
 const { AddTaskCategoryTxContent } = require("../executors/addTaskCategory.exec");
 const { UpdateTaskDoneTxContent } = require("../executors/updateTaskDone.exec");
 const { DeleteTaskCategoryTxContent } = require("../executors/deleteTaskCategory.exec");
 const { UpdateTaskRepeatPeriodTxContent } = require("../executors/updateTaskRepeatPeriod.exec");
-const { AddSubtaskTxContent, addSubtaskPre } = require("../executors/addSubtask.exec");
+const { CreateSubtaskTxContent, createSubtaskPre } = require("../executors/createSubtask.exec");
 const { DeleteSubtaskTxContent } = require("../executors/deleteSubtask.exec");
 const { UpdateSubtaskTitleTxContent } = require("../executors/updateSubtaskTitle.exec");
 const { UpdateSubtaskDueDateTxContent } = require("../executors/updateSubtaskDueDate.exec");
@@ -49,6 +49,7 @@ const appServerFinalEndpoint = `${appServerEndpoint}/${appServerApiVersion}`;
 
 /**
  * @type {import("../modules/sqlite3")}
+ * This is database module context (object...)
  */
 let databaseContext = null;
 
@@ -56,6 +57,7 @@ let databaseContext = null;
  * @type {import("sqlite3").Database}
  */
 let rootDB = null;
+// This is database context (query...)
 let db = null;
 
 /**
@@ -323,6 +325,47 @@ register("system/waitingBlockNumber", async (event, reqId) => {
     if (waitingBlockNumber == null) throw new Error("waitingBlockNumber is null");
     sender("system/waitingBlockNumber", reqId, true, waitingBlockNumber);
   } catch (err) {
+    throw err;
+  }
+});
+
+register("system/isDatabaseClear", async (event, reqId) => {
+  try {
+    // check if transaction is clear
+    let transactions = await db.all("SELECT * FROM transactions;");
+    let localClear = transactions.length === 0;
+    if (!localClear) {
+      sender("system/isDatabaseClear", reqId, true, false);
+      return;
+    }
+    // check remote transactions
+    if (!socket.connected()) {
+      throw new Error("socket is not connected");
+    }
+    let waitingBlockNumber = await socket.emitSync("waitingBlockNumber");
+    sender("system/isDatabaseClear", reqId, true, waitingBlockNumber === 1);
+  } catch (err) {
+    sender("system/isDatabaseClear", reqId, false);
+    throw err;
+  }
+});
+
+register("system/isMigratable", async (event, reqId) => {
+  try {
+    let migratableDatabaseExists = databaseContext.migratableDatabaseExists(currentUserId);
+    sender("system/isMigratable", reqId, true, migratableDatabaseExists);
+  } catch (err) {
+    sender("system/isMigratable", reqId, false);
+    throw err;
+  }
+});
+
+register("system/migrateDatabase", async (event, reqId) => {
+  try {
+    await databaseContext.migrateOldDatabase(socket, db, Ipc);
+    sender("system/migrateDatabase", reqId, true);
+  } catch (err) {
+    sender("system/migrateDatabase", reqId, false);
     throw err;
   }
 });
@@ -866,10 +909,10 @@ register("task/updateTaskRepeatPeriod", async (event, reqId, taskId, repeatPerio
   }
 });
 
-register("task/addSubtask", async (event, reqId, subtask, taskId) => {
+register("task/createSubtask", async (event, reqId, subtask, taskId) => {
   try {
-    const preResult = await addSubtaskPre();
-    const txContent = new AddSubtaskTxContent(
+    const preResult = await createSubtaskPre();
+    const txContent = new CreateSubtaskTxContent(
       taskId,
       preResult.sid,
       subtask.title,
@@ -883,7 +926,7 @@ register("task/addSubtask", async (event, reqId, subtask, taskId) => {
     Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
     sendTx(tx);
   } catch (err) {
-    sender("task/addSubtask", reqId, false);
+    sender("task/createSubtask", reqId, false);
     throw err;
   }
 });
@@ -950,10 +993,10 @@ register("category/getCategoryList", async (event, reqId) => {
   }
 });
 
-register("category/addCategory", async (event, reqId, category) => {
+register("category/createCategory", async (event, reqId, category) => {
   try {
-    let preResult = await addCategoryPre();
-    const txContent = new AddCategoryTxContent(
+    let preResult = await createCategoryPre();
+    const txContent = new CreateCategoryTxContent(
       preResult.cid,
       category.title,
       category.secret,
@@ -965,7 +1008,7 @@ register("category/addCategory", async (event, reqId, category) => {
     Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
     sendTx(tx);
   } catch (err) {
-    sender("category/addCategory", reqId, false);
+    sender("category/createCategory", reqId, false);
     throw err;
   }
 });

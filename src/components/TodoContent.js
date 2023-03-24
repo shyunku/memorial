@@ -226,6 +226,16 @@ const TodoContent = () => {
       await getSubTaskListSync();
       await getTasksCategoriesListSync();
     })();
+
+    IpcSender.onAll("system/initializeState", async () => {
+      await getTaskListSync();
+      await getSubTaskListSync();
+      await getTasksCategoriesListSync();
+    });
+
+    return () => {
+      IpcSender.offAll("system/initializeState");
+    };
   }, [categories]);
 
   // printf("taskMap", taskMap);

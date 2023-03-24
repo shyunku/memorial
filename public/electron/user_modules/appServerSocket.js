@@ -214,6 +214,7 @@ function initializeSocket(socket) {
     unregister: wsUnregister,
     emitSync: sendSync,
     connected,
+    socket: socket,
   };
 }
 
@@ -329,7 +330,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
       await txExecutor(db, null, ipc, tx, number);
       setLastBlockNumber(userId, number);
     } catch (err) {
-      console.error(err);
+      throw err;
     }
   };
 
@@ -355,8 +356,15 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
       console.info(`Sync result`, result);
       const blocks = result;
       const sortedBlocks = blocks.sort((a, b) => a.number - b.number);
-      for (let block of sortedBlocks) {
-        await saveBlockAndExecute(block);
+      let syncingLastBlock = null;
+      try {
+        for (let block of sortedBlocks) {
+          syncingLastBlock = block.number;
+          await saveBlockAndExecute(block);
+        }
+      } catch (err) {
+        console.warn(`Error occured while syncing blocks, error occured at block number ${syncingLastBlock}`);
+        console.error(err);
       }
     } else if (lastBlockNumber > waitingBlockNumber - 1) {
       // commit blocks needed (ahead)
@@ -376,6 +384,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
       try {
         await emitSync("commitTransactions", txRequests);
       } catch (err) {
+        console.warn(`Error occured while committing transactions`);
         console.error(err);
       }
     } else {

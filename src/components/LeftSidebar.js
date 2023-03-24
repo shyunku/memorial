@@ -46,18 +46,18 @@ const LeftSidebar = ({
     return ["synchronizing", "동기화 중"];
   }, [offlineMode, localNonce, remoteNonce]);
 
-  const addCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
+  const createCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
   const addSecretCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
 
   const tryAddCategory = (categoryName) => {
     const category = new Category(categoryName, false);
-    IpcSender.req.category.addCategory(category.toEntity(), null);
-    addCategoryCxt.closer();
+    IpcSender.req.category.createCategory(category.toEntity(), null);
+    createCategoryCxt.closer();
   };
 
   const tryAddSecretCategory = (categoryName) => {
     const category = new Category(categoryName, true);
-    IpcSender.req.category.addCategory(category.toEntity(), null);
+    IpcSender.req.category.createCategory(category.toEntity(), null);
     addSecretCategoryCxt.closer();
   };
 
@@ -79,7 +79,7 @@ const LeftSidebar = ({
     const category = categories[categoryId];
     if (category) {
       if (category.secret == true) {
-        Prompt.float("비밀 카테고리", `'${category.title}' 카테고리에 접근하려면 비밀번호를 입력해주세요.`, {
+        Prompt.float("비밀 카테고리", `'${category.title}' 카테고리에 접근하려면 계정 비밀번호를 입력해주세요.`, {
           inputs: [{ key: "password", placeholder: "비밀번호", type: "password" }],
           onConfirm: (data) => {
             const password = data.password;
@@ -109,7 +109,7 @@ const LeftSidebar = ({
   };
 
   useEffect(() => {
-    IpcSender.onAll("category/addCategory", ({ success, data }) => {
+    IpcSender.onAll("category/createCategory", ({ success, data }) => {
       if (success) {
         const category = new Category();
         category.id = data.cid;
@@ -158,10 +158,10 @@ const LeftSidebar = ({
             <div className="title">카테고리</div>
             <div className="buttons">
               <div className="button">
-                <div className="visible" ref={addCategoryCxt.openerRef} onClick={addCategoryCxt.opener}>
+                <div className="visible" ref={createCategoryCxt.openerRef} onClick={createCategoryCxt.opener}>
                   <IoAdd />
                 </div>
-                <ContextMenu defaultStyle={true} sticky={true} reference={addCategoryCxt.ref}>
+                <ContextMenu defaultStyle={true} sticky={true} reference={createCategoryCxt.ref}>
                   <SubmitInput placeholder="새로운 카테고리 생성" onSubmit={tryAddCategory} maxLength={20} />
                 </ContextMenu>
               </div>

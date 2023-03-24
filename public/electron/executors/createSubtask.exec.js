@@ -2,7 +2,7 @@ const { v4 } = require("uuid");
 const assert = require("assert");
 const TxContent = require("../user_modules/TxContent");
 
-class AddSubtaskTxContent extends TxContent {
+class CreateSubtaskTxContent extends TxContent {
   constructor(tid, sid, title, createdAt, doneAt, dueDate, done) {
     super();
 
@@ -16,18 +16,18 @@ class AddSubtaskTxContent extends TxContent {
   }
 }
 
-const addSubtaskPre = async () => {
+const createSubtaskPre = async () => {
   return {
     sid: v4(),
   };
 };
 
 /**
- * @param {AddSubtaskTxContent} txReq
+ * @param {CreateSubtaskTxContent} txReq
  */
-const addSubtask = async (db, reqId, { sender }, txReq) => {
+const createSubtask = async (db, reqId, { sender }, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new AddSubtaskTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(new CreateSubtaskTxContent().instanceOf(txReq), "Transaction request is not instance of class");
 
   let result = await db.run(
     "INSERT INTO subtasks (sid, title, created_at, done_at, due_date, done, tid) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -40,7 +40,7 @@ const addSubtask = async (db, reqId, { sender }, txReq) => {
     txReq.tid
   );
 
-  sender("task/addSubtask", reqId, true, {
+  sender("task/createSubtask", reqId, true, {
     sid: txReq.sid,
     title: txReq.title,
     createdAt: txReq.createdAt,
@@ -52,7 +52,7 @@ const addSubtask = async (db, reqId, { sender }, txReq) => {
 };
 
 module.exports = {
-  addSubtask,
-  addSubtaskPre,
-  AddSubtaskTxContent,
+  createSubtask,
+  createSubtaskPre,
+  CreateSubtaskTxContent,
 };

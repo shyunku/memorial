@@ -10,6 +10,8 @@ const Prompt = () => {
   const [title, setTitle] = useState("");
   const [contents, setContents] = useState([]);
   const [options, setOptions] = useState({});
+  const [extraBtns, setExtraBtns] = useState([]);
+  const [ignorable, setIgnorable] = useState(false);
   const inputs = useMemo(() => {
     const inputs = options?.inputs;
     if (!inputs) return [];
@@ -56,6 +58,15 @@ const Prompt = () => {
         });
         setInputValues(inputValues);
       }
+
+      const extraBtns = promptData?.options?.extraBtns;
+      if (extraBtns) {
+        setExtraBtns(extraBtns);
+      } else {
+        setExtraBtns([]);
+      }
+
+      setIgnorable(promptData?.options?.ignorable ?? false);
     };
     document.addEventListener("custom_prompt", listener);
 
@@ -84,8 +95,14 @@ const Prompt = () => {
   }, [visible, inputRefs.current, inputs]);
 
   return (
-    <div className={"custom-prompt-wrapper" + JsxUtil.classByCondition(visible, "visible")}>
-      <AutoBlurDiv className={"custom-prompt"} focused={visible} blurHandler={onCancel}>
+    <div
+      className={
+        "custom-prompt-wrapper" +
+        JsxUtil.classByCondition(visible, "visible") +
+        JsxUtil.classByCondition(!ignorable, "not-ignorable")
+      }
+    >
+      <AutoBlurDiv className={"custom-prompt"} focused={visible} blurHandler={ignorable ? onCancel : null}>
         <div className="title">{title}</div>
         {contents.length > 0 && (
           <div className="contents">
@@ -124,6 +141,24 @@ const Prompt = () => {
               {options.cancelText}
             </div>
           )}
+          {
+            // extra buttons
+            extraBtns.map((btn, ind) => {
+              return (
+                <div
+                  className="button"
+                  key={ind}
+                  onClick={(e) => {
+                    finalize();
+                    btn?.onClick(e);
+                  }}
+                  style={btn?.styles ?? {}}
+                >
+                  {btn.text}
+                </div>
+              );
+            })
+          }
         </div>
       </AutoBlurDiv>
     </div>
@@ -132,6 +167,7 @@ const Prompt = () => {
 
 const DEFAULT_OPTIONS = {
   allowEmptyInputs: false,
+  ignorable: true,
   inputs: [],
   confirmBtn: true,
   cancelBtn: true,
@@ -139,6 +175,7 @@ const DEFAULT_OPTIONS = {
   cancelText: "취소",
   onConfirm: () => {},
   onCancel: () => {},
+  extraBtns: [],
 };
 
 /**

@@ -1,5 +1,6 @@
 import TopBar from "components/TopBar";
 import Loading from "molecules/Loading";
+import Prompt from "molecules/Prompt";
 import Toast from "molecules/Toast";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -75,6 +76,59 @@ const RootLayout = () => {
     }
   };
 
+  const promptMigration = async () => {
+    return new Promise((resolve, reject) => {
+      IpcSender.req.system.isDatabaseClear(async ({ success, data }) => {
+        if (success) {
+          if (data) {
+            Prompt.float(
+              "데이터베이스 마이그레이션",
+              "기존에 사용하던 데이터베이스가 존재합니다.\n이전 데이터를 가져오시겠습니까?\n무시하게되면 이 메시지는 앞으로도 나타날 수 있습니다.",
+              {
+                ignorable: false,
+                confirmText: "가져오기",
+                cancelText: "무시",
+                onConfirm: () => {
+                  IpcSender.req.system.migrateDatabase(({ success, data }) => {
+                    if (success) {
+                      Toast.success("데이터베이스 마이그레이션이 완료되었습니다.");
+                    } else {
+                      Toast.error("데이터베이스 마이그레이션에 실패했습니다.");
+                    }
+                    resolve();
+                  });
+                },
+                onCancel: () => {
+                  resolve();
+                },
+                extraBtns: [
+                  {
+                    text: "이전 데이터 삭제",
+                    styles: {
+                      backgroundColor: "rgb(165, 66, 66)",
+                      color: "white",
+                    },
+                    onClick: () => {
+                      // TODO :: 이전 데이터 삭제
+                      console.log("delete old database");
+                      resolve();
+                    },
+                  },
+                ],
+              }
+            );
+          } else {
+            console.log("migratable database exists, but current database is not empty.");
+            resolve();
+          }
+        } else {
+          console.log("migratable database exists, but can't check whether states of account is clear.");
+          resolve();
+        }
+      });
+    });
+  };
+
   useEffect(() => {
     const userId = accountInfo.uid;
     (async () => {
@@ -105,7 +159,7 @@ const RootLayout = () => {
         IpcSender.req.system.getLastBlockNumber();
         IpcSender.req.system.getWaitingBlockNumber();
         if (isAuthorized) {
-          trySocketConnection();
+          await trySocketConnection();
         } else {
           Toast.info("현재 로컬 계정으로 접속 중입니다. 서버에 접속하려면 로그인해주세요.");
         }
@@ -122,8 +176,14 @@ const RootLayout = () => {
       setSocketConnected(false);
     });
 
-    IpcSender.onAll("socket/connected", (data) => {
+    IpcSender.onAll("socket/connected", async (data) => {
       setSocketConnected(true);
+
+      IpcSender.req.system.isMigratable(async ({ success, data: migratable }) => {
+        if (success && migratable) {
+          await promptMigration();
+        }
+      });
     });
 
     IpcSender.onAll("transaction/error", ({ success, data }, tx) => {
@@ -152,14 +212,13 @@ const RootLayout = () => {
       IpcSender.offAll("socket/connected");
       IpcSender.offAll("transaction/error");
       IpcSender.offAll("system/lastBlockNumber");
+      IpcSender.offAll("system/waitingBlockNumber");
     };
   }, []);
 
   useEffect(() => {
     dispatch(setAccount({ offlineMode: tryAtOffline }));
   }, [tryAtOffline]);
-
-  console.log("visible", databaseReady, socketReady, socketConnected, tryAtOffline);
 
   return (
     <div className="root-layout">
@@ -177,7 +236,7 @@ const RootLayout = () => {
               alignItems: "center",
             }}
           >
-            서버 연결 중입니다. 잠시만 기다려주세요...
+            데이터베이스에 연결 중입니다. 잠시만 기다려주세요...
           </div>
         )}
       </div>
