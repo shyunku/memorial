@@ -381,7 +381,7 @@ register("system/mismatchTxAcceptTheirs", async (event, reqId, startNumber, endN
       blockNumber: startNumber - 1,
     });
 
-    let block = await socket.emitSync("blockByNumber", {
+    let block = await socket.emitSync("blockByBlockNumber", {
       blockNumber: startNumber - 1,
     });
 
