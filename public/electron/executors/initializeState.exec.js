@@ -83,8 +83,8 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
         task.done,
         task.dueDate,
         task.next == "" ? null : task.next,
-        task.repeatPeriod,
-        task.repeatStartAt == "" ? null : task.repeatStartAt
+        task.repeatPeriod == "" ? null : task.repeatPeriod,
+        task.repeatStartAt == 0 ? null : task.repeatStartAt
       );
     }
 
