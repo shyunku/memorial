@@ -43,7 +43,7 @@ function initializeSocket(socket) {
       const reqId = v4();
       const packet = { topic, data, reqId };
       const callback = (data) => {
-        const dataStr = JSON.stringify(data);
+        let dataStr = JSON.stringify(data);
         if (dataStr.length > 1000) {
           dataStr = dataStr.substring(0, 1000) + "...";
         }
