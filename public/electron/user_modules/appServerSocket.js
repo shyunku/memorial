@@ -41,8 +41,8 @@ function initializeSocket(socket) {
       const packet = { topic, data, reqId };
       const callback = (data) => {
         let dataStr = JSON.stringify(data);
-        if (dataStr.length > 1000) {
-          dataStr = dataStr.substring(0, 1000) + "...";
+        if (dataStr.length > 5000) {
+          dataStr = dataStr.substring(0, 5000) + "...";
         }
         console.info(
           `${coloredSocket} ${console.wrap(`<--------`, console.GREEN)} ${console.wrap(topic, console.MAGENTA)}`,
@@ -453,10 +453,19 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
     if (lastBlockNumber < waitingBlockNumber - 1) {
       // sync blocks needed (behind)
+      // TODO :: if behind blocks are too much, then sync recent 1 block and save state.
+      let txCountToSync = remoteLastBlockNumber - lastBlockNumber;
+
+      if (txCountToSync > 10) {
+        // TODO :: implement this
+        // consider mismatch finding algorithm is tracking from oldest block
+        // so, if you just sync recent 1 block, you can't find mismatch start block number in some cases
+      }
+
       console.info(`Local block number is behind remote, syncing...`);
       let result = await emitSync("syncBlocks", {
         startBlockNumber: lastBlockNumber + 1,
-        endBlockNumber: waitingBlockNumber - 1,
+        endBlockNumber: remoteLastBlockNumber,
       });
 
       const blocks = result;
@@ -474,7 +483,6 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     } else if (lastBlockNumber > waitingBlockNumber - 1) {
       // commit blocks needed (ahead)
       console.info(`Local block number is ahead remote, waiting...`);
-      // TODO :: if ahead blocks are too much, then sync recent 1 block and save state.
       let txs = await db.all(`SELECT * FROM transactions WHERE block_number >= ? AND block_number <= ?;`, [
         waitingBlockNumber,
         lastBlockNumber,
