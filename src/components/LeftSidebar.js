@@ -6,6 +6,7 @@ import Category from "objects/Category";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IoAdd, IoClose, IoKey, IoKeySharp, IoLogoBuffer, IoReader, IoToday } from "react-icons/io5";
 import { useSelector } from "react-redux";
+import { useOutletContext } from "react-router-dom";
 import sha256 from "sha256";
 import { accountInfoSlice } from "store/accountSlice";
 import { printf } from "utils/Common";
@@ -31,14 +32,19 @@ const LeftSidebar = ({
   onCategoryAdd,
   onCategoryDelete,
 }) => {
+  const context = useOutletContext();
+  const { localNonce, remoteNonce } = context;
+
   const accountInfo = useSelector(accountInfoSlice);
   const offlineMode = accountInfo?.offlineMode ?? false;
   const username = accountInfo?.username ?? accountInfo?.googleEmail ?? accountInfo?.uid ?? "Unknown";
   const profileImageUrl = (offlineMode ? accountInfo?.profileImageUrl : accountInfo?.googleProfileImageUrl) ?? null;
 
-  const serverStatus = useMemo(() => {
-    return offlineMode ? "offline" : "synchronized";
-  }, [offlineMode]);
+  const [syncStatus, syncText] = useMemo(() => {
+    if (offlineMode) return ["offline", "오프라인 모드"];
+    if (localNonce == remoteNonce) return ["synchronized", "동기화 완료"];
+    return ["synchronizing", "동기화 중"];
+  }, [offlineMode, localNonce, remoteNonce]);
 
   const addCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
   const addSecretCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
@@ -190,9 +196,9 @@ const LeftSidebar = ({
         <ProfileImage src={profileImageUrl} />
         <div className="profile-summary">
           <div className="email">{username}</div>
-          <div className={"status" + JsxUtil.class(serverStatus)}>
+          <div className={"status" + JsxUtil.class(syncStatus)}>
             <div className="status-dot"></div>
-            <div className="status-text">{offlineMode ? "오프라인 모드" : "동기화 완료"}</div>
+            <div className="status-text">{syncText}</div>
           </div>
         </div>
       </div>

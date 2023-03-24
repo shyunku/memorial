@@ -70,10 +70,23 @@ let mainWindow = null;
 let socket = null;
 
 let lastBlockNumberMap = {};
+let waitingBlockNumberMap = {};
 let currentUserId = null;
-const curLastBlockNumber = () => lastBlockNumberMap[currentUserId] ?? 0;
 const getLastBlockNumber = (userId) => {
   return lastBlockNumberMap[userId] ?? 0;
+};
+const setLastBlockNumber = (userId, lastBlockNumber_) => {
+  if (lastBlockNumberMap[userId] == null) lastBlockNumberMap[userId] = 0;
+  lastBlockNumberMap[userId] = lastBlockNumber_;
+  sender("system/lastBlockNumber", null, true, lastBlockNumber_);
+};
+const getWaitingBlockNumber = (userId) => {
+  return waitingBlockNumberMap[userId] ?? 0;
+};
+const setWaitingBlockNumber = (userId, waitingBlockNumber_) => {
+  if (waitingBlockNumberMap[userId] == null) waitingBlockNumberMap[userId] = 0;
+  waitingBlockNumberMap[userId] = waitingBlockNumber_;
+  sender("system/waitingBlockNumber", null, true, waitingBlockNumber_);
 };
 
 const color = console.RGB(78, 119, 138);
@@ -172,9 +185,12 @@ const fastSilentSender = (topic, socketResponse) => {
 const sendTx = async (tx) => {
   if (socket == null) throw new Error("Socket is not connected");
   try {
-    return await socket.emitSync("transaction", tx);
+    if (socket.connected()) {
+      return await socket.emitSync("transaction", tx);
+    }
   } catch (err) {
     console.error(err);
+    sender("transaction/error", null, false, err.message, tx);
   }
 };
 
@@ -285,6 +301,28 @@ register("system/lastTxUpdateTime", async (event, reqId) => {
     sender("system/lastTxUpdateTime", reqId, true, lastTxUpdateTime);
   } catch (err) {
     sender("system/lastTxUpdateTime", reqId, false, err);
+    throw err;
+  }
+});
+
+register("system/lastBlockNumber", async (event, reqId) => {
+  try {
+    if (currentUserId == null) throw new Error("currentUserId is null");
+    let lastBlockNumber = lastBlockNumberMap[currentUserId];
+    if (lastBlockNumber == null) throw new Error("lastBlockNumber is null");
+    sender("system/lastBlockNumber", reqId, true, lastBlockNumber);
+  } catch (err) {
+    throw err;
+  }
+});
+
+register("system/waitingBlockNumber", async (event, reqId) => {
+  try {
+    if (currentUserId == null) throw new Error("currentUserId is null");
+    let waitingBlockNumber = waitingBlockNumberMap[currentUserId];
+    if (waitingBlockNumber == null) throw new Error("waitingBlockNumber is null");
+    sender("system/waitingBlockNumber", reqId, true, waitingBlockNumber);
+  } catch (err) {
     throw err;
   }
 });
@@ -634,7 +672,7 @@ register("socket/connect", async (event, reqId, userId, accessToken, refreshToke
       sender("system/lastTxUpdateTime", null, true, transaction.timestamp);
     }
     console.debug(`current last block number: ${lastBlockNumber} for user ${userId}`);
-    lastBlockNumberMap[userId] = lastBlockNumber;
+    setLastBlockNumber(userId, lastBlockNumber);
 
     await AppServerSocket(userId, accessToken, refreshToken, Ipc, rootDB, db, false, (socket_) => {
       socket = socket_;
@@ -1008,13 +1046,12 @@ const Ipc = {
   setMainWindow: (mainWindow_) => {
     mainWindow = mainWindow_;
   },
-  setLastBlockNumber: (userId, lastBlockNumber_) => {
-    lastBlockNumberMap[userId] = lastBlockNumber_;
-  },
+  setLastBlockNumber,
   setLastBlockNumberWithoutUserId: (lastBlockNumber_) => {
-    lastBlockNumberMap[currentUserId] = lastBlockNumber_;
+    setLastBlockNumber(currentUserId, lastBlockNumber_);
   },
   getLastBlockNumber,
+  setWaitingBlockNumber,
 };
 
 module.exports = Ipc;

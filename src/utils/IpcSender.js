@@ -105,6 +105,12 @@ const IpcSender = {
       getLastTxUpdateTime: (callback) => {
         sender("system/lastTxUpdateTime", callback);
       },
+      getLastBlockNumber: (callback) => {
+        sender("system/lastBlockNumber", callback);
+      },
+      getWaitingBlockNumber: (callback) => {
+        sender("system/waitingBlockNumber", callback);
+      },
     },
     auth: {
       sendGoogleOauthResult: (result, callback) => {

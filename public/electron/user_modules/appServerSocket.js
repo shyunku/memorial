@@ -203,12 +203,17 @@ function initializeSocket(socket) {
     }
   });
 
+  const connected = () => {
+    return socket != null && socket.readyState === WebSocket.OPEN;
+  };
+
   return {
     emit: wsEmiter,
     on: wsMessageRegister,
     register: wsRegister,
     unregister: wsUnregister,
     emitSync: sendSync,
+    connected,
   };
 }
 
@@ -237,7 +242,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     alreadyAuthorized = false;
   }
 
-  const { sender, emiter, getLastBlockNumber, setLastBlockNumber } = ipc;
+  const { sender, emiter, getLastBlockNumber, setLastBlockNumber, setWaitingBlockNumber } = ipc;
 
   let accessToken_ = accessToken;
   let refreshToken_ = refreshToken;
@@ -328,54 +333,64 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     }
   };
 
+  const handleWaitingBlockNumber = async (waitingBlockNumber) => {
+    console.info(`Remote Waiting block number`, waitingBlockNumber);
+    setWaitingBlockNumber(userId, waitingBlockNumber);
+
+    if (waitingBlockNumber == 1) {
+      // this is first commit time
+      // initialize server states
+      // TODO :: implment this
+    }
+
+    let lastBlockNumber = getLastBlockNumber(userId);
+    if (lastBlockNumber < waitingBlockNumber - 1) {
+      // sync blocks needed (behind)
+      console.info(`Local block number is behind remote, syncing...`);
+      let result = await emitSync("syncBlocks", {
+        start_block_number: lastBlockNumber + 1,
+        end_block_number: waitingBlockNumber - 1,
+      });
+
+      console.info(`Sync result`, result);
+      const blocks = result;
+      const sortedBlocks = blocks.sort((a, b) => a.number - b.number);
+      for (let block of sortedBlocks) {
+        await saveBlockAndExecute(block);
+      }
+    } else if (lastBlockNumber > waitingBlockNumber - 1) {
+      // commit blocks needed (ahead)
+      console.info(`Local block number is ahead remote, waiting...`);
+      // TODO :: if ahead blocks are too much, then sync recent 1 block and save state.
+      let txs = await db.all(`SELECT * FROM transactions WHERE block_number >= ? AND block_number <= ?;`, [
+        waitingBlockNumber,
+        lastBlockNumber,
+      ]);
+      let txRequests = txs.map((tx) => {
+        const contentBuffer = Buffer.from(tx.content);
+        const stringified = contentBuffer.toString("utf-8");
+        const parsed = JSON.parse(stringified);
+        return makeTransaction(tx.type, parsed, tx.block_number);
+      });
+
+      try {
+        await emitSync("commitTransactions", txRequests);
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      // no sync needed (already synced)
+      console.info(`Local block number is already synced with remote as ${lastBlockNumber}`);
+    }
+  };
+
   register("open", async () => {
     console.system(console.wrap(`Websocket connected to (${appServerSocketFinalEndpoint})`, console.CYAN));
     emiter("socket/connected", null, null);
     // emit("test", "Hello world");
     try {
       let waitingBlockNumber = await emitSync("waitingBlockNumber", null, 5000);
-      console.info(`Remote Waiting block number`, waitingBlockNumber);
-
-      if (waitingBlockNumber == 1) {
-        // this is first commit time
-        // initialize server states
-        // TODO :: implment this
-      }
-
-      let lastBlockNumber = getLastBlockNumber(userId);
-      if (lastBlockNumber < waitingBlockNumber - 1) {
-        // sync blocks needed (behind)
-        console.info(`Local block number is behind remote, syncing...`);
-        let result = await emitSync("syncBlocks", {
-          start_block_number: lastBlockNumber + 1,
-          end_block_number: waitingBlockNumber - 1,
-        });
-        console.info(`Sync result`, result);
-        const blocks = result;
-        const sortedBlocks = blocks.sort((a, b) => a.number - b.number);
-        for (let block of sortedBlocks) {
-          await saveBlockAndExecute(block);
-        }
-      } else if (lastBlockNumber > waitingBlockNumber - 1) {
-        // commit blocks needed (ahead)
-        console.info(`Local block number is ahead remote, waiting...`);
-        // TODO :: if ahead blocks are too much, then sync recent 1 block and save state.
-        let txs = await db.all(`SELECT * FROM transactions WHERE block_number >= ? AND block_number <= ?;`, [
-          waitingBlockNumber,
-          lastBlockNumber,
-        ]);
-        let txRequests = txs.map((tx) => {
-          const contentBuffer = Buffer.from(tx.content);
-          const stringified = contentBuffer.toString("utf-8");
-          const parsed = JSON.parse(stringified);
-          return makeTransaction(tx.type, parsed, tx.block_number);
-        });
-        let result = await emitSync("commitTransactions", txRequests);
-        console.info(`CommitTransactions result`, result);
-      } else {
-        // no sync needed (already synced)
-        console.info(`Local block number is already synced with remote as ${lastBlockNumber}`);
-      }
+      handleWaitingBlockNumber(waitingBlockNumber);
     } catch (err) {
       console.error(`Waiting block number error`, err);
     }
@@ -403,6 +418,10 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
   on("broadcast_transaction", ({ data }) => {
     saveBlockAndExecute(data);
+  });
+
+  on("waiting_block_number", ({ data: waitingBlockNumber }) => {
+    setWaitingBlockNumber(userId, waitingBlockNumber);
   });
 
   resolveSocket?.(socketCtx);

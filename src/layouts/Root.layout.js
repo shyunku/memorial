@@ -20,6 +20,9 @@ const RootLayout = () => {
     return context?.isAuthorized ?? false;
   }, [context]);
 
+  const [localNonce, setLocalNonce] = useState(0);
+  const [remoteNonce, setRemoteNonce] = useState(0);
+
   // console.log(accountInfo, accountAuth);
 
   const [databaseReady, setDatabaseReady] = useState(false);
@@ -74,7 +77,6 @@ const RootLayout = () => {
 
   useEffect(() => {
     const userId = accountInfo.uid;
-    console.log(userId);
     (async () => {
       const checkDatabasePromise = new Promise((resolve, reject) => {
         IpcSender.req.auth.isDatabaseReady(userId, ({ success, data: ready }) => {
@@ -100,6 +102,8 @@ const RootLayout = () => {
       try {
         await Loading.float("데이터베이스 접근 중입니다. 잠시만 기다려주세요...", checkDatabasePromise);
         setDatabaseReady(true);
+        IpcSender.req.system.getLastBlockNumber();
+        IpcSender.req.system.getWaitingBlockNumber();
         if (isAuthorized) {
           trySocketConnection();
         } else {
@@ -122,9 +126,32 @@ const RootLayout = () => {
       setSocketConnected(true);
     });
 
+    IpcSender.onAll("transaction/error", ({ success, data }, tx) => {
+      console.error("transaction error", data, tx);
+      Toast.error("서버 동기화에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    });
+
+    IpcSender.onAll("system/lastBlockNumber", ({ success, data }) => {
+      if (success) {
+        if (typeof data === "number") {
+          setLocalNonce(data);
+        }
+      }
+    });
+
+    IpcSender.onAll("system/waitingBlockNumber", ({ success, data }) => {
+      if (success) {
+        if (typeof data === "number") {
+          setRemoteNonce(data - 1);
+        }
+      }
+    });
+
     return () => {
       IpcSender.offAll("socket/disconnected");
       IpcSender.offAll("socket/connected");
+      IpcSender.offAll("transaction/error");
+      IpcSender.offAll("system/lastBlockNumber");
     };
   }, []);
 
@@ -139,7 +166,7 @@ const RootLayout = () => {
       <TopBar />
       <div className="root-layout__content">
         {databaseReady ? (
-          <Outlet />
+          <Outlet context={{ localNonce, remoteNonce }} />
         ) : (
           <div
             style={{
