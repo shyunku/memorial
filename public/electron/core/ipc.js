@@ -381,6 +381,20 @@ register("system/mismatchTxAcceptTheirs", async (event, reqId, startNumber, endN
       blockNumber: startNumber - 1,
     });
 
+    let block = await socket.emitSync("blockByNumber", {
+      blockNumber: startNumber - 1,
+    });
+
+    // save last tx in local db
+    let { tx: rawTx, number } = block;
+    const tx = new Transaction(rawTx.version, rawTx.type, rawTx.timestamp, rawTx.content, number);
+    const rawContent = tx.content;
+    const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
+    await db.run(
+      `INSERT INTO transactions (version, type, timestamp, content, hash, block_number) VALUES (?, ?, ?, ?, ?, ?);`,
+      [tx.version, tx.type, tx.timestamp, decodedBuffer, tx.hash, tx.blockNumber]
+    );
+
     // delete user database
     await db.close();
     await databaseContext.deleteDatabase(currentUserId);
