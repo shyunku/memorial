@@ -1,13 +1,5 @@
 import "./TodoContent.scss";
-import React, {
-  createRef,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { createRef, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { TODO_MENU_TYPE } from "components/LeftSidebar";
 import Task from "objects/Task";
 import TodoItemAddSection from "./TodoItemAddSection";
@@ -20,12 +12,7 @@ import moment from "moment";
 import Category from "objects/Category";
 import TaskCalendarView from "views/TaskCalendarView";
 import Toast from "molecules/Toast";
-import {
-  fastInterval,
-  fromRelativeTime,
-  printf,
-  toRelativeTime,
-} from "utils/Common";
+import { fastInterval, fromRelativeTime, printf, toRelativeTime } from "utils/Common";
 import { useSelector } from "react-redux";
 import { accountAuthSlice, accountInfoSlice } from "store/accountSlice";
 
@@ -54,9 +41,7 @@ const TodoContent = () => {
     if (lastTxUpdateTime == null) return null;
     const now = Date.now();
     const diff = now - lastTxUpdateTime;
-    return (
-      fromRelativeTime(diff, { showLayerCount: 1 }) + (diff > 0 ? " 전" : " 후")
-    );
+    return fromRelativeTime(diff, { showLayerCount: 1 }) + (diff > 0 ? " 전" : " 후");
   }, [lastTxUpdateTime, timer]);
 
   // main objects
@@ -74,15 +59,10 @@ const TodoContent = () => {
       case TODO_MENU_TYPE.ALL:
         return () => true;
       case TODO_MENU_TYPE.TODAY:
-        return (task) =>
-          task.dueDate != null && moment(task.dueDate).isSame(moment(), "day");
+        return (task) => task.dueDate != null && moment(task.dueDate).isSame(moment(), "day");
       default:
         return (task) => {
-          if (
-            category != null &&
-            category.default === false &&
-            task.categories[category.id] == null
-          ) {
+          if (category != null && category.default === false && task.categories[category.id] == null) {
             return false;
           }
           return true;
@@ -171,8 +151,7 @@ const TodoContent = () => {
             // rearrange tasks and set next/prev nodes (linked list)
             for (let rawTask of data) {
               const nextTaskId = rawTask.next;
-              const nextTask =
-                nextTaskId != null ? newTaskMap[nextTaskId] : null;
+              const nextTask = nextTaskId != null ? newTaskMap[nextTaskId] : null;
               const curTask = newTaskMap[rawTask.tid];
 
               if (curTask) curTask.next = nextTask;
@@ -216,28 +195,26 @@ const TodoContent = () => {
 
   const getTasksCategoriesListSync = useCallback(() => {
     return new Promise((resolve, reject) => {
-      IpcSender.req.tasks_categories.getTasksCategoriesList(
-        ({ success, data }) => {
-          if (success) {
-            setTaskMap((taskMap) => {
-              for (let i = 0; i < data.length; i++) {
-                const taskCategoryEntity = data[i];
-                const taskId = taskCategoryEntity.tid;
-                const categoryId = taskCategoryEntity.cid;
-                const category = categories[categoryId];
-                if (taskMap[taskId]) {
-                  taskMap[taskId].addCategory(category);
-                }
+      IpcSender.req.tasks_categories.getTasksCategoriesList(({ success, data }) => {
+        if (success) {
+          setTaskMap((taskMap) => {
+            for (let i = 0; i < data.length; i++) {
+              const taskCategoryEntity = data[i];
+              const taskId = taskCategoryEntity.tid;
+              const categoryId = taskCategoryEntity.cid;
+              const category = categories[categoryId];
+              if (taskMap[taskId]) {
+                taskMap[taskId].addCategory(category);
               }
-              return { ...taskMap };
-            });
-            resolve();
-          } else {
-            console.error("failed to get task list");
-            reject();
-          }
+            }
+            return { ...taskMap };
+          });
+          resolve();
+        } else {
+          console.error("failed to get task list");
+          reject();
         }
-      );
+      });
     });
   }, [categories]);
 
@@ -260,8 +237,6 @@ const TodoContent = () => {
     };
   }, [categories]);
 
-  // printf("taskMap", taskMap);
-
   /* ------------------------------ Handlers ------------------------------ */
   const onTaskAdd = (task) => {
     if (!(task instanceof Task)) return;
@@ -274,34 +249,19 @@ const TodoContent = () => {
 
   const onTaskDragEndHandler = (result) => {
     const { targetId, currentId, afterTarget } = result;
-    let targetTaskId = document
-      .getElementById(targetId)
-      ?.getAttribute("todo-id");
-    let currentTaskId = document
-      .getElementById(currentId)
-      ?.getAttribute("todo-id");
+    let targetTaskId = document.getElementById(targetId)?.getAttribute("todo-id");
+    let currentTaskId = document.getElementById(currentId)?.getAttribute("todo-id");
     if (targetTaskId != null && currentTaskId != null) {
       // check if the target.next is current when afterTarget
-      if (
-        afterTarget === true &&
-        taskMap[targetTaskId].next?.id == currentTaskId
-      ) {
+      if (afterTarget === true && taskMap[targetTaskId].next?.id == currentTaskId) {
         return;
       }
       // check if the target.prev is current when beforeTarget
-      if (
-        afterTarget === false &&
-        taskMap[targetTaskId].prev?.id == currentTaskId
-      ) {
+      if (afterTarget === false && taskMap[targetTaskId].prev?.id == currentTaskId) {
         return;
       }
 
-      IpcSender.req.task.updateTaskOrder(
-        currentTaskId,
-        targetTaskId,
-        afterTarget,
-        null
-      );
+      IpcSender.req.task.updateTaskOrder(currentTaskId, targetTaskId, afterTarget, null);
     } else {
       console.log(result);
     }
@@ -343,7 +303,7 @@ const TodoContent = () => {
       return;
     }
 
-    IpcSender.req.task.addSubtask(subtask.toEntity(), tid, null);
+    IpcSender.req.task.createSubtask(subtask.toEntity(), tid, null);
   };
 
   const onSubtaskDelete = (tid, sid) => {
@@ -364,7 +324,7 @@ const TodoContent = () => {
     IpcSender.req.task.updateSubtaskDone(tid, sid, done, now.getTime());
   };
 
-  printf("taskMap", taskMap);
+  // printf("taskMap", taskMap);
 
   useEffect(() => {
     // get last update time
@@ -385,9 +345,7 @@ const TodoContent = () => {
         task.done = data.done;
         task.categories = data.categories;
         task.repeatPeriod = data.repeatPeriod;
-        task.repeatStartAt = data.repeatStartAt
-          ? new Date(data.repeatStartAt)
-          : null;
+        task.repeatStartAt = data.repeatStartAt ? new Date(data.repeatStartAt) : null;
 
         setTaskMap((taskMap) => {
           const updated = { ...taskMap };
@@ -513,28 +471,25 @@ const TodoContent = () => {
       }
     });
 
-    IpcSender.onAll(
-      "task/updateTaskDone",
-      ({ success, data }, isRepeated, newDueDate) => {
-        if (success) {
-          const { tid, done, doneAt } = data;
+    IpcSender.onAll("task/updateTaskDone", ({ success, data }, isRepeated, newDueDate) => {
+      if (success) {
+        const { tid, done, doneAt } = data;
 
-          setTaskMap((taskMap) => {
-            const task = taskMap[tid];
-            if (isRepeated) {
-              task.done = false;
-              task.dueDate = new Date(newDueDate);
-            } else {
-              task.done = done;
-              task.doneAt = doneAt;
-            }
-            return { ...taskMap, [tid]: task };
-          });
-        } else {
-          console.error("failed to update task done");
-        }
+        setTaskMap((taskMap) => {
+          const task = taskMap[tid];
+          if (isRepeated) {
+            task.done = false;
+            task.dueDate = new Date(newDueDate);
+          } else {
+            task.done = done;
+            task.doneAt = doneAt;
+          }
+          return { ...taskMap, [tid]: task };
+        });
+      } else {
+        console.error("failed to update task done");
       }
-    );
+    });
 
     IpcSender.onAll("task/updateTaskRepeatPeriod", ({ success, data }) => {
       if (success) {
@@ -553,7 +508,7 @@ const TodoContent = () => {
       }
     });
 
-    IpcSender.onAll("task/addSubtask", ({ success, data }) => {
+    IpcSender.onAll("task/createSubtask", ({ success, data }) => {
       if (success) {
         const { tid, sid, title, createdAt, doneAt, dueDate, done } = data;
         const subtask = new Subtask();
@@ -656,7 +611,7 @@ const TodoContent = () => {
       IpcSender.offAll("task/updateTaskMemo");
       IpcSender.offAll("task/updateTaskDone");
       IpcSender.offAll("task/updateTaskRepeatPeriod");
-      IpcSender.offAll("task/addSubtask");
+      IpcSender.offAll("task/createSubtask");
       IpcSender.offAll("task/deleteSubtask");
       IpcSender.offAll("task/updateSubtaskTitle");
       IpcSender.offAll("task/updateSubtaskDueDate");
@@ -708,9 +663,7 @@ const TodoContent = () => {
           {category?.title ?? "-"} ({Object.keys(filteredTaskMap).length})
         </div>
         <div className="metadata">
-          <div className="last-modified">
-            마지막 수정: {lastUpdateTimeText ?? "-"}
-          </div>
+          <div className="last-modified">마지막 수정: {lastUpdateTimeText ?? "-"}</div>
         </div>
         <div className="options">
           <div className="view-modes">
@@ -719,14 +672,7 @@ const TodoContent = () => {
               return (
                 <div
                   key={mode}
-                  className={
-                    `view-mode` +
-                    JsxUtil.classByEqual(
-                      curTaskViewMode,
-                      taskViewMode,
-                      "selected"
-                    )
-                  }
+                  className={`view-mode` + JsxUtil.classByEqual(curTaskViewMode, taskViewMode, "selected")}
                   onClick={(e) => setTaskViewMode(curTaskViewMode)}
                 >
                   {curTaskViewMode}
@@ -741,14 +687,7 @@ const TodoContent = () => {
                 return (
                   <div
                     key={mode}
-                    className={
-                      `sort-option` +
-                      JsxUtil.classByEqual(
-                        currentSortMode,
-                        sortMode,
-                        "activated"
-                      )
-                    }
+                    className={`sort-option` + JsxUtil.classByEqual(currentSortMode, sortMode, "activated")}
                     onClick={(e) => setCurrentSortMode(sortMode)}
                   >
                     {sortMode} 순
@@ -786,9 +725,7 @@ const TodoContent = () => {
               onSubtaskDone={onSubtaskDone}
             />
           ),
-          [TASK_VIEW_MODE.CALENDAR]: (
-            <TaskCalendarView filteredTaskMap={filteredTaskMap} />
-          ),
+          [TASK_VIEW_MODE.CALENDAR]: <TaskCalendarView filteredTaskMap={filteredTaskMap} />,
         }[taskViewMode] ?? <div>Currently not supported</div>}
       </div>
       <TodoItemAddSection onTaskAdd={onTaskAdd} category={category} />
