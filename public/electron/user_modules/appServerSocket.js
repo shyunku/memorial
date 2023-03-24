@@ -336,12 +336,14 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
   };
 
   const getLocalTxHash = async (blockNumber) => {
-    let blocks = await db.all(`SELECT * FROM blocks WHERE number = ?;`, [blockNumber]);
-    if (blocks.length == 0) return null;
-    let [block] = blocks;
-    let { tx: rawTx } = block;
-    const tx = new Transaction(rawTx.version, rawTx.type, rawTx.timestamp, rawTx.content, blockNumber);
-    return tx.hash();
+    let transactions = await db.all(`SELECT * FROM transactions WHERE block_number = ?;`, [blockNumber]);
+    if (transactions.length == 0) return null;
+    let [rawTx] = transactions;
+    const contentBuffer = Buffer.from(rawTx.content);
+    const stringified = contentBuffer.toString("utf-8");
+    const parsedContent = JSON.parse(stringified);
+    const tx = new Transaction(rawTx.version, rawTx.type, rawTx.timestamp, parsedContent, blockNumber);
+    return tx.hash;
   };
 
   const findTxHashMismatchStartNumber = async (start, end) => {
@@ -380,6 +382,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
       let lastCommonLocalTxHash = await getLocalTxHash(commonChainLastBlockNumber);
       let lastCommonRemoteTxHash = await emitSync("txHashByBlockNumber", { blockNumber: commonChainLastBlockNumber });
       if (lastCommonLocalTxHash !== lastCommonRemoteTxHash) {
+        console.warn(`Mismatch transaction hash detected, finding mismatch start block number...`);
         // last common mismatch, need to find un-dirty block
         const mismatchStartBlockNumber = await findTxHashMismatchStartNumber(1, remoteLastBlockNumber);
         if (mismatchStartBlockNumber == null) {
@@ -450,6 +453,12 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     }
   };
 
+  const handleDeleteTransactionsAfter = async (blockNumber) => {
+    console.info(`Deleting transactions after block number ${blockNumber}`);
+    await db.run(`DELETE FROM transactions WHERE block_number > ?;`, [blockNumber]);
+    sender("system/stateRollbacked", null, true);
+  };
+
   register("open", async () => {
     console.system(console.wrap(`Websocket connected to (${appServerSocketFinalEndpoint})`, console.CYAN));
     emiter("socket/connected", null, null);
@@ -488,6 +497,10 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
   on("waiting_block_number", ({ data: waitingBlockNumber }) => {
     setWaitingBlockNumber(userId, waitingBlockNumber);
+  });
+
+  on("delete_transaction_after", ({ data: blockNumber }) => {
+    handleDeleteTransactionsAfter(blockNumber);
   });
 
   resolveSocket?.(socketCtx);

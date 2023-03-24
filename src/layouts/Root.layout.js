@@ -266,12 +266,20 @@ const RootLayout = () => {
       );
     });
 
+    IpcSender.onAll("system/stateRollbacked", ({ success, data }) => {
+      if (!success) return;
+      Toast.info("다른 기기에서 데이터 충돌에 대해 롤백을 수행했습니다.");
+      // reconnect socket
+      trySocketConnection();
+    });
+
     return () => {
       IpcSender.offAll("socket/disconnected");
       IpcSender.offAll("socket/connected");
       IpcSender.offAll("transaction/error");
       IpcSender.offAll("system/lastBlockNumber");
       IpcSender.offAll("system/waitingBlockNumber");
+      IpcSender.offAll("system/mismatchTxHashFound");
     };
   }, []);
 
