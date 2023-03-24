@@ -119,6 +119,12 @@ const IpcSender = {
       migrateDatabase: (callback) => {
         sender("system/migrateDatabase", callback);
       },
+      mismatchTxAcceptTheirs: (start, end, callback) => {
+        sender("system/mismatchTxAcceptTheirs", callback, start, end);
+      },
+      mismatchTxAcceptMine: (start, end, callback) => {
+        sender("system/mismatchTxAcceptMine", callback, start, end);
+      },
     },
     auth: {
       sendGoogleOauthResult: (result, callback) => {

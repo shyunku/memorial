@@ -207,6 +207,65 @@ const RootLayout = () => {
       }
     });
 
+    IpcSender.onAll("system/mismatchTxHashFound", ({ success, data }) => {
+      if (!success) return;
+      const { mismatchStartBlockNumber, mismatchEndBlockNumber, lossAfterAccpetTheirs, lossAfterAccpetMine } = data;
+      Prompt.float(
+        "데이터 충돌 발생",
+        `동기화 중 데이터 충돌이 발생했습니다.\n충돌을 직접 해결하거나 무시할 수 있지만, 무시할 경우 오프라인으로 사용해야 합니다.` +
+          `\n\n서버의 데이터를 가져올 경우, ${lossAfterAccpetTheirs}개의 트랜잭션이 손실됩니다.` +
+          `\n클라이언트의 데이터를 가져올 경우, ${lossAfterAccpetMine}개의 트랜잭션이 손실됩니다.`,
+        {
+          ignorable: false,
+          confirmText: "서버 데이터 사용",
+          cancelText: "무시",
+          onConfirm: () => {
+            IpcSender.req.system.mismatchTxAcceptTheirs(
+              mismatchStartBlockNumber,
+              mismatchEndBlockNumber,
+              ({ success, data }) => {
+                if (success) {
+                  Toast.success("데이터베이스 충돌 해결이 완료되었습니다.");
+                  // reconnect socket
+                  trySocketConnection();
+                } else {
+                  Toast.error("데이터베이스 충돌 해결에 실패했습니다.");
+                }
+              }
+            );
+          },
+          onCancel: () => {
+            Toast.info("오프라인 모드로 전환합니다.");
+            dispatch(setAccount({ offlineMode: true }));
+          },
+          extraBtns: [
+            {
+              text: "클라이언트 데이터 사용",
+              styles: {
+                backgroundColor: "rgb(165, 66, 66)",
+                color: "white",
+              },
+              onClick: () => {
+                IpcSender.req.system.mismatchTxAcceptMine(
+                  mismatchStartBlockNumber,
+                  mismatchEndBlockNumber,
+                  ({ success, data }) => {
+                    if (success) {
+                      Toast.success("데이터베이스 충돌 해결이 완료되었습니다.");
+                      // reconnect socket
+                      trySocketConnection();
+                    } else {
+                      Toast.error("데이터베이스 충돌 해결에 실패했습니다.");
+                    }
+                  }
+                );
+              },
+            },
+          ],
+        }
+      );
+    });
+
     return () => {
       IpcSender.offAll("socket/disconnected");
       IpcSender.offAll("socket/connected");

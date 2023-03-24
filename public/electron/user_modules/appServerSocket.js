@@ -335,23 +335,79 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     }
   };
 
-  const handleWaitingBlockNumber = async (waitingBlockNumber) => {
+  const getLocalTxHash = async (blockNumber) => {
+    let blocks = await db.all(`SELECT * FROM blocks WHERE number = ?;`, [blockNumber]);
+    if (blocks.length == 0) return null;
+    let [block] = blocks;
+    let { tx: rawTx } = block;
+    const tx = new Transaction(rawTx.version, rawTx.type, rawTx.timestamp, rawTx.content, blockNumber);
+    return tx.hash();
+  };
+
+  const findTxHashMismatchStartNumber = async (start, end) => {
+    let left = start;
+    let right = end;
+    let mismatchStart = null;
+
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2);
+      const localTxHash = await getLocalTxHash(mid);
+      const remoteTxHash = await emitSync("txHashByBlockNumber", { blockNumber: mid });
+
+      if (localTxHash === remoteTxHash) {
+        left = mid + 1;
+      } else {
+        mismatchStart = mid;
+        right = mid - 1;
+      }
+    }
+
+    return mismatchStart;
+  };
+
+  const handleLastRemoteBlock = async (lastRemoteBlock) => {
+    const { number: remoteLastBlockNumber, tx: rawTx } = lastRemoteBlock;
+    const waitingBlockNumber = remoteLastBlockNumber + 1;
+
     console.info(`Remote Waiting block number`, waitingBlockNumber);
     setWaitingBlockNumber(userId, waitingBlockNumber);
 
-    if (waitingBlockNumber == 1) {
-      // this is first commit time
-      // initialize server states
-      // TODO :: implment this
+    // local last block number
+    let lastBlockNumber = getLastBlockNumber(userId);
+    let commonChainLastBlockNumber = Math.min(lastBlockNumber, remoteLastBlockNumber);
+
+    if (commonChainLastBlockNumber > 0) {
+      let lastCommonLocalTxHash = await getLocalTxHash(commonChainLastBlockNumber);
+      let lastCommonRemoteTxHash = await emitSync("txHashByBlockNumber", { blockNumber: commonChainLastBlockNumber });
+      if (lastCommonLocalTxHash !== lastCommonRemoteTxHash) {
+        // last common mismatch, need to find un-dirty block
+        const mismatchStartBlockNumber = await findTxHashMismatchStartNumber(1, remoteLastBlockNumber);
+        if (mismatchStartBlockNumber == null) {
+          throw new Error("Cannot find mismatch start block number");
+        }
+        // recover?
+        sender("system/mismatchTxHashFound", null, true, {
+          mismatchStartBlockNumber,
+          mismatchEndBlockNumber: commonChainLastBlockNumber,
+          lossAfterAccpetTheirs:
+            lastBlockNumber > commonChainLastBlockNumber ? lastBlockNumber - commonChainLastBlockNumber + 1 : 0,
+          lossAfterAccpetMine:
+            remoteLastBlockNumber > commonChainLastBlockNumber
+              ? remoteLastBlockNumber - commonChainLastBlockNumber + 1
+              : 0,
+        });
+        throw new Error(
+          `Mismatch tx hash found at block number ${mismatchStartBlockNumber}~${commonChainLastBlockNumber}`
+        );
+      }
     }
 
-    let lastBlockNumber = getLastBlockNumber(userId);
     if (lastBlockNumber < waitingBlockNumber - 1) {
       // sync blocks needed (behind)
       console.info(`Local block number is behind remote, syncing...`);
       let result = await emitSync("syncBlocks", {
-        start_block_number: lastBlockNumber + 1,
-        end_block_number: waitingBlockNumber - 1,
+        startBlockNumber: lastBlockNumber + 1,
+        endBlockNumber: waitingBlockNumber - 1,
       });
 
       console.info(`Sync result`, result);
@@ -399,8 +455,8 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     emiter("socket/connected", null, null);
     // emit("test", "Hello world");
     try {
-      let waitingBlockNumber = await emitSync("waitingBlockNumber", null, 5000);
-      handleWaitingBlockNumber(waitingBlockNumber);
+      let lastRemoteBlock = await emitSync("lastRemoteBlock", null, 5000);
+      handleLastRemoteBlock(lastRemoteBlock);
     } catch (err) {
       console.error(`Waiting block number error`, err);
     }

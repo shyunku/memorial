@@ -82,9 +82,6 @@ const setLastBlockNumber = (userId, lastBlockNumber_) => {
   lastBlockNumberMap[userId] = lastBlockNumber_;
   sender("system/lastBlockNumber", null, true, lastBlockNumber_);
 };
-const getWaitingBlockNumber = (userId) => {
-  return waitingBlockNumberMap[userId] ?? 0;
-};
 const setWaitingBlockNumber = (userId, waitingBlockNumber_) => {
   if (waitingBlockNumberMap[userId] == null) waitingBlockNumberMap[userId] = 0;
   waitingBlockNumberMap[userId] = waitingBlockNumber_;
@@ -368,6 +365,34 @@ register("system/migrateDatabase", async (event, reqId) => {
     sender("system/migrateDatabase", reqId, true);
   } catch (err) {
     sender("system/migrateDatabase", reqId, false);
+    throw err;
+  }
+});
+
+register("system/mismatchTxAcceptTheirs", async (event, reqId, startNumber, endNumber) => {
+  try {
+    // delete all transactions from startNumber to endNumber in local db
+    await db.run("DELETE FROM transactions WHERE block_number >= ? AND block_number <= ?;", startNumber, endNumber);
+    sender("system/mismatchTxAcceptTheirs", reqId, true);
+  } catch (err) {
+    sender("system/mismatchTxAcceptTheirs", reqId, false);
+    throw err;
+  }
+});
+
+register("system/mismatchTxAcceptMine", async (event, reqId, startNumber, endNumber) => {
+  try {
+    // delete all transactions from startNumber to endNumber in remote db
+    if (!socket.connected()) {
+      throw new Error("socket is not connected");
+    }
+    await socket.emitSync("deleteMismatchBlocks", {
+      startNumber,
+      endNumber,
+    });
+    sender("system/mismatchTxAcceptMine", reqId, true);
+  } catch (err) {
+    sender("system/mismatchTxAcceptMine", reqId, false);
     throw err;
   }
 });
