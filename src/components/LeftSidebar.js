@@ -43,7 +43,7 @@ const LeftSidebar = ({
   const [syncStatus, syncText] = useMemo(() => {
     if (offlineMode) return ["offline", "오프라인 모드"];
     if (localNonce == remoteNonce) return ["synchronized", "동기화 완료"];
-    return ["synchronizing", "동기화 중"];
+    return ["synchronizing", `동기화 중 (${Math.abs(localNonce - remoteNonce)}개 남음)`];
   }, [offlineMode, localNonce, remoteNonce]);
 
   const createCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
