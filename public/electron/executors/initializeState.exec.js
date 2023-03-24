@@ -16,7 +16,10 @@ class InitializeStateTxContent extends TxContent {
  */
 const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new InitializeStateTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(
+    new InitializeStateTxContent().instanceOf(txReq),
+    "Transaction request is not instance of class"
+  );
 
   if (blockNumber !== 1) {
     throw new Error("InitializeState can be executed only at block 1");
@@ -54,7 +57,9 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
 
     // sort tasks
     let reverseSortedTasks = [];
-    let lastTask = Object.values(bidirectionalTasks).find((task) => task.next == "");
+    let lastTask = Object.values(bidirectionalTasks).find(
+      (task) => task.next == ""
+    );
     let iter = lastTask;
     while (iter != null) {
       reverseSortedTasks.push(iter);
@@ -77,9 +82,9 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
         task.memo,
         task.done,
         task.dueDate,
-        task.next === "" ? null : task.next,
+        task.next == "" ? null : task.next,
         task.repeatPeriod,
-        task.repeatStartAt
+        task.repeatStartAt == "" ? null : task.repeatStartAt
       );
     }
 
@@ -102,7 +107,11 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
     for (const tid in tasks) {
       const task = tasks[tid];
       for (const cid in task.categories) {
-        await db.run("INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)", task.tid, cid);
+        await db.run(
+          "INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)",
+          task.tid,
+          cid
+        );
       }
       for (const sid in task.subtasks) {
         const subtask = task.subtasks[sid];
