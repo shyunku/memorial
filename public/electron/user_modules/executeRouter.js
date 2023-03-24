@@ -12,11 +12,15 @@ const { updateTaskMemo } = require("../executors/updateTaskMemo.exec");
 const { updateTaskOrder } = require("../executors/updateTaskOrder.exec");
 const { updateTaskTitle } = require("../executors/updateTaskTitle.exec");
 const { deleteTaskCategory } = require("../executors/deleteTaskCategory.exec");
-const { updateTaskRepeatPeriod } = require("../executors/updateTaskRepeatPeriod.exec");
+const {
+  updateTaskRepeatPeriod,
+} = require("../executors/updateTaskRepeatPeriod.exec");
 const { createSubtask } = require("../executors/createSubtask.exec");
 const { deleteSubtask } = require("../executors/deleteSubtask.exec");
 const { updateSubtaskTitle } = require("../executors/updateSubtaskTitle.exec");
-const { updateSubtaskDueDate } = require("../executors/updateSubtaskDueDate.exec");
+const {
+  updateSubtaskDueDate,
+} = require("../executors/updateSubtaskDueDate.exec");
 const { updateSubtaskDone } = require("../executors/updateSubtaskDone.exec");
 const { initializeState } = require("../executors/initializeState.exec");
 
@@ -73,27 +77,16 @@ const makeTransaction = (type, data, blockNumber) => {
   return new Transaction(schemeVersion, type, timestamp, data, blockNumber);
 };
 
-const getTxHash = (tx) => {
-  const raw = {
-    version: tx.version,
-    type: tx.type,
-    timestamp: tx.timestamp,
-    content: tx.content,
-  };
-  const buffer = jsonMarshal(raw);
-  const hash = sha256(buffer);
-  return hash;
-};
-
 const txExecutor = async (db, reqId, Ipc, tx) => {
   if (tx == null) throw new Error("Transaction is null");
-  if (!(tx instanceof Transaction)) throw new Error("tx is not instance of Transaction");
+  if (!(tx instanceof Transaction))
+    throw new Error("tx is not instance of Transaction");
   if (tx.type == null) throw new Error("Transaction type is null");
 
   const { setLastBlockNumberWithoutUserId, sender } = Ipc;
   const args = [db, reqId, Ipc];
 
-  console.debug(JSON.stringify(tx, null, 4));
+  // console.debug(JSON.stringify(tx, null, 4));
 
   // add transaction (db transaction) to rollback when error occurs
 

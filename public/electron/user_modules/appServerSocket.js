@@ -17,7 +17,7 @@ const appServerSocketFinalEndpoint = `${appServerFinalEndpoint.replace(
 let socket;
 
 const color = console.RGB(190, 75, 255);
-const coloredSocket = console.wrap("Websocket", color);
+const coloredSocket = console.wrap("Websock", color);
 
 let queue = {};
 let socketHandlers = {};
@@ -43,9 +43,24 @@ function initializeSocket(socket) {
       const reqId = v4();
       const packet = { topic, data, reqId };
       const callback = (data) => {
+        console.info(
+          `${coloredSocket} ${console.wrap(
+            `<--------`,
+            console.GREEN
+          )} ${console.wrap(topic, console.MAGENTA)}`,
+          data
+        );
         resolve(data);
       };
       const errorHandler = (err) => {
+        console.info(
+          `${coloredSocket} ${console.wrap(
+            `<--------`,
+            console.RED
+          )} ${console.wrap(topic, console.MAGENTA)} ${
+            err?.message ?? "unknown error"
+          }`
+        );
         reject(err);
       };
 
