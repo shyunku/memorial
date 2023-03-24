@@ -388,6 +388,7 @@ register("system/mismatchTxAcceptTheirs", async (event, reqId, startNumber, endN
 
     // insert state to local database
     await initializeState(db, null, Ipc, state, 1);
+    setLastBlockNumber(currentUserId, startNumber - 1);
 
     sender("system/mismatchTxAcceptTheirs", reqId, true);
   } catch (err) {

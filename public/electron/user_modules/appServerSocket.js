@@ -9,7 +9,10 @@ const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
 const appServerFinalEndpoint = `${appServerEndpoint}/${appServerApiVersion}`;
 
-const appServerSocketFinalEndpoint = `${appServerFinalEndpoint.replace(/http/g, "ws")}/websocket/connect`;
+const appServerSocketFinalEndpoint = `${appServerFinalEndpoint.replace(
+  /http/g,
+  "ws"
+)}/websocket/connect`;
 
 let socket;
 
@@ -48,10 +51,10 @@ function initializeSocket(socket) {
 
       let timeoutHandler = setTimeout(() => {
         console.info(
-          `${coloredSocket} ${console.wrap(`|-${reqIdTag(reqId)}--`, console.ORANGE)} ${console.wrap(
-            topic,
-            console.MAGENTA
-          )}`
+          `${coloredSocket} ${console.wrap(
+            `|-${reqIdTag(reqId)}--`,
+            console.ORANGE
+          )} ${console.wrap(topic, console.MAGENTA)}`
         );
         reject(`Request timeout`);
       }, timeout);
@@ -68,10 +71,10 @@ function initializeSocket(socket) {
       }
 
       console.info(
-        `${coloredSocket} ${console.wrap(`--${reqIdTag(reqId)}->`, console.CYAN)} ${console.wrap(
-          topic,
-          console.MAGENTA
-        )}`,
+        `${coloredSocket} ${console.wrap(
+          `--${reqIdTag(reqId)}->`,
+          console.CYAN
+        )} ${console.wrap(topic, console.MAGENTA)}`,
         data
       );
     });
@@ -93,10 +96,10 @@ function initializeSocket(socket) {
     }
 
     console.info(
-      `${coloredSocket} ${console.wrap(`--${reqIdTag(reqId)}->`, console.CYAN)} ${console.wrap(
-        topic,
-        console.MAGENTA
-      )}`,
+      `${coloredSocket} ${console.wrap(
+        `--${reqIdTag(reqId)}->`,
+        console.CYAN
+      )} ${console.wrap(topic, console.MAGENTA)}`,
       data
     );
   };
@@ -135,18 +138,20 @@ function initializeSocket(socket) {
 
       if (success) {
         console.info(
-          `${coloredSocket} ${console.wrap(`<-${reqIdTag(reqId)}--`, console.GREEN)} ${console.wrap(
-            topic,
-            console.MAGENTA
-          )}`,
+          `${coloredSocket} ${console.wrap(
+            `<-${reqIdTag(reqId)}--`,
+            console.GREEN
+          )} ${console.wrap(topic, console.MAGENTA)}`,
           data?.data
         );
       } else {
         console.info(
-          `${coloredSocket} ${console.wrap(`<-${reqIdTag(reqId)}--`, console.RED)} ${console.wrap(
-            topic,
-            console.MAGENTA
-          )} ${data?.err_message ?? "unknown fail error"}`
+          `${coloredSocket} ${console.wrap(
+            `<-${reqIdTag(reqId)}--`,
+            console.RED
+          )} ${console.wrap(topic, console.MAGENTA)} ${
+            data?.err_message ?? "unknown fail error"
+          }`
         );
       }
 
@@ -188,7 +193,10 @@ function initializeSocket(socket) {
           return;
         }
 
-        if (handlers[data.topic] != null && typeof handlers[data.topic] === "function") {
+        if (
+          handlers[data.topic] != null &&
+          typeof handlers[data.topic] === "function"
+        ) {
           const handler = handlers[data?.topic];
           handler(data);
         } else {
@@ -221,7 +229,16 @@ function initializeSocket(socket) {
 let alreadyAuthorized = false;
 let reconnectTimeout = 500;
 
-const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db, reconnect = false, resolveSocket) => {
+const connectSocket = async (
+  userId,
+  accessToken,
+  refreshToken,
+  ipc,
+  rootDB,
+  db,
+  reconnect = false,
+  resolveSocket
+) => {
   if (userId == null) throw new Error("User ID is required");
   if (accessToken == null) throw new Error("Access token is required");
   if (ipc == null) throw new Error("IPC is required");
@@ -243,7 +260,13 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     alreadyAuthorized = false;
   }
 
-  const { sender, emiter, getLastBlockNumber, setLastBlockNumber, setWaitingBlockNumber } = ipc;
+  const {
+    sender,
+    emiter,
+    getLastBlockNumber,
+    setLastBlockNumber,
+    setWaitingBlockNumber,
+  } = ipc;
 
   let accessToken_ = accessToken;
   let refreshToken_ = refreshToken;
@@ -258,7 +281,9 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     }
   } catch (err) {
     try {
-      let users = await rootDB.all(`SELECT * FROM users WHERE uid = ?;`, [userId]);
+      let users = await rootDB.all(`SELECT * FROM users WHERE uid = ?;`, [
+        userId,
+      ]);
       if (users.length == 0) throw new Error("User not found");
       let [user] = users;
 
@@ -272,24 +297,28 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     console.debug(err?.response?.status, err?.response?.data, refreshToken_);
     if (err?.response?.status === 401 && refreshToken_ != null) {
       try {
-        let result = await Request.post(appServerFinalEndpoint, "/auth/refreshToken", null, {
-          headers: {
-            Authorization: `Bearer ${accessToken_}`,
-            "X-Refresh-Token": refreshToken_,
-          },
-          withCredentials: true,
-        });
+        let result = await Request.post(
+          appServerFinalEndpoint,
+          "/auth/refreshToken",
+          null,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken_}`,
+              "X-Refresh-Token": refreshToken_,
+            },
+            withCredentials: true,
+          }
+        );
         let { access_token, refresh_token } = result;
 
         accessToken_ = access_token.token;
         refreshToken_ = refresh_token.token;
 
         // register updated tokens on local
-        await rootDB.run(`UPDATE users SET access_token = ?, refresh_token = ? WHERE uid = ?;`, [
-          accessToken_,
-          refreshToken_,
-          userId,
-        ]);
+        await rootDB.run(
+          `UPDATE users SET access_token = ?, refresh_token = ? WHERE uid = ?;`,
+          [accessToken_, refreshToken_, userId]
+        );
 
         // update access token & refresh token to ipc
         sender("auth/tokenUpdated", null, true, {
@@ -327,7 +356,13 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
   const saveBlockAndExecute = async (block) => {
     try {
       let { tx: rawTx, number } = block;
-      const tx = new Transaction(rawTx.version, rawTx.type, rawTx.timestamp, rawTx.content, number);
+      const tx = new Transaction(
+        rawTx.version,
+        rawTx.type,
+        rawTx.timestamp,
+        rawTx.content,
+        number
+      );
       await txExecutor(db, null, ipc, tx);
       setLastBlockNumber(userId, number);
     } catch (err) {
@@ -336,13 +371,22 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
   };
 
   const getLocalTxHash = async (blockNumber) => {
-    let transactions = await db.all(`SELECT * FROM transactions WHERE block_number = ?;`, [blockNumber]);
+    let transactions = await db.all(
+      `SELECT * FROM transactions WHERE block_number = ?;`,
+      [blockNumber]
+    );
     if (transactions.length == 0) return null;
     let [rawTx] = transactions;
     const contentBuffer = Buffer.from(rawTx.content);
     const stringified = contentBuffer.toString("utf-8");
     const parsedContent = JSON.parse(stringified);
-    const tx = new Transaction(rawTx.version, rawTx.type, rawTx.timestamp, parsedContent, blockNumber);
+    const tx = new Transaction(
+      rawTx.version,
+      rawTx.type,
+      rawTx.timestamp,
+      parsedContent,
+      blockNumber
+    );
     return tx.hash;
   };
 
@@ -354,7 +398,9 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     while (left <= right) {
       const mid = Math.floor((left + right) / 2);
       const localTxHash = await getLocalTxHash(mid);
-      const remoteTxHash = await emitSync("txHashByBlockNumber", { blockNumber: mid });
+      const remoteTxHash = await emitSync("txHashByBlockNumber", {
+        blockNumber: mid,
+      });
 
       if (localTxHash === remoteTxHash) {
         left = mid + 1;
@@ -376,27 +422,47 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
     // local last block number
     let lastBlockNumber = getLastBlockNumber(userId);
-    let commonChainLastBlockNumber = Math.min(lastBlockNumber, remoteLastBlockNumber);
+    let commonChainLastBlockNumber = Math.min(
+      lastBlockNumber,
+      remoteLastBlockNumber
+    );
 
     if (commonChainLastBlockNumber > 0) {
-      let lastCommonLocalTxHash = await getLocalTxHash(commonChainLastBlockNumber);
-      let lastCommonRemoteTxHash = await emitSync("txHashByBlockNumber", { blockNumber: commonChainLastBlockNumber });
+      let lastCommonLocalTxHash = await getLocalTxHash(
+        commonChainLastBlockNumber
+      );
+      let lastCommonRemoteTxHash = await emitSync("txHashByBlockNumber", {
+        blockNumber: commonChainLastBlockNumber,
+      });
       if (lastCommonLocalTxHash !== lastCommonRemoteTxHash) {
-        console.warn(`Mismatch transaction hash detected, finding mismatch start block number...`);
+        console.warn(
+          `Mismatch transaction hash detected at ${commonChainLastBlockNumber}, finding mismatch start block number...`
+        );
         // last common mismatch, need to find un-dirty block
-        const mismatchStartBlockNumber = await findTxHashMismatchStartNumber(1, remoteLastBlockNumber);
+        const mismatchStartBlockNumber = await findTxHashMismatchStartNumber(
+          1,
+          remoteLastBlockNumber
+        );
         if (mismatchStartBlockNumber == null) {
           throw new Error("Cannot find mismatch start block number");
         }
-        // recover?
+        console.debug({
+          mismatchStartBlockNumber,
+          commonChainLastBlockNumber,
+          lastBlockNumber,
+          remoteLastBlockNumber,
+        });
+        // recover
         sender("system/mismatchTxHashFound", null, true, {
           mismatchStartBlockNumber,
           mismatchEndBlockNumber: commonChainLastBlockNumber,
           lossAfterAccpetTheirs:
-            lastBlockNumber > commonChainLastBlockNumber ? lastBlockNumber - commonChainLastBlockNumber + 1 : 0,
+            lastBlockNumber >= mismatchStartBlockNumber
+              ? lastBlockNumber - mismatchStartBlockNumber + 1
+              : 0,
           lossAfterAccpetMine:
-            remoteLastBlockNumber > commonChainLastBlockNumber
-              ? remoteLastBlockNumber - commonChainLastBlockNumber + 1
+            remoteLastBlockNumber >= mismatchStartBlockNumber
+              ? remoteLastBlockNumber - mismatchStartBlockNumber + 1
               : 0,
         });
         throw new Error(
@@ -423,22 +489,30 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
           await saveBlockAndExecute(block);
         }
       } catch (err) {
-        console.warn(`Error occured while syncing blocks, error occured at block number ${syncingLastBlock}`);
+        console.warn(
+          `Error occured while syncing blocks, error occured at block number ${syncingLastBlock}`
+        );
         console.error(err);
       }
     } else if (lastBlockNumber > waitingBlockNumber - 1) {
       // commit blocks needed (ahead)
       console.info(`Local block number is ahead remote, waiting...`);
       // TODO :: if ahead blocks are too much, then sync recent 1 block and save state.
-      let txs = await db.all(`SELECT * FROM transactions WHERE block_number >= ? AND block_number <= ?;`, [
-        waitingBlockNumber,
-        lastBlockNumber,
-      ]);
+      let txs = await db.all(
+        `SELECT * FROM transactions WHERE block_number >= ? AND block_number <= ?;`,
+        [waitingBlockNumber, lastBlockNumber]
+      );
       let txRequests = txs.map((tx) => {
         const contentBuffer = Buffer.from(tx.content);
         const stringified = contentBuffer.toString("utf-8");
         const parsedContent = JSON.parse(stringified);
-        return new Transaction(tx.version, tx.type, tx.timestamp, parsedContent, tx.block_number);
+        return new Transaction(
+          tx.version,
+          tx.type,
+          tx.timestamp,
+          parsedContent,
+          tx.block_number
+        );
       });
 
       try {
@@ -449,23 +523,32 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
       }
     } else {
       // no sync needed (already synced)
-      console.info(`Local block number is already synced with remote as ${lastBlockNumber}`);
+      console.info(
+        `Local block number is already synced with remote as ${lastBlockNumber}`
+      );
     }
   };
 
   const handleDeleteTransactionsAfter = async (blockNumber) => {
     console.info(`Deleting transactions after block number ${blockNumber}`);
-    await db.run(`DELETE FROM transactions WHERE block_number > ?;`, [blockNumber]);
+    await db.run(`DELETE FROM transactions WHERE block_number > ?;`, [
+      blockNumber,
+    ]);
     sender("system/stateRollbacked", null, true);
   };
 
   register("open", async () => {
-    console.system(console.wrap(`Websocket connected to (${appServerSocketFinalEndpoint})`, console.CYAN));
+    console.system(
+      console.wrap(
+        `Websocket connected to (${appServerSocketFinalEndpoint})`,
+        console.CYAN
+      )
+    );
     emiter("socket/connected", null, null);
     // emit("test", "Hello world");
     try {
       let lastRemoteBlock = await emitSync("lastRemoteBlock", null, 5000);
-      handleLastRemoteBlock(lastRemoteBlock);
+      await handleLastRemoteBlock(lastRemoteBlock);
     } catch (err) {
       console.error(`Waiting block number error`, err);
     }
@@ -483,7 +566,16 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
     // reconnect
     setTimeout(() => {
-      connectSocket(userId, accessToken, refreshToken, ipc, rootDB, db, true, resolveSocket);
+      connectSocket(
+        userId,
+        accessToken,
+        refreshToken,
+        ipc,
+        rootDB,
+        db,
+        true,
+        resolveSocket
+      );
     }, reconnectTimeout);
   });
 
