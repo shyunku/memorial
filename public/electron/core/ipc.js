@@ -41,6 +41,7 @@ const { DeleteSubtaskTxContent } = require("../executors/deleteSubtask.exec");
 const { UpdateSubtaskTitleTxContent } = require("../executors/updateSubtaskTitle.exec");
 const { UpdateSubtaskDueDateTxContent } = require("../executors/updateSubtaskDueDate.exec");
 const { UpdateSubtaskDoneTxContent } = require("../executors/updateSubtaskDone.exec");
+const { initializeState } = require("../executors/initializeState.exec");
 const { TX_TYPE } = Exec;
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
@@ -371,8 +372,23 @@ register("system/migrateDatabase", async (event, reqId) => {
 
 register("system/mismatchTxAcceptTheirs", async (event, reqId, startNumber, endNumber) => {
   try {
-    // delete all transactions from startNumber to endNumber in local db
-    await db.run("DELETE FROM transactions WHERE block_number >= ? AND block_number <= ?;", startNumber, endNumber);
+    if (!socket.connected()) {
+      throw new Error("socket is not connected");
+    }
+
+    // get state from remote
+    let state = await socket.emitSync("stateByBlockNumber", {
+      blockNumber: startNumber - 1,
+    });
+
+    // delete user database
+    await databaseContext.deleteDatabase(currentUserId);
+    await databaseContext.initialize(currentUserId);
+    db = await databaseContext.getContext();
+
+    // insert state to local database
+    await initializeState(db, null, Ipc, state, 1);
+
     sender("system/mismatchTxAcceptTheirs", reqId, true);
   } catch (err) {
     sender("system/mismatchTxAcceptTheirs", reqId, false);

@@ -263,6 +263,28 @@ function isReadyForOperateUser(userId) {
   return db != null && currentDatabaseUserId == userId;
 }
 
+async function deleteDatabase(userId) {
+  if (userId == null) throw new Error("User ID is not valid.");
+  console.info("Deleting User Database... [User ID: " + userId + "]");
+
+  const schemeVersion = "v" + packageJson.config["scheme_version"];
+
+  if (userId == null || userId == "") {
+    console.error("User ID is not valid.");
+    process.exit(-1);
+  }
+
+  let datafileDirPath = path.join(userDataPath, "datafiles");
+
+  let databaseDirPath = path.join(datafileDirPath, schemeVersion);
+  let databaseFileName = `user-${userId}.sqlite3`;
+  let databaseFilePath = path.join(databaseDirPath, databaseFileName);
+
+  if (fs.existsSync(databaseFilePath)) {
+    fs.unlinkSync(databaseFilePath);
+  }
+}
+
 async function initialize(userId) {
   if (userId == null) throw new Error("User ID is not valid.");
   console.info("Initializing User Database... [User ID: " + userId + "]");
@@ -482,4 +504,5 @@ module.exports = {
   setSystemInfo,
   migratableDatabaseExists,
   migrateOldDatabase,
+  deleteDatabase,
 };
