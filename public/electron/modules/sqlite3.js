@@ -488,6 +488,15 @@ module.exports = {
     begin: () => _begin(rootDB),
     commit: () => _commit(rootDB),
     rollback: () => _rollback(rootDB),
+    close: () =>
+      new Promise((resolve, reject) =>
+        rootDB.close((err) => {
+          if (err) reject(err);
+          rootDB = null;
+          currentDatabaseUserId = null;
+          resolve();
+        })
+      ),
   }),
   getContext: async (userId) => {
     if (isReadyForOperateUser(userId)) await getConnection(userId);
@@ -498,6 +507,15 @@ module.exports = {
       begin: () => _begin(db),
       commit: () => _commit(db),
       rollback: () => _rollback(db),
+      close: () =>
+        new Promise((resolve, reject) =>
+          db.close((err) => {
+            if (err) reject(err);
+            db = null;
+            currentDatabaseUserId = null;
+            resolve();
+          })
+        ),
     };
   },
   isReadyForOperateUser,

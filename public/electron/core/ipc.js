@@ -382,6 +382,7 @@ register("system/mismatchTxAcceptTheirs", async (event, reqId, startNumber, endN
     });
 
     // delete user database
+    await db.close();
     await databaseContext.deleteDatabase(currentUserId);
     await databaseContext.initialize(currentUserId);
     db = await databaseContext.getContext();
