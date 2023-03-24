@@ -1,4 +1,5 @@
 const PackageJson = require("../../../package.json");
+const sha256 = require("sha256");
 
 const { createCategory } = require("../executors/createCategory.exec");
 const { addTaskCategory } = require("../executors/addTaskCategory.exec");
@@ -40,31 +41,65 @@ const TX_TYPE = {
   DELETE_CATEGORY: 18,
 };
 
-const makeTransaction = (type, data, targetBlockNumber) => {
+class Transaction {
+  constructor(version, type, timestamp, content, blockNumber) {
+    this.version = version;
+    this.type = type;
+    this.timestamp = timestamp;
+    this.content = content;
+    this.blockNumber = blockNumber;
+    this.hash = this.getHash();
+  }
+
+  getHash() {
+    const raw = {
+      version: this.version,
+      type: this.type,
+      timestamp: this.timestamp,
+      content: this.content,
+    };
+    const buffer = jsonMarshal(raw);
+    const hash = sha256(buffer);
+    return hash;
+  }
+}
+
+const makeTransaction = (type, data, blockNumber) => {
   const timestamp = Date.now();
   const schemeVersion = PackageJson.config.scheme_version;
 
-  return {
-    type,
-    version: schemeVersion,
-    content: data,
-    timestamp,
-    targetBlockNumber: targetBlockNumber,
-  };
+  // sort fields
+  data = sortFields(data);
+  return new Transaction(schemeVersion, type, timestamp, data, blockNumber);
 };
 
-const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
+const getTxHash = (tx) => {
+  const raw = {
+    version: tx.version,
+    type: tx.type,
+    timestamp: tx.timestamp,
+    content: tx.content,
+  };
+  const buffer = jsonMarshal(raw);
+  const hash = sha256(buffer);
+  return hash;
+};
+
+const txExecutor = async (db, reqId, Ipc, tx) => {
   if (tx == null) throw new Error("Transaction is null");
+  if (!(tx instanceof Transaction)) throw new Error("tx is not instance of Transaction");
   if (tx.type == null) throw new Error("Transaction type is null");
 
   const { setLastBlockNumberWithoutUserId, sender } = Ipc;
   const args = [db, reqId, Ipc];
 
-  console.debug(tx);
+  console.debug(JSON.stringify(tx, null, 4));
+
+  // add transaction (db transaction) to rollback when error occurs
 
   switch (tx.type) {
     case TX_TYPE.INITIALIZE:
-      await initializeState(...args, tx.content, blockNumber);
+      await initializeState(...args, tx.content, tx.blockNumber);
       break;
     case TX_TYPE.CREATE_TASK:
       await createTask(...args, tx.content);
@@ -126,17 +161,36 @@ const txExecutor = async (db, reqId, Ipc, tx, blockNumber) => {
   const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
 
   // insert block (as transaction) into local db
-  await db.run(`INSERT INTO transactions (type, timestamp, content, block_number) VALUES (?, ?, ?, ?);`, [
-    tx.type,
-    tx.timestamp,
-    decodedBuffer,
-    blockNumber,
-  ]);
+  await db.run(
+    `INSERT INTO transactions (version, type, timestamp, content, hash, block_number) VALUES (?, ?, ?, ?, ?, ?);`,
+    [tx.version, tx.type, tx.timestamp, decodedBuffer, tx.hash, tx.blockNumber]
+  );
 
-  setLastBlockNumberWithoutUserId(blockNumber);
+  setLastBlockNumberWithoutUserId(tx.blockNumber);
 
   // send to ipc
   sender("system/lastTxUpdateTime", null, true, tx.timestamp);
 };
 
-module.exports = { txExecutor, TX_TYPE, makeTransaction };
+const jsonMarshal = (v) => {
+  if (v === null || v === undefined) {
+    return Buffer.from([]);
+  } else {
+    const str = JSON.stringify(v);
+    const bytes = Buffer.from(str, "utf8");
+    return bytes;
+  }
+};
+
+const sortFields = (obj) => {
+  if (obj == null || typeof obj !== "object") return obj;
+  let keys = Object.keys(obj);
+  keys.sort();
+  let newObj = {};
+  for (let key of keys) {
+    newObj[key] = sortFields(obj[key]);
+  }
+  return newObj;
+};
+
+module.exports = { txExecutor, TX_TYPE, makeTransaction, Transaction };

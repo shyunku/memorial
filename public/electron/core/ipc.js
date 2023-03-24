@@ -186,6 +186,7 @@ const fastSilentSender = (topic, socketResponse) => {
 /* ---------------------------------------- Websocket (Custom) ---------------------------------------- */
 const sendTx = async (tx) => {
   if (socket == null) throw new Error("Socket is not connected");
+  if (!(tx instanceof Exec.Transaction)) throw new Error("Invalid transaction type (not Transaction)");
   try {
     if (socket.connected()) {
       return await socket.emitSync("transaction", tx);
@@ -322,8 +323,9 @@ register("system/waitingBlockNumber", async (event, reqId) => {
   try {
     if (currentUserId == null) throw new Error("currentUserId is null");
     let waitingBlockNumber = waitingBlockNumberMap[currentUserId];
-    if (waitingBlockNumber == null) throw new Error("waitingBlockNumber is null");
-    sender("system/waitingBlockNumber", reqId, true, waitingBlockNumber);
+    if (waitingBlockNumber != null) {
+      sender("system/waitingBlockNumber", reqId, true, waitingBlockNumber);
+    }
   } catch (err) {
     throw err;
   }
@@ -767,7 +769,7 @@ register("task/addTask", async (event, reqId, task) => {
     );
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.CREATE_TASK, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/addTask", reqId, false);
@@ -783,7 +785,7 @@ register("task/deleteTask", async (event, reqId, taskId) => {
     const txContent = new DeleteTaskTxContent(taskId, preResult.prevTaskId);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.DELETE_TASK, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/deleteTask", reqId, false);
@@ -810,7 +812,7 @@ register("task/updateTaskOrder", async (event, reqId, taskId, targetTaskId, afte
     );
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_ORDER, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/updateTaskOrder", reqId, false);
@@ -823,7 +825,7 @@ register("task/updateTaskTitle", async (event, reqId, taskId, title) => {
     const txContent = new UpdateTaskTitleTxContent(taskId, title);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_TITLE, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/updateTaskTitle", reqId, false);
@@ -836,7 +838,7 @@ register("task/updateTaskDueDate", async (event, reqId, taskId, dueDate) => {
     const txContent = new UpdateTaskDueDateTxContent(taskId, dueDate);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_DUE_DATE, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/updateTaskDueDate", reqId, false);
@@ -849,7 +851,7 @@ register("task/updateTaskMemo", async (event, reqId, taskId, memo) => {
     const txContent = new UpdateTaskMemoTxContent(taskId, memo);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_MEMO, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/updateTaskMemo", reqId, false);
@@ -862,7 +864,7 @@ register("task/updateTaskDone", async (event, reqId, taskId, done, doneAt) => {
     const txContent = new UpdateTaskDoneTxContent(taskId, done, doneAt);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_DONE, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/updateTaskDone", reqId, false);
@@ -875,7 +877,7 @@ register("task/addTaskCategory", async (event, reqId, taskId, categoryId) => {
     const txContent = new AddTaskCategoryTxContent(taskId, categoryId);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.ADD_TASK_CATEGORY, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/addTaskCategory", reqId, false);
@@ -888,7 +890,7 @@ register("task/deleteTaskCategory", async (event, reqId, taskId, categoryId) => 
     const txContent = new DeleteTaskCategoryTxContent(taskId, categoryId);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.DELETE_TASK_CATEGORY, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/deleteTaskCategory", reqId, false);
@@ -901,7 +903,7 @@ register("task/updateTaskRepeatPeriod", async (event, reqId, taskId, repeatPerio
     const txContent = new UpdateTaskRepeatPeriodTxContent(taskId, repeatPeriod);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.UPDATE_TASK_REPEAT_PERIOD, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/updateTaskRepeatPeriod", reqId, false);
@@ -923,7 +925,7 @@ register("task/createSubtask", async (event, reqId, subtask, taskId) => {
     );
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.CREATE_SUBTASK, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/createSubtask", reqId, false);
@@ -936,7 +938,7 @@ register("task/deleteSubtask", async (event, reqId, taskId, subtaskId) => {
     const txContent = new DeleteSubtaskTxContent(taskId, subtaskId);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.DELETE_SUBTASK, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/deleteSubtask", reqId, false);
@@ -949,7 +951,7 @@ register("task/updateSubtaskTitle", async (event, reqId, taskId, subtaskId, titl
     const txContent = new UpdateSubtaskTitleTxContent(taskId, subtaskId, title);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.UPDATE_SUBTASK_TITLE, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/updateSubtaskTitle", reqId, false);
@@ -962,7 +964,7 @@ register("task/updateSubtaskDueDate", async (event, reqId, taskId, subtaskId, du
     const txContent = new UpdateSubtaskDueDateTxContent(taskId, subtaskId, dueDate);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.UPDATE_SUBTASK_DUE_DATE, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/updateSubtaskDueDate", reqId, false);
@@ -975,7 +977,7 @@ register("task/updateSubtaskDone", async (event, reqId, taskId, subtaskId, done,
     const txContent = new UpdateSubtaskDoneTxContent(taskId, subtaskId, done, doneAt);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.UPDATE_SUBTASK_DONE, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("task/updateSubtaskDone", reqId, false);
@@ -1005,7 +1007,7 @@ register("category/createCategory", async (event, reqId, category) => {
     );
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.CREATE_CATEGORY, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("category/createCategory", reqId, false);
@@ -1018,7 +1020,7 @@ register("category/deleteCategory", async (event, reqId, categoryId) => {
     const txContent = new DeleteCategoryTxContent(categoryId);
     const targetBlockNumber = getLastBlockNumber(currentUserId) + 1;
     const tx = Exec.makeTransaction(TX_TYPE.DELETE_CATEGORY, txContent, targetBlockNumber);
-    Exec.txExecutor(db, reqId, Ipc, tx, targetBlockNumber);
+    Exec.txExecutor(db, reqId, Ipc, tx);
     sendTx(tx);
   } catch (err) {
     sender("category/deleteCategory", reqId, false);

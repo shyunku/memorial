@@ -243,7 +243,7 @@ async function migrateOldDatabase(socket, db, Ipc) {
         // send migration result to socket
         if (socket.connected()) {
           let tx = makeTransaction(TX_TYPE.INITIALIZE, txContent, 1);
-          await txExecutor(db, null, Ipc, tx, 1);
+          await txExecutor(db, null, Ipc, tx);
           await socket.emitSync("transaction", tx, 15000);
 
           // backup or delete old database?

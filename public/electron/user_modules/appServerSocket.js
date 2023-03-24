@@ -3,7 +3,7 @@ const WebSocket = require("ws");
 const Request = require("../core/request");
 const { v4 } = require("uuid");
 const { reqIdTag } = require("../modules/util");
-const { txExecutor, makeTransaction } = require("./executeRouter");
+const { txExecutor, makeTransaction, Transaction } = require("./executeRouter");
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
@@ -326,8 +326,9 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
   const saveBlockAndExecute = async (block) => {
     try {
-      let { tx, number } = block;
-      await txExecutor(db, null, ipc, tx, number);
+      let { tx: rawTx, number } = block;
+      const tx = new Transaction(rawTx.version, rawTx.type, rawTx.timestamp, rawTx.content, number);
+      await txExecutor(db, null, ipc, tx);
       setLastBlockNumber(userId, number);
     } catch (err) {
       throw err;
@@ -377,8 +378,8 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
       let txRequests = txs.map((tx) => {
         const contentBuffer = Buffer.from(tx.content);
         const stringified = contentBuffer.toString("utf-8");
-        const parsed = JSON.parse(stringified);
-        return makeTransaction(tx.type, parsed, tx.block_number);
+        const parsedContent = JSON.parse(stringified);
+        return new Transaction(tx.version, tx.type, tx.timestamp, parsedContent, tx.block_number);
       });
 
       try {
@@ -410,10 +411,10 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
   });
 
   register("close", (code) => {
-    console.info("Disconnect with socket, reason: " + code);
+    console.warn("Disconnect with socket, reason: " + code);
     emiter("socket/disconnected", null, { code });
 
-    console.error(`Reconnecting socket in ${reconnectTimeout}ms...`);
+    console.info(`Reconnecting socket in ${reconnectTimeout}ms...`);
 
     // reconnect
     setTimeout(() => {

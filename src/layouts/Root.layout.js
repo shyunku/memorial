@@ -156,13 +156,13 @@ const RootLayout = () => {
       try {
         await Loading.float("데이터베이스 접근 중입니다. 잠시만 기다려주세요...", checkDatabasePromise);
         setDatabaseReady(true);
-        IpcSender.req.system.getLastBlockNumber();
-        IpcSender.req.system.getWaitingBlockNumber();
         if (isAuthorized) {
           await trySocketConnection();
         } else {
           Toast.info("현재 로컬 계정으로 접속 중입니다. 서버에 접속하려면 로그인해주세요.");
         }
+        IpcSender.req.system.getLastBlockNumber();
+        IpcSender.req.system.getWaitingBlockNumber();
       } catch (err) {
         console.error(err);
         Toast.error(err?.message ?? "알 수 없는 오류가 발생했습니다. 로그인 화면으로 이동합니다.");
