@@ -442,6 +442,12 @@ register(
         blockNumber: startNumber - 1,
       });
 
+      // delete user database
+      await db.close();
+      await databaseContext.deleteDatabase(currentUserId);
+      await databaseContext.initialize(currentUserId);
+      db = await databaseContext.getContext();
+
       // save last tx in local db
       let { tx: rawTx, number } = block;
       const tx = new Exec.Transaction(
@@ -464,12 +470,6 @@ register(
           tx.blockNumber,
         ]
       );
-
-      // delete user database
-      await db.close();
-      await databaseContext.deleteDatabase(currentUserId);
-      await databaseContext.initialize(currentUserId);
-      db = await databaseContext.getContext();
 
       // insert state to local database
       await initializeState(db, null, Ipc, state, 1);
