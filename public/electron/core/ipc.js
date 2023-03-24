@@ -433,13 +433,15 @@ register(
         throw new Error("socket is not connected");
       }
 
+      const newLastBlockNumber = startNumber - 1;
+
       // get state from remote
       let state = await socket.emitSync("stateByBlockNumber", {
-        blockNumber: startNumber - 1,
+        blockNumber: newLastBlockNumber,
       });
 
       let block = await socket.emitSync("blockByBlockNumber", {
-        blockNumber: startNumber - 1,
+        blockNumber: newLastBlockNumber,
       });
 
       // delete user database
@@ -449,31 +451,33 @@ register(
       db = await databaseContext.getContext();
 
       // save last tx in local db
-      let { tx: rawTx, number } = block;
-      const tx = new Exec.Transaction(
-        rawTx.version,
-        rawTx.type,
-        rawTx.timestamp,
-        rawTx.content,
-        number
-      );
-      const rawContent = tx.content;
-      const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
-      await db.run(
-        `INSERT INTO transactions (version, type, timestamp, content, hash, block_number) VALUES (?, ?, ?, ?, ?, ?);`,
-        [
-          tx.version,
-          tx.type,
-          tx.timestamp,
-          decodedBuffer,
-          tx.hash,
-          tx.blockNumber,
-        ]
-      );
+      if (newLastBlockNumber > 0) {
+        let { tx: rawTx, number } = block;
+        const tx = new Exec.Transaction(
+          rawTx.version,
+          rawTx.type,
+          rawTx.timestamp,
+          rawTx.content,
+          number
+        );
+        const rawContent = tx.content;
+        const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
+        await db.run(
+          `INSERT INTO transactions (version, type, timestamp, content, hash, block_number) VALUES (?, ?, ?, ?, ?, ?);`,
+          [
+            tx.version,
+            tx.type,
+            tx.timestamp,
+            decodedBuffer,
+            tx.hash,
+            tx.blockNumber,
+          ]
+        );
+      }
 
       // insert state to local database
       await initializeState(db, null, Ipc, state, 1);
-      setLastBlockNumber(currentUserId, startNumber - 1);
+      setLastBlockNumber(currentUserId, newLastBlockNumber);
 
       sender("system/mismatchTxAcceptTheirs", reqId, true);
     } catch (err) {
