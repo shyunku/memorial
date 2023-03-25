@@ -41,6 +41,30 @@ const TX_TYPE = {
   DELETE_CATEGORY: 18,
 };
 
+class Block {
+  constructor(number, txHash, prevBlockHash) {
+    this.number = number;
+    this.txHash = txHash;
+    this.prevBlockHash = prevBlockHash;
+    this.hash = this.getHash();
+  }
+
+  getHash() {
+    const raw = {
+      number: this.number,
+      txHash: this.txHash,
+      prevBlockHash: this.prevBlockHash,
+    };
+    const buffer = jsonMarshal(raw);
+    const hash = sha256(buffer);
+    return hash;
+  }
+
+  static emptyBlock() {
+    return new Block(0, "", "");
+  }
+}
+
 class Transaction {
   constructor(version, type, timestamp, content, blockNumber) {
     this.version = version;
@@ -73,10 +97,32 @@ const makeTransaction = (type, data, blockNumber) => {
   return new Transaction(schemeVersion, type, timestamp, data, blockNumber);
 };
 
-const txExecutor = async (db, reqId, Ipc, tx) => {
+const txExecutor = async (db, reqId, Ipc, tx, blockHash = null) => {
   if (tx == null) throw new Error("Transaction is null");
   if (!(tx instanceof Transaction)) throw new Error("tx is not instance of Transaction");
   if (tx.type == null) throw new Error("Transaction type is null");
+  if (blockHash == null) {
+    // maybe this is local transaction
+    // create block hash from previous
+    const prevBlockNumber = tx.blockNumber - 1;
+    let prevBlockHash;
+    if (prevBlockNumber === 0) {
+      // empty 32 bytes hash (initial block)
+      const initialBlock = Block.emptyBlock();
+      prevBlockHash = initialBlock.hash;
+      console.debug(`Initial state hash: ${prevBlockHash}`);
+    } else {
+      // standard block hash
+      const [prevRawTxs] = await db.get("SELECT * FROM transactions WHERE block_number = ?", prevBlockNumber);
+      if (prevRawTxs == null) throw new Error(`No transactions in block ${prevBlockNumber}`);
+
+      const prevBlock = new Block(tx.blockNumber - 1, prevRawTxs.hash, prevBlockHash);
+      prevBlockHash = prevBlock.hash;
+    }
+
+    const currentBlock = new Block(tx.blockNumber, tx.hash, prevBlockHash);
+    blockHash = currentBlock.hash;
+  }
 
   const { setLastBlockNumberWithoutUserId, sender } = Ipc;
   const args = [db, reqId, Ipc];
@@ -152,8 +198,8 @@ const txExecutor = async (db, reqId, Ipc, tx) => {
 
     // insert block (as transaction) into local db
     await db.run(
-      `INSERT INTO transactions (version, type, timestamp, content, hash, block_number) VALUES (?, ?, ?, ?, ?, ?);`,
-      [tx.version, tx.type, tx.timestamp, decodedBuffer, tx.hash, tx.blockNumber]
+      `INSERT INTO transactions (version, type, timestamp, content, hash, block_number, block_hash) VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      [tx.version, tx.type, tx.timestamp, decodedBuffer, tx.hash, tx.blockNumber, blockHash]
     );
 
     setLastBlockNumberWithoutUserId(tx.blockNumber);
@@ -194,13 +240,13 @@ const rollbackState = async (socket, databaseContext, db, userId, Ipc, blockNumb
 
   // save last tx in local db
   if (blockNumber > 0) {
-    let { tx: rawTx, number } = block;
+    let { tx: rawTx, number, hash: blockHash } = block;
     const tx = new Transaction(rawTx.version, rawTx.type, rawTx.timestamp, rawTx.content, number);
     const rawContent = tx.content;
     const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
     await db.run(
-      `INSERT INTO transactions (version, type, timestamp, content, hash, block_number) VALUES (?, ?, ?, ?, ?, ?);`,
-      [tx.version, tx.type, tx.timestamp, decodedBuffer, tx.hash, tx.blockNumber]
+      `INSERT INTO transactions (version, type, timestamp, content, hash, block_number, block_hash) VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      [tx.version, tx.type, tx.timestamp, decodedBuffer, tx.hash, tx.blockNumber, blockHash]
     );
 
     // insert state to local database
@@ -231,4 +277,4 @@ const sortFields = (obj) => {
   return newObj;
 };
 
-module.exports = { txExecutor, TX_TYPE, makeTransaction, Transaction, rollbackState };
+module.exports = { txExecutor, TX_TYPE, makeTransaction, Block, Transaction, rollbackState };

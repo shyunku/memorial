@@ -453,7 +453,7 @@ function _begin(_db) {
   console.system(
     `${coloredIpcMain} ${console.wrap(`--[BEG]->`, console.BLUE)} ${console.wrap(
       "sqlite3: begin transaction;",
-      console.YELLOW
+      console.ORANGE
     )}`
   );
   return new Promise((resolve, reject) => {

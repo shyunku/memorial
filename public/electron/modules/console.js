@@ -18,7 +18,7 @@ module.exports = (loggerModule) => {
   console.WHITE = "\x1b[37m";
 
   // extra
-  console.ORANGE = rgbANSI(255, 170, 80);
+  console.ORANGE = rgbANSI(255, 150, 70);
   console.LIME = rgbANSI(241, 255, 138);
   console.PURPLE = rgbANSI(184, 148, 255);
   console.PINK = rgbANSI(242, 99, 255);

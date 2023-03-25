@@ -3,7 +3,7 @@ const WebSocket = require("ws");
 const Request = require("../core/request");
 const { v4 } = require("uuid");
 const { reqIdTag } = require("../modules/util");
-const { txExecutor, makeTransaction, Transaction, rollbackState } = require("./executeRouter");
+const { txExecutor, makeTransaction, Transaction, rollbackState, Block } = require("./executeRouter");
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
@@ -358,9 +358,9 @@ const connectSocket = async (
 
   const saveBlockAndExecute = async (block) => {
     try {
-      let { tx: rawTx, number } = block;
+      let { tx: rawTx, number, blockHash } = block;
       const tx = new Transaction(rawTx.version, rawTx.type, rawTx.timestamp, rawTx.content, number);
-      await txExecutor(db, null, ipc, tx);
+      await txExecutor(db, null, ipc, tx, blockHash);
       setLastBlockNumber(userId, number);
     } catch (err) {
       throw err;
@@ -378,6 +378,20 @@ const connectSocket = async (
     return tx.hash;
   };
 
+  const getLocalBlockHash = async (blockNumber) => {
+    let transactions = await db.all(`SELECT * FROM transactions WHERE block_number = ?;`, [blockNumber]);
+    if (transactions.length == 0) return null;
+    let [rawTx] = transactions;
+    return rawTx.block_hash;
+  };
+
+  const getRemoteBlockHash = async (blockNumber) => {
+    let blockHash = await emitSync("blockHashByBlockNumber", {
+      blockNumber: blockNumber,
+    });
+    return blockHash;
+  };
+
   const getOldestLocalBlockNumber = async () => {
     let transactions = await db.all(`SELECT * FROM transactions ORDER BY block_number ASC LIMIT 1;`);
     if (transactions.length == 0) return null;
@@ -385,25 +399,23 @@ const connectSocket = async (
     return tx.block_number;
   };
 
-  const findTxHashMismatchStartNumber = async (start, end) => {
+  const findBlockHashMismatchStartNumber = async (start, end) => {
     let left = start;
     let right = end;
     let mismatchStart = null;
 
     while (left <= right) {
       const mid = Math.floor((left + right) / 2);
-      const localTxHash = await getLocalTxHash(mid);
-      const remoteTxHash = await emitSync("txHashByBlockNumber", {
-        blockNumber: mid,
-      });
+      const localBlockHash = await getLocalBlockHash(mid);
+      const remoteBlockHash = await getRemoteBlockHash(mid);
 
-      if (localTxHash == null) {
+      if (localBlockHash == null) {
         // local db has no transaction here... (maybe truncated)
         // so, we can't find mismatch start number
         return null;
       }
 
-      if (localTxHash === remoteTxHash) {
+      if (localBlockHash === remoteBlockHash) {
         left = mid + 1;
       } else {
         mismatchStart = mid;
@@ -415,7 +427,7 @@ const connectSocket = async (
   };
 
   const handleLastRemoteBlock = async (lastRemoteBlock) => {
-    const { number: remoteLastBlockNumber, tx: rawTx } = lastRemoteBlock;
+    const { number: remoteLastBlockNumber, tx: rawTx, hash: lastRemoteBlockHash } = lastRemoteBlock;
     const waitingBlockNumber = remoteLastBlockNumber + 1;
 
     console.info(`Remote Waiting block number`, waitingBlockNumber);
@@ -426,21 +438,32 @@ const connectSocket = async (
     let oldestLocalBlockNumber = await getOldestLocalBlockNumber();
     let commonChainLastBlockNumber = Math.min(lastBlockNumber, remoteLastBlockNumber);
 
+    if (commonChainLastBlockNumber === 0) {
+      // test local empty hash
+      let zeroBlock = Block.emptyBlock();
+      if (zeroBlock.hash !== lastRemoteBlockHash) {
+        console.error(`Initial hash mismatch, local: ${zeroBlock.hash}, remote: ${lastRemoteBlockHash}`);
+        throw new Error("Initial hash mismatch");
+      } else {
+        console.debug(`Initial hash matched, local: ${zeroBlock.hash}, remote: ${lastRemoteBlockHash}`);
+      }
+    }
+
     if (commonChainLastBlockNumber > 0) {
-      let lastCommonLocalTxHash = await getLocalTxHash(commonChainLastBlockNumber);
-      let lastCommonRemoteTxHash = await emitSync("txHashByBlockNumber", {
-        blockNumber: commonChainLastBlockNumber,
-      });
-      if (lastCommonLocalTxHash !== lastCommonRemoteTxHash) {
+      let lastCommonLocalBlockHash = await getLocalBlockHash(commonChainLastBlockNumber);
+      let lastCommonRemoteBlockHash = await getRemoteBlockHash(commonChainLastBlockNumber);
+      if (lastCommonLocalBlockHash !== lastCommonRemoteBlockHash) {
         console.warn(
-          `Mismatch transaction hash detected at ${commonChainLastBlockNumber}, finding mismatch start block number...`
+          `Mismatch transaction hash detected at ${commonChainLastBlockNumber},` +
+            ` local: ${lastCommonLocalBlockHash}, remote: ${lastCommonRemoteBlockHash}`
         );
+        console.info(`finding mismatch start block number...`);
         // last common mismatch, need to find un-dirty block
         if (oldestLocalBlockNumber == null) {
           throw new Error("Cannot find oldest local block number");
         }
 
-        const mismatchStartBlockNumber = await findTxHashMismatchStartNumber(
+        const mismatchStartBlockNumber = await findBlockHashMismatchStartNumber(
           oldestLocalBlockNumber,
           commonChainLastBlockNumber
         );
