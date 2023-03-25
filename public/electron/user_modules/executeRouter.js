@@ -88,6 +88,19 @@ class Transaction {
   }
 }
 
+class TransactionRequest extends Transaction {
+  constructor(version, type, timestamp, content, blockNumber, blockHash) {
+    super(version, type, timestamp, content, blockNumber);
+    this.blockHash = blockHash;
+  }
+
+  static fromTransaction(tx, blockHash) {
+    if (tx == null) throw new Error("Transaction is null");
+    if (!(tx instanceof Transaction)) throw new Error("tx is not instance of Transaction");
+    return new TransactionRequest(tx.version, tx.type, tx.timestamp, tx.content, tx.blockNumber, blockHash);
+  }
+}
+
 const makeTransaction = (type, data, blockNumber) => {
   const timestamp = Date.now();
   const schemeVersion = PackageJson.config.scheme_version;
@@ -97,30 +110,40 @@ const makeTransaction = (type, data, blockNumber) => {
   return new Transaction(schemeVersion, type, timestamp, data, blockNumber);
 };
 
+const getBlockHash = async (db, blockNumber, txHash) => {
+  const [rawTxs] = await db.all("SELECT * FROM transactions WHERE block_number = ?", blockNumber);
+  if (rawTxs != null) {
+    // block already exists
+    return rawTxs.block_hash;
+  }
+
+  const prevBlockNumber = blockNumber - 1;
+  let prevBlockHash;
+  if (prevBlockNumber === 0) {
+    // empty 32 bytes hash (initial block)
+    const initialBlock = Block.emptyBlock();
+    prevBlockHash = initialBlock.hash;
+    console.debug(`Initial state hash: ${prevBlockHash}`);
+  } else {
+    // standard block hash
+    const [prevRawTxs] = await db.all("SELECT * FROM transactions WHERE block_number = ?", prevBlockNumber);
+    if (prevRawTxs == null) throw new Error(`No transactions in block ${prevBlockNumber}`);
+    prevBlockHash = prevRawTxs.block_hash;
+  }
+  const currentBlock = new Block(blockNumber, txHash, prevBlockHash);
+  console.debug(currentBlock);
+  return currentBlock.hash;
+};
+
 const txExecutor = async (db, reqId, Ipc, tx, blockHash = null) => {
   if (tx == null) throw new Error("Transaction is null");
   if (!(tx instanceof Transaction)) throw new Error("tx is not instance of Transaction");
   if (tx.type == null) throw new Error("Transaction type is null");
+  let expectedBlockHash = await getBlockHash(db, tx.blockNumber, tx.hash);
   if (blockHash == null) {
-    // maybe this is local transaction
-    // create block hash from previous
-    const prevBlockNumber = tx.blockNumber - 1;
-    let prevBlockHash;
-    if (prevBlockNumber === 0) {
-      // empty 32 bytes hash (initial block)
-      const initialBlock = Block.emptyBlock();
-      prevBlockHash = initialBlock.hash;
-      console.debug(`Initial state hash: ${prevBlockHash}`);
-    } else {
-      // standard block hash
-      const [prevRawTxs] = await db.all("SELECT * FROM transactions WHERE block_number = ?", prevBlockNumber);
-      if (prevRawTxs == null) throw new Error(`No transactions in block ${prevBlockNumber}`);
-      prevBlockHash = prevRawTxs.block_hash;
-    }
-
-    const currentBlock = new Block(tx.blockNumber, tx.hash, prevBlockHash);
-    console.debug(currentBlock);
-    blockHash = currentBlock.hash;
+    blockHash = expectedBlockHash;
+  } else if (blockHash != expectedBlockHash) {
+    throw new Error(`Block hash mismatch: ${blockHash} != ${expectedBlockHash}`);
   }
 
   const { setLastBlockNumberWithoutUserId, sender } = Ipc;
@@ -276,4 +299,13 @@ const sortFields = (obj) => {
   return newObj;
 };
 
-module.exports = { txExecutor, TX_TYPE, makeTransaction, Block, Transaction, rollbackState };
+module.exports = {
+  txExecutor,
+  TX_TYPE,
+  makeTransaction,
+  getBlockHash,
+  Block,
+  Transaction,
+  TransactionRequest,
+  rollbackState,
+};

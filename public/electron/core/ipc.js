@@ -187,8 +187,11 @@ const sendTx = async (tx) => {
     if (socket == null) throw new Error("Socket is not connected");
     if (!(tx instanceof Exec.Transaction)) throw new Error("Invalid transaction type (not Transaction)");
 
+    const blockHash = await Exec.getBlockHash(db, tx.blockNumber, tx.hash);
+    const txRequest = Exec.TransactionRequest.fromTransaction(tx, blockHash);
+
     if (socket.connected()) {
-      return await socket.emitSync("transaction", tx);
+      return await socket.emitSync("transaction", txRequest);
     }
   } catch (err) {
     console.error(err);

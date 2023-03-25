@@ -107,6 +107,7 @@ const isProductionMode = () => {
 };
 
 const reqIdTag = (reqId) => {
+  if (reqId == null) reqId = "NUL";
   return reqId ? `[${reqId.substr(0, 3)}]` : "";
 };
 

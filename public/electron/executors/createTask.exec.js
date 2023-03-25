@@ -23,7 +23,7 @@ class CreateTaskTxContent extends TxContent {
 const createTaskPre = async (db) => {
   const newTid = v4();
   // find tid is null
-  let lastTidList = await db.all("SELECT tid FROM tasks WHERE next IS NULL LIMIT 2;");
+  let lastTidList = await db.all("SELECT tid FROM tasks WHERE next IS NULL LIMIT 1;");
   if (lastTidList.length > 1) {
     console.log(lastTidList);
     throw new Error(`tasks that ID is null is more than 1. (${lastTidList.length})`);

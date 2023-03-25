@@ -468,7 +468,7 @@ function _commit(_db) {
   console.system(
     `${coloredIpcMain} ${console.wrap(`--[COM]->`, console.BLUE)} ${console.wrap(
       "sqlite3: commit transactions",
-      console.YELLOW
+      console.ORANGE
     )}`
   );
   return new Promise((resolve, reject) => {

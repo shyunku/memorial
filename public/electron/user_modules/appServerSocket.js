@@ -3,7 +3,14 @@ const WebSocket = require("ws");
 const Request = require("../core/request");
 const { v4 } = require("uuid");
 const { reqIdTag } = require("../modules/util");
-const { txExecutor, makeTransaction, Transaction, rollbackState, Block } = require("./executeRouter");
+const {
+  txExecutor,
+  makeTransaction,
+  Transaction,
+  rollbackState,
+  Block,
+  TransactionRequest,
+} = require("./executeRouter");
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
@@ -45,7 +52,7 @@ function initializeSocket(socket) {
           dataStr = dataStr.substring(0, 5000) + "...";
         }
         console.info(
-          `${coloredSocket} ${console.wrap(`<-[${reqIdTag(reqId)}]--`, console.GREEN)} ${console.wrap(
+          `${coloredSocket} ${console.wrap(`<-${reqIdTag(reqId)}--`, console.GREEN)} ${console.wrap(
             topic,
             console.MAGENTA
           )}`,
@@ -55,7 +62,7 @@ function initializeSocket(socket) {
       };
       const errorHandler = (err) => {
         console.info(
-          `${coloredSocket} ${console.wrap(`<-[${reqIdTag(reqId)}]--`, console.RED)} ${console.wrap(
+          `${coloredSocket} ${console.wrap(`<-${reqIdTag(reqId)}--`, console.RED)} ${console.wrap(
             topic,
             console.MAGENTA
           )} ${err?.message ?? "unknown error"}`
@@ -457,7 +464,7 @@ const connectSocket = async (
       let lastCommonRemoteBlockHash = await getRemoteBlockHash(commonChainLastBlockNumber);
       if (lastCommonLocalBlockHash !== lastCommonRemoteBlockHash) {
         console.warn(
-          `Mismatch transaction hash detected at ${commonChainLastBlockNumber},` +
+          `Mismatch block hash detected at ${commonChainLastBlockNumber},` +
             ` local: ${lastCommonLocalBlockHash}, remote: ${lastCommonRemoteBlockHash}`
         );
         console.info(`finding mismatch start block number...`);
@@ -491,7 +498,7 @@ const connectSocket = async (
               : 0,
         });
         throw new Error(
-          `Mismatch tx hash found at block number ${mismatchStartBlockNumber}~${commonChainLastBlockNumber}`
+          `Mismatch block hash found at block number ${mismatchStartBlockNumber}~${commonChainLastBlockNumber}`
         );
       }
     }
@@ -536,7 +543,7 @@ const connectSocket = async (
         const contentBuffer = Buffer.from(tx.content);
         const stringified = contentBuffer.toString("utf-8");
         const parsedContent = JSON.parse(stringified);
-        return new Transaction(tx.version, tx.type, tx.timestamp, parsedContent, tx.block_number);
+        return new TransactionRequest(tx.version, tx.type, tx.timestamp, parsedContent, tx.block_number, tx.block_hash);
       });
 
       try {
