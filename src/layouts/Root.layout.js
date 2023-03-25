@@ -285,7 +285,10 @@ const RootLayout = () => {
     });
 
     IpcSender.onAll("system/stateRollbacked", ({ success, data }) => {
-      if (!success) return;
+      if (!success) {
+        Toast.error("다른 기기에서 데이터 충돌에 대해 수행한 롤백을 적용하는데 실패했습니다.");
+        return;
+      }
       Toast.info("다른 기기에서 데이터 충돌에 대해 롤백을 수행했습니다.");
       Prompt.float(
         "데이터 롤백 완료",
@@ -323,6 +326,7 @@ const RootLayout = () => {
       IpcSender.offAll("system/waitingBlockNumber");
       IpcSender.offAll("system/mismatchTxHashFound");
       IpcSender.offAll("system/stateRollbacked");
+      IpcSender.offAll("system/socketError");
     };
   }, []);
 

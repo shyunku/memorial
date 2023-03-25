@@ -3,7 +3,7 @@ const WebSocket = require("ws");
 const Request = require("../core/request");
 const { v4 } = require("uuid");
 const { reqIdTag } = require("../modules/util");
-const { txExecutor, makeTransaction, Transaction } = require("./executeRouter");
+const { txExecutor, makeTransaction, Transaction, rollbackState } = require("./executeRouter");
 
 const appServerEndpoint = PackageJson.config.app_server_endpoint;
 const appServerApiVersion = PackageJson.config.app_server_api_version;
@@ -238,7 +238,18 @@ function initializeSocket(socket) {
 let alreadyAuthorized = false;
 let reconnectTimeout = 500;
 
-const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db, reconnect = false, resolveSocket) => {
+const connectSocket = async (
+  userId,
+  accessToken,
+  refreshToken,
+  ipc,
+  rootDB,
+  dbCtx,
+  db,
+  reconnect = false,
+  resolveSocket,
+  setDb
+) => {
   if (userId == null) throw new Error("User ID is required");
   if (accessToken == null) throw new Error("Access token is required");
   if (ipc == null) throw new Error("IPC is required");
@@ -287,7 +298,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
     // if error is 401, then try refresh token
     console.debug(err?.response?.status, err?.response?.data, refreshToken_);
-    if (err?.response?.status === 401 && refreshToken_ != null) {
+    if (err?.response?.status === 401 && refreshToken_ != null && refreshToken_ !== "") {
       try {
         let result = await Request.post(appServerFinalEndpoint, "/auth/refreshToken", null, {
           headers: {
@@ -514,10 +525,18 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     }
   };
 
+  // rollback state
   const handleDeleteTransactionsAfter = async (blockNumber) => {
-    console.info(`Deleting transactions after block number ${blockNumber}`);
-    await db.run(`DELETE FROM transactions WHERE block_number >= ?;`, blockNumber);
-    sender("system/stateRollbacked", null, true);
+    try {
+      console.info(`Deleting transactions after block number ${blockNumber}`);
+
+      const newLastBlockNumber = blockNumber - 1;
+      await rollbackState(socketCtx, dbCtx, db, userId, Ipc, newLastBlockNumber, setDb);
+      sender("system/stateRollbacked", null, true);
+    } catch (err) {
+      console.error(err);
+      sender("system/stateRollbacked", null, false);
+    }
   };
 
   register("open", async () => {
@@ -563,7 +582,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
     // reconnect
     setTimeout(() => {
-      connectSocket(userId, accessToken, refreshToken, ipc, rootDB, db, true, resolveSocket);
+      connectSocket(userId, accessToken, refreshToken, ipc, rootDB, dbCtx, db, true, resolveSocket, setDb);
     }, reconnectTimeout);
   });
 

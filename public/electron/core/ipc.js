@@ -373,43 +373,10 @@ register("system/migrateDatabase", async (event, reqId) => {
 
 register("system/mismatchTxAcceptTheirs", async (event, reqId, startNumber, endNumber) => {
   try {
-    if (!socket.connected()) {
-      throw new Error("socket is not connected");
-    }
-
     const newLastBlockNumber = startNumber - 1;
-
-    // get state from remote
-    let state = await socket.emitSync("stateByBlockNumber", {
-      blockNumber: newLastBlockNumber,
+    await Exec.rollbackState(socket, databaseContext, db, currentUserId, Ipc, newLastBlockNumber, (newDb) => {
+      db = newDb;
     });
-
-    let block = await socket.emitSync("blockByBlockNumber", {
-      blockNumber: newLastBlockNumber,
-    });
-
-    // delete user database
-    await db.close();
-    await databaseContext.deleteDatabase(currentUserId);
-    await databaseContext.initialize(currentUserId);
-    db = await databaseContext.getContext();
-
-    // save last tx in local db
-    if (newLastBlockNumber > 0) {
-      let { tx: rawTx, number } = block;
-      const tx = new Exec.Transaction(rawTx.version, rawTx.type, rawTx.timestamp, rawTx.content, number);
-      const rawContent = tx.content;
-      const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
-      await db.run(
-        `INSERT INTO transactions (version, type, timestamp, content, hash, block_number) VALUES (?, ?, ?, ?, ?, ?);`,
-        [tx.version, tx.type, tx.timestamp, decodedBuffer, tx.hash, tx.blockNumber]
-      );
-    }
-
-    // insert state to local database
-    await initializeState(db, null, Ipc, state, 1);
-    setLastBlockNumber(currentUserId, newLastBlockNumber);
-
     sender("system/mismatchTxAcceptTheirs", reqId, true);
   } catch (err) {
     sender("system/mismatchTxAcceptTheirs", reqId, false);
@@ -784,9 +751,22 @@ register("socket/connect", async (event, reqId, userId, accessToken, refreshToke
     console.debug(`current last block number: ${lastBlockNumber} for user ${userId}`);
     setLastBlockNumber(userId, lastBlockNumber);
 
-    await AppServerSocket(userId, accessToken, refreshToken, Ipc, rootDB, db, false, (socket_) => {
-      socket = socket_;
-    });
+    await AppServerSocket(
+      userId,
+      accessToken,
+      refreshToken,
+      Ipc,
+      rootDB,
+      databaseContext,
+      db,
+      false,
+      (socket_) => {
+        socket = socket_;
+      },
+      (newDb) => {
+        db = newDb;
+      }
+    );
     sender("socket/connect", reqId, true);
   } catch (err) {
     sender("socket/connect", reqId, false, err);

@@ -167,6 +167,49 @@ const txExecutor = async (db, reqId, Ipc, tx) => {
   }
 };
 
+const rollbackState = async (socket, databaseContext, db, userId, Ipc, blockNumber, setDb) => {
+  if (!socket.connected()) {
+    throw new Error("socket is not connected");
+  }
+
+  if (setDb == null || typeof setDb !== "function") {
+    throw new Error("setDb is not function");
+  }
+
+  // get state from remote
+  let state = await socket.emitSync("stateByBlockNumber", {
+    blockNumber,
+  });
+
+  let block = await socket.emitSync("blockByBlockNumber", {
+    blockNumber,
+  });
+
+  // delete user database
+  await db.close();
+  await databaseContext.deleteDatabase(userId);
+  await databaseContext.initialize(userId);
+  let newDb = await databaseContext.getContext();
+  setDb(newDb);
+
+  // save last tx in local db
+  if (blockNumber > 0) {
+    let { tx: rawTx, number } = block;
+    const tx = new Transaction(rawTx.version, rawTx.type, rawTx.timestamp, rawTx.content, number);
+    const rawContent = tx.content;
+    const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
+    await db.run(
+      `INSERT INTO transactions (version, type, timestamp, content, hash, block_number) VALUES (?, ?, ?, ?, ?, ?);`,
+      [tx.version, tx.type, tx.timestamp, decodedBuffer, tx.hash, tx.blockNumber]
+    );
+
+    // insert state to local database
+    await initializeState(db, null, Ipc, state, 1);
+  }
+
+  Ipc.setLastBlockNumber(userId, blockNumber);
+};
+
 const jsonMarshal = (v) => {
   if (v === null || v === undefined) {
     return Buffer.from([]);
@@ -188,4 +231,4 @@ const sortFields = (obj) => {
   return newObj;
 };
 
-module.exports = { txExecutor, TX_TYPE, makeTransaction, Transaction };
+module.exports = { txExecutor, TX_TYPE, makeTransaction, Transaction, rollbackState };
