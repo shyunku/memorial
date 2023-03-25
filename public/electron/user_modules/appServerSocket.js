@@ -531,7 +531,7 @@ const connectSocket = async (
       console.info(`Deleting transactions after block number ${blockNumber}`);
 
       const newLastBlockNumber = blockNumber - 1;
-      await rollbackState(socketCtx, dbCtx, db, userId, Ipc, newLastBlockNumber, setDb);
+      await rollbackState(socketCtx, dbCtx, db, userId, ipc, newLastBlockNumber, setDb);
       sender("system/stateRollbacked", null, true);
     } catch (err) {
       console.error(err);
