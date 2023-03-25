@@ -777,6 +777,16 @@ register("socket/connect", async (event, reqId, userId, accessToken, refreshToke
   }
 });
 
+register("socket/disconnect", async (event, reqId) => {
+  try {
+    socket.disconnect();
+    sender("socket/disconnect", reqId, true);
+  } catch (err) {
+    sender("socket/disconnect", reqId, false);
+    throw err;
+  }
+});
+
 register("task/getAllTaskList", async (event, reqId) => {
   try {
     let tasks = await db.all("SELECT * FROM tasks;");

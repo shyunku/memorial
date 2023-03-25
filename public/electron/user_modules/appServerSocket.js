@@ -26,6 +26,10 @@ const coloredSocket = console.wrap("Websock", color);
 let queue = {};
 let socketHandlers = {};
 
+let alreadyAuthorized = false;
+let reconnectTimeout = 500;
+let reconnector = null;
+
 function initializeSocket(socket) {
   // initialize previous queue
   for (const reqId in queue) {
@@ -231,6 +235,15 @@ function initializeSocket(socket) {
     return socket != null && socket.readyState === WebSocket.OPEN;
   };
 
+  const disconnect = () => {
+    if (socket != null) {
+      socket.close();
+      socket = null;
+    }
+
+    clearTimeout(reconnector);
+  };
+
   return {
     emit: wsEmiter,
     on: wsMessageRegister,
@@ -238,13 +251,10 @@ function initializeSocket(socket) {
     unregister: wsUnregister,
     emitSync: sendSync,
     connected,
+    disconnect,
     socket: socket,
   };
 }
-
-let alreadyAuthorized = false;
-let reconnectTimeout = 500;
-let reconnector = null;
 
 const connectSocket = async (
   userId,

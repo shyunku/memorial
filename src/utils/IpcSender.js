@@ -189,6 +189,9 @@ const IpcSender = {
       tryConnect: (userId, accessToken, refreshToken, callback) => {
         sender("socket/connect", callback, userId, accessToken, refreshToken);
       },
+      tryDisconnect: (callback) => {
+        sender("socket/disconnect", callback);
+      },
     },
     task: {
       getTaskList: (callback) => {
