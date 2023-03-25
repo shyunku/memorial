@@ -237,6 +237,7 @@ function initializeSocket(socket) {
 
 let alreadyAuthorized = false;
 let reconnectTimeout = 500;
+let reconnector = null;
 
 const connectSocket = async (
   userId,
@@ -254,6 +255,7 @@ const connectSocket = async (
   if (accessToken == null) throw new Error("Access token is required");
   if (ipc == null) throw new Error("IPC is required");
   if (!reconnect && socket != null) {
+    clearTimeout(reconnector);
     console.warn("Socket is already connected. Disconnecting previous...");
     socket?.unregister("close");
     socket.close(1000, "Reorganize socket connection");
@@ -604,7 +606,7 @@ const connectSocket = async (
     console.info(`Reconnecting socket in ${reconnectTimeout}ms...`);
 
     // reconnect
-    setTimeout(() => {
+    reconnector = setTimeout(() => {
       connectSocket(userId, accessToken, refreshToken, ipc, rootDB, dbCtx, db, true, resolveSocket, setDb);
     }, reconnectTimeout);
   });

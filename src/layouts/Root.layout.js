@@ -5,7 +5,12 @@ import Toast from "molecules/Toast";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Outlet, useNavigate, useOutletContext } from "react-router-dom";
-import { accountAuthSlice, accountInfoSlice, setAccount } from "store/accountSlice";
+import {
+  accountAuthSlice,
+  accountInfoSlice,
+  removeAuth,
+  setAccount,
+} from "store/accountSlice";
 import IpcSender from "utils/IpcSender";
 import "./Root.layout.scss";
 
@@ -46,22 +51,30 @@ const RootLayout = () => {
           reject("서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }, 3000);
 
-        IpcSender.req.socket.tryConnect(userId, accessToken, refreshToken, ({ success, data }) => {
-          if (success) {
-            setSocketReady(true);
-            resolve();
-          } else {
-            reject(data);
+        IpcSender.req.socket.tryConnect(
+          userId,
+          accessToken,
+          refreshToken,
+          ({ success, data }) => {
+            if (success) {
+              setSocketReady(true);
+              resolve();
+            } else {
+              reject(data);
+            }
+            clearInterval(timeout);
           }
-          clearInterval(timeout);
-        });
+        );
       } catch (err) {
         reject(err);
       }
     });
 
     try {
-      await Loading.float("서버 연결 중입니다. 잠시만 기다려주세요...", connectSocketPromise);
+      await Loading.float(
+        "서버 연결 중입니다. 잠시만 기다려주세요...",
+        connectSocketPromise
+      );
     } catch (err) {
       switch (err?.message) {
         case "401":
@@ -70,7 +83,9 @@ const RootLayout = () => {
           break;
         default:
           console.log(err);
-          Toast.warn("서버가 연결되지 않았습니다. 오프라인에서 작업할 수 있습니다.");
+          Toast.warn(
+            "서버가 연결되지 않았습니다. 오프라인에서 작업할 수 있습니다."
+          );
           break;
       }
     }
@@ -91,7 +106,9 @@ const RootLayout = () => {
                 onConfirm: () => {
                   IpcSender.req.system.migrateDatabase(({ success, data }) => {
                     if (success) {
-                      Toast.success("데이터베이스 마이그레이션이 완료되었습니다.");
+                      Toast.success(
+                        "데이터베이스 마이그레이션이 완료되었습니다."
+                      );
                     } else {
                       Toast.error("데이터베이스 마이그레이션에 실패했습니다.");
                     }
@@ -118,11 +135,15 @@ const RootLayout = () => {
               }
             );
           } else {
-            console.log("migratable database exists, but current database is not empty.");
+            console.log(
+              "migratable database exists, but current database is not empty."
+            );
             resolve();
           }
         } else {
-          console.log("migratable database exists, but can't check whether states of account is clear.");
+          console.log(
+            "migratable database exists, but can't check whether states of account is clear."
+          );
           resolve();
         }
       });
@@ -133,39 +154,53 @@ const RootLayout = () => {
     const userId = accountInfo.uid;
     (async () => {
       const checkDatabasePromise = new Promise((resolve, reject) => {
-        IpcSender.req.auth.isDatabaseReady(userId, ({ success, data: ready }) => {
-          if (!success) {
-            reject("데이터베이스 접근에 실패했습니다.");
-            return;
+        IpcSender.req.auth.isDatabaseReady(
+          userId,
+          ({ success, data: ready }) => {
+            if (!success) {
+              reject("데이터베이스 접근에 실패했습니다.");
+              return;
+            }
+            if (!ready) {
+              IpcSender.req.auth.initializeDatabase(
+                userId,
+                ({ success, data }) => {
+                  if (!success) {
+                    reject("데이터베이스 설정에 실패했습니다.");
+                    return;
+                  }
+                  resolve();
+                }
+              );
+              return;
+            }
+            // ready for database
+            resolve();
           }
-          if (!ready) {
-            IpcSender.req.auth.initializeDatabase(userId, ({ success, data }) => {
-              if (!success) {
-                reject("데이터베이스 설정에 실패했습니다.");
-                return;
-              }
-              resolve();
-            });
-            return;
-          }
-          // ready for database
-          resolve();
-        });
+        );
       });
 
       try {
-        await Loading.float("데이터베이스 접근 중입니다. 잠시만 기다려주세요...", checkDatabasePromise);
+        await Loading.float(
+          "데이터베이스 접근 중입니다. 잠시만 기다려주세요...",
+          checkDatabasePromise
+        );
         setDatabaseReady(true);
         if (isAuthorized) {
           await trySocketConnection();
         } else {
-          Toast.info("현재 로컬 계정으로 접속 중입니다. 서버에 접속하려면 로그인해주세요.");
+          Toast.info(
+            "현재 로컬 계정으로 접속 중입니다. 서버에 접속하려면 로그인해주세요."
+          );
         }
         IpcSender.req.system.getLastBlockNumber();
         IpcSender.req.system.getWaitingBlockNumber();
       } catch (err) {
         console.error(err);
-        Toast.error(err?.message ?? "알 수 없는 오류가 발생했습니다. 로그인 화면으로 이동합니다.");
+        Toast.error(
+          err?.message ??
+            "알 수 없는 오류가 발생했습니다. 로그인 화면으로 이동합니다."
+        );
         goBackToLoginPage();
       }
     })();
@@ -179,11 +214,13 @@ const RootLayout = () => {
     IpcSender.onAll("socket/connected", async (data) => {
       setSocketConnected(true);
 
-      IpcSender.req.system.isMigratable(async ({ success, data: migratable }) => {
-        if (success && migratable) {
-          await promptMigration();
+      IpcSender.req.system.isMigratable(
+        async ({ success, data: migratable }) => {
+          if (success && migratable) {
+            await promptMigration();
+          }
         }
-      });
+      );
     });
 
     IpcSender.onAll("transaction/error", ({ success, data }, tx) => {
@@ -209,7 +246,12 @@ const RootLayout = () => {
 
     IpcSender.onAll("system/mismatchTxHashFound", ({ success, data }) => {
       if (!success) return;
-      const { mismatchStartBlockNumber, mismatchEndBlockNumber, lossAfterAccpetTheirs, lossAfterAccpetMine } = data;
+      const {
+        mismatchStartBlockNumber,
+        mismatchEndBlockNumber,
+        lossAfterAccpetTheirs,
+        lossAfterAccpetMine,
+      } = data;
       Prompt.float(
         "데이터 충돌 발생",
         `동기화 중 데이터 충돌이 발생했습니다.\n충돌을 직접 해결하거나 무시할 수 있지만, 무시할 경우 오프라인으로 사용해야 합니다.` +
@@ -286,7 +328,9 @@ const RootLayout = () => {
 
     IpcSender.onAll("system/stateRollbacked", ({ success, data }) => {
       if (!success) {
-        Toast.error("다른 기기에서 데이터 충돌에 대해 수행한 롤백을 적용하는데 실패했습니다.");
+        Toast.error(
+          "다른 기기에서 데이터 충돌에 대해 수행한 롤백을 적용하는데 실패했습니다."
+        );
         return;
       }
       Toast.info("다른 기기에서 데이터 충돌에 대해 롤백을 수행했습니다.");
@@ -307,14 +351,19 @@ const RootLayout = () => {
     IpcSender.onAll("system/socketError", ({ success, data }) => {
       if (!success) return;
       if (data === 401) {
-        Prompt.float("로그인 세션이 만료되었습니다.", "로그인 세션이 만료되었습니다.\n로그인 페이지로 이동합니다.", {
-          ignorable: false,
-          confirmText: "로그인 페이지로 이동",
-          onConfirm: () => {
-            window.location.href = "/login";
-          },
-          cancelBtn: false,
-        });
+        Prompt.float(
+          "로그인 세션이 만료되었습니다.",
+          "로그인 세션이 만료되었습니다.\n로그인 페이지로 이동합니다.",
+          {
+            ignorable: false,
+            confirmText: "로그인 페이지로 이동",
+            onConfirm: () => {
+              dispatch(removeAuth());
+              window.location.href = "/login";
+            },
+            cancelBtn: false,
+          }
+        );
       }
     });
 
