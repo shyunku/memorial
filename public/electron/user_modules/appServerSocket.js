@@ -441,13 +441,14 @@ const connectSocket = async (
     let commonChainLastBlockNumber = Math.min(lastBlockNumber, remoteLastBlockNumber);
 
     if (commonChainLastBlockNumber === 0) {
+      const remoteZeroBlockHash = await getRemoteBlockHash(0);
       // test local empty hash
       let zeroBlock = Block.emptyBlock();
-      if (zeroBlock.hash !== lastRemoteBlockHash) {
-        console.error(`Initial hash mismatch, local: ${zeroBlock.hash}, remote: ${lastRemoteBlockHash}`);
+      if (zeroBlock.hash !== remoteZeroBlockHash) {
+        console.error(`Initial hash mismatch, local: ${zeroBlock.hash}, remote: ${remoteZeroBlockHash}`);
         throw new Error("Initial hash mismatch");
       } else {
-        console.debug(`Initial hash matched, local: ${zeroBlock.hash}, remote: ${lastRemoteBlockHash}`);
+        console.debug(`Initial hash matched, local: ${zeroBlock.hash}, remote: ${remoteZeroBlockHash}`);
       }
     }
 
