@@ -450,6 +450,12 @@ function _all(_db, query, ...args) {
 }
 
 function _begin(_db) {
+  console.system(
+    `${coloredIpcMain} ${console.wrap(`--[BEG]->`, console.BLUE)} ${console.wrap(
+      "sqlite3: begin transaction;",
+      console.YELLOW
+    )}`
+  );
   return new Promise((resolve, reject) => {
     _db.run("BEGIN", (err) => {
       if (err) reject(err);
@@ -459,6 +465,12 @@ function _begin(_db) {
 }
 
 function _commit(_db) {
+  console.system(
+    `${coloredIpcMain} ${console.wrap(`--[COM]->`, console.BLUE)} ${console.wrap(
+      "sqlite3: commit transactions",
+      console.YELLOW
+    )}`
+  );
   return new Promise((resolve, reject) => {
     _db.run("COMMIT", (err) => {
       if (err) reject(err);
@@ -468,6 +480,12 @@ function _commit(_db) {
 }
 
 function _rollback(_db) {
+  console.system(
+    `${coloredIpcMain} ${console.wrap(`--[ROL]-|`, console.BLUE)} ${console.wrap(
+      "sqlite3: rollback transactions",
+      console.ORANGE
+    )}`
+  );
   return new Promise((resolve, reject) => {
     _db.run("ROLLBACK", (err) => {
       if (err) reject(err);
