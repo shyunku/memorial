@@ -534,10 +534,6 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
   register("error", (err) => {
     console.error(`Socket error occurred`, err);
-    console.log(err.error);
-    console.log(err.message);
-    console.log(err.type);
-
     if (err.message.includes("401")) {
       sender("system/socketError", null, true, 401);
       return;
