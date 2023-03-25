@@ -113,14 +113,13 @@ const txExecutor = async (db, reqId, Ipc, tx, blockHash = null) => {
       console.debug(`Initial state hash: ${prevBlockHash}`);
     } else {
       // standard block hash
-      const [prevRawTxs] = await db.get("SELECT * FROM transactions WHERE block_number = ?", prevBlockNumber);
+      const [prevRawTxs] = await db.all("SELECT * FROM transactions WHERE block_number = ?", prevBlockNumber);
       if (prevRawTxs == null) throw new Error(`No transactions in block ${prevBlockNumber}`);
-
-      const prevBlock = new Block(tx.blockNumber - 1, prevRawTxs.hash, prevBlockHash);
-      prevBlockHash = prevBlock.hash;
+      prevBlockHash = prevRawTxs.block_hash;
     }
 
     const currentBlock = new Block(tx.blockNumber, tx.hash, prevBlockHash);
+    console.debug(currentBlock);
     blockHash = currentBlock.hash;
   }
 
