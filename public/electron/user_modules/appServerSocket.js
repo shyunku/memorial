@@ -516,7 +516,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
   const handleDeleteTransactionsAfter = async (blockNumber) => {
     console.info(`Deleting transactions after block number ${blockNumber}`);
-    await db.run(`DELETE FROM transactions WHERE block_number > ?;`, [blockNumber]);
+    await db.run(`DELETE FROM transactions WHERE block_number >= ?;`, blockNumber);
     sender("system/stateRollbacked", null, true);
   };
 
