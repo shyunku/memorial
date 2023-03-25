@@ -237,6 +237,7 @@ function initializeSocket(socket) {
 
   const disconnect = () => {
     if (socket != null) {
+      wsUnregister("close");
       socket.close();
       socket = null;
     }
