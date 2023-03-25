@@ -301,6 +301,11 @@ const RootLayout = () => {
       );
     });
 
+    IpcSender.onAll("system/socketError", ({ success, data }) => {
+      if (!success) return;
+      Toast.error("서버와의 연결이 끊겼습니다.");
+    });
+
     return () => {
       IpcSender.offAll("socket/disconnected");
       IpcSender.offAll("socket/connected");
@@ -308,6 +313,7 @@ const RootLayout = () => {
       IpcSender.offAll("system/lastBlockNumber");
       IpcSender.offAll("system/waitingBlockNumber");
       IpcSender.offAll("system/mismatchTxHashFound");
+      IpcSender.offAll("system/stateRollbacked");
     };
   }, []);
 

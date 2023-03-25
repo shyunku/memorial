@@ -45,16 +45,20 @@ function initializeSocket(socket) {
           dataStr = dataStr.substring(0, 5000) + "...";
         }
         console.info(
-          `${coloredSocket} ${console.wrap(`<--------`, console.GREEN)} ${console.wrap(topic, console.MAGENTA)}`,
+          `${coloredSocket} ${console.wrap(`<-[${reqIdTag(reqId)}]--`, console.GREEN)} ${console.wrap(
+            topic,
+            console.MAGENTA
+          )}`,
           dataStr
         );
         resolve(data);
       };
       const errorHandler = (err) => {
         console.info(
-          `${coloredSocket} ${console.wrap(`<--------`, console.RED)} ${console.wrap(topic, console.MAGENTA)} ${
-            err?.message ?? "unknown error"
-          }`
+          `${coloredSocket} ${console.wrap(`<-[${reqIdTag(reqId)}]--`, console.RED)} ${console.wrap(
+            topic,
+            console.MAGENTA
+          )} ${err?.message ?? "unknown error"}`
         );
         reject(err);
       };
@@ -312,6 +316,7 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
       } catch (err) {
         console.error(err);
         console.log(err?.response?.data);
+
         // refresh failed
         throw new Error(401);
       }
@@ -526,9 +531,29 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
 
   register("error", (err) => {
     console.error(`Socket error occurred`, err);
+    console.log(err.error);
+    console.log(err.message);
+    console.log(err.type);
+
+    sender("system/socketError", null, true, err.error);
   });
 
   register("close", (code) => {
+    /**
+      1000: 정상 종료
+      1001: 엔드포인트가 사라짐
+      1002: 프로토콜 오류
+      1003: 지원하지 않는 데이터
+      1004: 예약됨 (사용하지 않음)
+      1005: 정의되지 않은 상태 코드 (내부 사용)
+      1006: 연결이 비정상적으로 끊김 (내부 사용)
+      1007: 데이터 형식이 일치하지 않음
+      1008: 정책 위반
+      1009: 메시지가 너무 큼
+      1010: 클라이언트가 요구한 확장을 서버가 처리할 수 없음
+      1011: 예상치 못한 조건으로 인해 서버가 연결을 종료함
+      1015: TLS 핸드셰이크 실패 (내부 사용)
+     */
     console.warn("Disconnect with socket, reason: " + code);
     emiter("socket/disconnected", null, { code });
 
