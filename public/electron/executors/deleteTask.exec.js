@@ -31,33 +31,24 @@ const deleteTask = async (db, reqId, { sender }, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
   assert(new DeleteTaskTxContent().instanceOf(txReq), "Transaction request is not instance of class");
 
-  // transaction
-  await db.begin();
+  // delete subtasks first
+  await db.run("DELETE FROM subtasks WHERE tid = ?", txReq.tid);
 
-  try {
-    // delete subtasks first
-    await db.run("DELETE FROM subtasks WHERE tid = ?", txReq.tid);
+  // get next task
+  let [curTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", txReq.tid);
+  let nextTaskId = curTask.next ?? null;
 
-    // get next task
-    let [curTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", txReq.tid);
-    let nextTaskId = curTask.next ?? null;
+  await db.run("UPDATE tasks SET next = NULL WHERE next = ?;", txReq.tid);
+  await db.run("DELETE FROM tasks_categories WHERE tid = ?", txReq.tid);
+  await db.run("DELETE FROM tasks WHERE tid = ?", txReq.tid);
 
-    await db.run("UPDATE tasks SET next = NULL WHERE next = ?;", txReq.tid);
-    await db.run("DELETE FROM tasks_categories WHERE tid = ?", txReq.tid);
-    await db.run("DELETE FROM tasks WHERE tid = ?", txReq.tid);
-
-    // update previous task's next
-    if (txReq.prevTaskId != null) {
-      await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, txReq.prevTaskId);
-    }
-    await db.commit();
-    sender("task/deleteTask", reqId, true, {
-      tid: txReq.tid,
-    });
-  } catch (err) {
-    await db.rollback();
-    throw err;
+  // update previous task's next
+  if (txReq.prevTaskId != null) {
+    await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, txReq.prevTaskId);
   }
+  sender("task/deleteTask", reqId, true, {
+    tid: txReq.tid,
+  });
 };
 
 module.exports = {

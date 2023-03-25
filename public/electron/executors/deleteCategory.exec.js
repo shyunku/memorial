@@ -17,19 +17,12 @@ const deleteCategory = async (db, reqId, { sender }, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
   assert(new DeleteCategoryTxContent().instanceOf(txReq), "Transaction request is not instance of class");
 
-  await db.begin();
-
-  try {
-    await db.run("DELETE FROM tasks_categories WHERE cid = ?", txReq.cid);
-    await db.run("DELETE FROM categories WHERE cid = ?", txReq.cid);
-    db.commit();
-    sender("category/deleteCategory", reqId, true, {
-      cid: txReq.cid,
-    });
-  } catch (err) {
-    await db.rollback();
-    throw err;
-  }
+  await db.run("DELETE FROM tasks_categories WHERE cid = ?", txReq.cid);
+  await db.run("DELETE FROM categories WHERE cid = ?", txReq.cid);
+  db.commit();
+  sender("category/deleteCategory", reqId, true, {
+    cid: txReq.cid,
+  });
 };
 
 module.exports = {

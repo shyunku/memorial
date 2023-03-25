@@ -43,42 +43,32 @@ const createTask = async (db, reqId, { sender }, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
   assert(new CreateTaskTxContent().instanceOf(txReq), "Transaction request is not instance of class");
 
-  // transaction
-  await db.begin();
+  await db.run(
+    "INSERT INTO tasks (tid, title, created_at, done_at, memo, done, due_date, repeat_period, repeat_start_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    txReq.tid,
+    txReq.title,
+    txReq.createdAt,
+    txReq.doneAt,
+    txReq.memo,
+    txReq.done,
+    txReq.dueDate,
+    txReq.repeatPeriod,
+    txReq.dueDate
+  );
 
-  try {
-    await db.run(
-      "INSERT INTO tasks (tid, title, created_at, done_at, memo, done, due_date, repeat_period, repeat_start_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      txReq.tid,
-      txReq.title,
-      txReq.createdAt,
-      txReq.doneAt,
-      txReq.memo,
-      txReq.done,
-      txReq.dueDate,
-      txReq.repeatPeriod,
-      txReq.dueDate
-    );
-
-    if (txReq.prevTaskId != null) {
-      await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, txReq.tid, txReq.prevTaskId);
-    }
-
-    // add category to task
-    const categories = txReq.categories;
-    if (categories) {
-      for (let cid in categories) {
-        await db.run(`INSERT INTO tasks_categories (tid, cid) VALUES (?, ?);`, txReq.tid, cid);
-      }
-    }
-
-    await db.commit();
-    sender("task/addTask", reqId, true, txReq);
-  } catch (err) {
-    console.error(err);
-    await db.rollback();
-    throw err;
+  if (txReq.prevTaskId != null) {
+    await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, txReq.tid, txReq.prevTaskId);
   }
+
+  // add category to task
+  const categories = txReq.categories;
+  if (categories) {
+    for (let cid in categories) {
+      await db.run(`INSERT INTO tasks_categories (tid, cid) VALUES (?, ?);`, txReq.tid, cid);
+    }
+  }
+
+  sender("task/addTask", reqId, true, txReq);
 };
 
 module.exports = {

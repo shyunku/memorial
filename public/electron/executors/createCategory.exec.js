@@ -27,25 +27,21 @@ const createCategory = async (db, reqId, { sender }, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
   assert(new CreateCategoryTxContent().instanceOf(txReq), "Transaction request is not instance of class");
 
-  try {
-    await db.run(
-      "INSERT INTO categories (cid, title, secret, locked, color) VALUES (?, ?, ?, ?, ?)",
-      txReq.cid,
-      txReq.title,
-      txReq.secret,
-      txReq.locked,
-      txReq.color
-    );
-    sender("category/createCategory", reqId, true, {
-      cid: txReq.cid,
-      title: txReq.title,
-      secret: txReq.secret,
-      locked: txReq.locked,
-      color: txReq.color,
-    });
-  } catch (err) {
-    throw err;
-  }
+  await db.run(
+    "INSERT INTO categories (cid, title, secret, locked, color) VALUES (?, ?, ?, ?, ?)",
+    txReq.cid,
+    txReq.title,
+    txReq.secret,
+    txReq.locked,
+    txReq.color
+  );
+  sender("category/createCategory", reqId, true, {
+    cid: txReq.cid,
+    title: txReq.title,
+    secret: txReq.secret,
+    locked: txReq.locked,
+    color: txReq.color,
+  });
 };
 
 module.exports = {

@@ -29,7 +29,7 @@ const createSubtask = async (db, reqId, { sender }, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
   assert(new CreateSubtaskTxContent().instanceOf(txReq), "Transaction request is not instance of class");
 
-  let result = await db.run(
+  await db.run(
     "INSERT INTO subtasks (sid, title, created_at, done_at, due_date, done, tid) VALUES (?, ?, ?, ?, ?, ?, ?)",
     txReq.sid,
     txReq.title,

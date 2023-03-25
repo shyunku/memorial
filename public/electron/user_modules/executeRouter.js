@@ -12,15 +12,11 @@ const { updateTaskMemo } = require("../executors/updateTaskMemo.exec");
 const { updateTaskOrder } = require("../executors/updateTaskOrder.exec");
 const { updateTaskTitle } = require("../executors/updateTaskTitle.exec");
 const { deleteTaskCategory } = require("../executors/deleteTaskCategory.exec");
-const {
-  updateTaskRepeatPeriod,
-} = require("../executors/updateTaskRepeatPeriod.exec");
+const { updateTaskRepeatPeriod } = require("../executors/updateTaskRepeatPeriod.exec");
 const { createSubtask } = require("../executors/createSubtask.exec");
 const { deleteSubtask } = require("../executors/deleteSubtask.exec");
 const { updateSubtaskTitle } = require("../executors/updateSubtaskTitle.exec");
-const {
-  updateSubtaskDueDate,
-} = require("../executors/updateSubtaskDueDate.exec");
+const { updateSubtaskDueDate } = require("../executors/updateSubtaskDueDate.exec");
 const { updateSubtaskDone } = require("../executors/updateSubtaskDone.exec");
 const { initializeState } = require("../executors/initializeState.exec");
 
@@ -79,90 +75,96 @@ const makeTransaction = (type, data, blockNumber) => {
 
 const txExecutor = async (db, reqId, Ipc, tx) => {
   if (tx == null) throw new Error("Transaction is null");
-  if (!(tx instanceof Transaction))
-    throw new Error("tx is not instance of Transaction");
+  if (!(tx instanceof Transaction)) throw new Error("tx is not instance of Transaction");
   if (tx.type == null) throw new Error("Transaction type is null");
 
   const { setLastBlockNumberWithoutUserId, sender } = Ipc;
   const args = [db, reqId, Ipc];
 
   // console.debug(JSON.stringify(tx, null, 4));
+  console.debug(tx);
 
-  // add transaction (db transaction) to rollback when error occurs
+  await db.begin();
 
-  switch (tx.type) {
-    case TX_TYPE.INITIALIZE:
-      await initializeState(...args, tx.content, tx.blockNumber);
-      break;
-    case TX_TYPE.CREATE_TASK:
-      await createTask(...args, tx.content);
-      break;
-    case TX_TYPE.DELETE_TASK:
-      await deleteTask(...args, tx.content);
-      break;
-    case TX_TYPE.UPDATE_TASK_ORDER:
-      await updateTaskOrder(...args, tx.content);
-      break;
-    case TX_TYPE.UPDATE_TASK_TITLE:
-      await updateTaskTitle(...args, tx.content);
-      break;
-    case TX_TYPE.UPDATE_TASK_DUE_DATE:
-      await updateTaskDueDate(...args, tx.content);
-      break;
-    case TX_TYPE.UPDATE_TASK_MEMO:
-      await updateTaskMemo(...args, tx.content);
-      break;
-    case TX_TYPE.CREATE_CATEGORY:
-      await createCategory(...args, tx.content);
-      break;
-    case TX_TYPE.DELETE_CATEGORY:
-      await deleteCategory(...args, tx.content);
-      break;
-    case TX_TYPE.ADD_TASK_CATEGORY:
-      await addTaskCategory(...args, tx.content);
-      break;
-    case TX_TYPE.UPDATE_TASK_DONE:
-      await updateTaskDone(...args, tx.content);
-      break;
-    case TX_TYPE.DELETE_TASK_CATEGORY:
-      await deleteTaskCategory(...args, tx.content);
-      break;
-    case TX_TYPE.UPDATE_TASK_REPEAT_PERIOD:
-      await updateTaskRepeatPeriod(...args, tx.content);
-      break;
-    case TX_TYPE.CREATE_SUBTASK:
-      await createSubtask(...args, tx.content);
-      break;
-    case TX_TYPE.DELETE_SUBTASK:
-      await deleteSubtask(...args, tx.content);
-      break;
-    case TX_TYPE.UPDATE_SUBTASK_TITLE:
-      await updateSubtaskTitle(...args, tx.content);
-      break;
-    case TX_TYPE.UPDATE_SUBTASK_DUE_DATE:
-      await updateSubtaskDueDate(...args, tx.content);
-      break;
-    case TX_TYPE.UPDATE_SUBTASK_DONE:
-      await updateSubtaskDone(...args, tx.content);
-      break;
-    default:
-      throw new Error("Transaction type is not supported");
+  try {
+    switch (tx.type) {
+      case TX_TYPE.INITIALIZE:
+        await initializeState(...args, tx.content, tx.blockNumber);
+        break;
+      case TX_TYPE.CREATE_TASK:
+        await createTask(...args, tx.content);
+        break;
+      case TX_TYPE.DELETE_TASK:
+        await deleteTask(...args, tx.content);
+        break;
+      case TX_TYPE.UPDATE_TASK_ORDER:
+        await updateTaskOrder(...args, tx.content);
+        break;
+      case TX_TYPE.UPDATE_TASK_TITLE:
+        await updateTaskTitle(...args, tx.content);
+        break;
+      case TX_TYPE.UPDATE_TASK_DUE_DATE:
+        await updateTaskDueDate(...args, tx.content);
+        break;
+      case TX_TYPE.UPDATE_TASK_MEMO:
+        await updateTaskMemo(...args, tx.content);
+        break;
+      case TX_TYPE.CREATE_CATEGORY:
+        await createCategory(...args, tx.content);
+        break;
+      case TX_TYPE.DELETE_CATEGORY:
+        await deleteCategory(...args, tx.content);
+        break;
+      case TX_TYPE.ADD_TASK_CATEGORY:
+        await addTaskCategory(...args, tx.content);
+        break;
+      case TX_TYPE.UPDATE_TASK_DONE:
+        await updateTaskDone(...args, tx.content);
+        break;
+      case TX_TYPE.DELETE_TASK_CATEGORY:
+        await deleteTaskCategory(...args, tx.content);
+        break;
+      case TX_TYPE.UPDATE_TASK_REPEAT_PERIOD:
+        await updateTaskRepeatPeriod(...args, tx.content);
+        break;
+      case TX_TYPE.CREATE_SUBTASK:
+        await createSubtask(...args, tx.content);
+        break;
+      case TX_TYPE.DELETE_SUBTASK:
+        await deleteSubtask(...args, tx.content);
+        break;
+      case TX_TYPE.UPDATE_SUBTASK_TITLE:
+        await updateSubtaskTitle(...args, tx.content);
+        break;
+      case TX_TYPE.UPDATE_SUBTASK_DUE_DATE:
+        await updateSubtaskDueDate(...args, tx.content);
+        break;
+      case TX_TYPE.UPDATE_SUBTASK_DONE:
+        await updateSubtaskDone(...args, tx.content);
+        break;
+      default:
+        throw new Error("Transaction type is not supported");
+    }
+
+    // decode tx.content
+    const rawContent = tx.content;
+    const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
+
+    // insert block (as transaction) into local db
+    await db.run(
+      `INSERT INTO transactions (version, type, timestamp, content, hash, block_number) VALUES (?, ?, ?, ?, ?, ?);`,
+      [tx.version, tx.type, tx.timestamp, decodedBuffer, tx.hash, tx.blockNumber]
+    );
+
+    setLastBlockNumberWithoutUserId(tx.blockNumber);
+    await db.commit();
+
+    // send to ipc
+    sender("system/lastTxUpdateTime", null, true, tx.timestamp);
+  } catch (err) {
+    await db.rollback();
+    throw err;
   }
-
-  // decode tx.content
-  const rawContent = tx.content;
-  const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
-
-  // insert block (as transaction) into local db
-  await db.run(
-    `INSERT INTO transactions (version, type, timestamp, content, hash, block_number) VALUES (?, ?, ?, ?, ?, ?);`,
-    [tx.version, tx.type, tx.timestamp, decodedBuffer, tx.hash, tx.blockNumber]
-  );
-
-  setLastBlockNumberWithoutUserId(tx.blockNumber);
-
-  // send to ipc
-  sender("system/lastTxUpdateTime", null, true, tx.timestamp);
 };
 
 const jsonMarshal = (v) => {

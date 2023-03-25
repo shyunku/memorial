@@ -18,7 +18,7 @@ const deleteSubtask = async (db, reqId, { sender }, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
   assert(new DeleteSubtaskTxContent().instanceOf(txReq), "Transaction request is not instance of class");
 
-  let result = await db.run("DELETE FROM subtasks WHERE sid = ?", txReq.sid);
+  await db.run("DELETE FROM subtasks WHERE sid = ?", txReq.sid);
   sender("task/deleteSubtask", reqId, true, {
     sid: txReq.sid,
     tid: txReq.tid,
