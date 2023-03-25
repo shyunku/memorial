@@ -303,7 +303,16 @@ const RootLayout = () => {
 
     IpcSender.onAll("system/socketError", ({ success, data }) => {
       if (!success) return;
-      Toast.error("서버와의 연결이 끊겼습니다.");
+      if (data === 401) {
+        Prompt.float("로그인 세션이 만료되었습니다.", "로그인 세션이 만료되었습니다.\n로그인 페이지로 이동합니다.", {
+          ignorable: false,
+          confirmText: "로그인 페이지로 이동",
+          onConfirm: () => {
+            window.location.href = "/login";
+          },
+          cancelBtn: false,
+        });
+      }
     });
 
     return () => {

@@ -325,6 +325,9 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
       if (err?.response?.data == null) {
         console.error(err);
       }
+      if (err?.response?.status == null) {
+        console.error(err);
+      }
       throw new Error(err?.response?.status ?? "unknown error");
     }
   }
@@ -535,7 +538,10 @@ const connectSocket = async (userId, accessToken, refreshToken, ipc, rootDB, db,
     console.log(err.message);
     console.log(err.type);
 
-    sender("system/socketError", null, true, err.error);
+    if (err.message.includes("401")) {
+      sender("system/socketError", null, true, 401);
+      return;
+    }
   });
 
   register("close", (code) => {
