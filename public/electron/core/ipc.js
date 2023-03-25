@@ -423,9 +423,12 @@ register("system/mismatchTxAcceptMine", async (event, reqId, startNumber, endNum
     if (!socket.connected()) {
       throw new Error("socket is not connected");
     }
+    if (startNumber > endNumber) throw new Error(`startNumber(${startNumber}) > endNumber(${endNumber})`);
+    if (startNumber < 0) throw new Error(`startNumber(${startNumber}) < 0`);
+    else if (startNumber === 0) throw new Error(`startNumber 0 is not allowed (initial state)`);
     await socket.emitSync("deleteMismatchBlocks", {
-      startNumber,
-      endNumber,
+      startBlockNumber: startNumber,
+      endBlockNumber: endNumber,
     });
     sender("system/mismatchTxAcceptMine", reqId, true);
   } catch (err) {
