@@ -148,6 +148,7 @@ const Login = () => {
           return;
         }
 
+        Toast.success("로그인되었습니다.");
         goToHome(user, auth);
       } else {
         Toast.error("구글 계정 인증 정보 등록에 실패했습니다.");
@@ -352,6 +353,7 @@ const Login = () => {
         try {
           const { user, auth } = data;
 
+          Toast.success("로그인되었습니다.");
           goToHome(user, auth);
         } catch (err) {
           console.error(err);
@@ -373,6 +375,8 @@ const Login = () => {
               Toast.error("로그인에 실패했습니다.");
               break;
           }
+        } else if (canLoginWithLocal === false) {
+          Toast.error("아이디 또는 비밀번호가 일치하지 않습니다.");
         } else {
           // not server error
           Toast.error("로그인 중 오류가 발생했습니다.");

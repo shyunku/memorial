@@ -17,7 +17,6 @@ const __IpcRouter__ = require("../objects/IpcRouter");
 const Window = require("./window");
 const Request = require("./request");
 const crypto = require("crypto");
-const { default: axios } = require("axios");
 const IpcRouter = new __IpcRouter__();
 const silentTopics = [];
 const PackageJson = require("../../../package.json");
@@ -660,6 +659,8 @@ register("auth/login", async (event, reqId, signinRequest) => {
         encrypted_password: sha256(signinRequest.encryptedPassword),
       });
     } catch (err) {
+      console.debug(err?.response?.data);
+
       let data = {
         serverStatus: err?.response?.status,
         canLoginWithLocal,

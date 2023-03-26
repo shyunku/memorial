@@ -1,6 +1,14 @@
-const axios = require("axios");
+const AXIOS = require("axios").default;
+const https = require("https");
 
 const SERVER_WRAPPED = console.wrap("[SERVER]", console.BLUE);
+
+// set up https agent rejectUnauthorized: false
+const axios = AXIOS.create({
+  httpsAgent: new https.Agent({
+    rejectUnauthorized: false,
+  }),
+});
 
 const Request = {
   ok: 200,

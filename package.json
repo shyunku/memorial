@@ -8,7 +8,7 @@
     "react_port": 9300,
     "scheme_version": 1,
     "root_scheme_version": 1,
-    "app_server_endpoint": "http://ec2-52-79-228-100.ap-northeast-2.compute.amazonaws.com:4033",
+    "app_server_endpoint": "https://memorial.im:4033",
     "app_server_api_version": "v1"
   },
   "dependencies": {

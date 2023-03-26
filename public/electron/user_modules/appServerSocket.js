@@ -363,7 +363,9 @@ const connectSocket = async (
     }
   }
 
+  // set self-signed certificate false
   socket = new WebSocket(appServerSocketFinalEndpoint, {
+    rejectUnauthorized: false,
     headers: {
       Authorization: `Bearer ${accessToken_}`,
     },
