@@ -24,3 +24,5 @@ yarn-error.log*
 
 /datafiles
 /dist
+
+.idea/
