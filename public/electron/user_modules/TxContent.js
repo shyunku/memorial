@@ -4,7 +4,7 @@ class TxContent {
   instanceOf(object) {
     // check object
     if (object == null) throw new Error("Object is null");
-    if (typeof object !== "object") throw new Error("Object is not object");
+    if (typeof object !== "object") throw new Error(`Data is not object (actual: ${typeof object}))`);
 
     // check properties
     // iterate properties

@@ -7,9 +7,9 @@ const dmg = require("./dmg");
 const Request = require("../core/request");
 const PackageJson = require("../../../package.json");
 const VersionComparator = require("compare-versions");
-const ArchCategory = require("../objects/ArchCategory.constants");
+const ArchCategory = require("../constants/ArchCategory.constants");
 const ChildProcess = require("child_process");
-const ArchCategoryConstants = require("../objects/ArchCategory.constants");
+const ArchCategoryConstants = require("../constants/ArchCategory.constants");
 
 let Ipc;
 const serverHost = process.env.REACT_APP_SERVER_HOST;
@@ -27,7 +27,9 @@ function getFileExtensionByCategory(category) {
     case ArchCategory.MacOS:
       return ".dmg";
     default:
-      throw new Error(`Category '${category}' not supported for get file extension.`);
+      throw new Error(
+        `Category '${category}' not supported for get file extension.`
+      );
   }
 }
 
@@ -44,9 +46,15 @@ async function checkForUpdates(category) {
       const latestVersion = latestVersionInfo.version;
       const isLatestBeta = latestVersion.beta;
 
-      console.info(`Latest version fetched: ${currentClientVersion} -> ${latestVersion} ?`);
+      console.info(
+        `Latest version fetched: ${currentClientVersion} -> ${latestVersion} ?`
+      );
 
-      const updateNeeded = VersionComparator.compare(currentClientVersion, latestVersion, "<");
+      const updateNeeded = VersionComparator.compare(
+        currentClientVersion,
+        latestVersion,
+        "<"
+      );
       console.info(updateNeeded ? "Update needed." : "Already latest version.");
 
       if (updateNeeded) {
@@ -80,7 +88,10 @@ async function updateToNewVersion(osCategory, userDataPath, version) {
     const releaseDirPath = path.resolve(userDataPath, "releases");
     const downloadPath = path.resolve(releaseDirPath, version);
     const fileExtension = getFileExtensionByCategory(osCategory);
-    const downloadFilepath = path.resolve(downloadPath, `${version}${fileExtension}`);
+    const downloadFilepath = path.resolve(
+      downloadPath,
+      `${version}${fileExtension}`
+    );
 
     if (!fs.existsSync(releaseDirPath)) {
       console.warn(`Releases directory doesn't exists, newly create.`);
@@ -88,7 +99,9 @@ async function updateToNewVersion(osCategory, userDataPath, version) {
     }
 
     if (!fs.existsSync(downloadPath)) {
-      console.warn(`Releases/${version} directory doesn't exists, newly create.`);
+      console.warn(
+        `Releases/${version} directory doesn't exists, newly create.`
+      );
       fs.mkdirSync(downloadPath);
     }
 
@@ -103,7 +116,10 @@ async function updateToNewVersion(osCategory, userDataPath, version) {
 
     return new Promise((resolve, reject) => {
       const filesize = response.headers["content-length"];
-      const progressInterceptor = StreamProgress({ time: 10, length: filesize });
+      const progressInterceptor = StreamProgress({
+        time: 10,
+        length: filesize,
+      });
       progressInterceptor.on("progress", (progress) => {
         Ipc.silentSender("release_download@state", true, progress);
       });
@@ -168,7 +184,9 @@ async function installNewVersion(osCategory, userDataPath, installerPath) {
         throw new Error(`Can't find arch named '${osCategory}'.`);
     }
   } else {
-    throw new Error(`Can't find installer on destination path: ${installerPath}`);
+    throw new Error(
+      `Can't find installer on destination path: ${installerPath}`
+    );
   }
 }
 

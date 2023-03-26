@@ -2,6 +2,7 @@ const moment = require("moment");
 
 global.TRACE_MAX_LENGTH = 0;
 global.ERROR_TRACE_SIZE = 5;
+global.TRACE_SEGMENT_SIZE = 3;
 
 const rgbANSI = (r, g, b) => `\x1b[38;2;${r};${g};${b}m`;
 
@@ -100,8 +101,10 @@ module.exports = (loggerModule) => {
     const errorStack = new Error().stack;
     Error.prepareStackTrace = priorStackTrace;
 
-    const slicedCallStack = errorStack.slice(3, 5);
+    const slicedCallStack = errorStack.slice(3, 3 + global.TRACE_SEGMENT_SIZE);
+    let lastSegmentTrace = "";
     let callStackTraceMsg = slicedCallStack
+      .reverse()
       .map((entry) => {
         let { column, line, file } = entry;
         if (file === null) return "null";
@@ -111,9 +114,13 @@ module.exports = (loggerModule) => {
         let cleanFileName = lastSegment.split(".").first();
         let shortenFileName = cleanFileName.split("/").last();
 
+        if (shortenFileName === lastSegmentTrace) {
+          shortenFileName = "&";
+        } else {
+          lastSegmentTrace = shortenFileName;
+        }
         return `${shortenFileName}(${line})`;
       })
-      .reverse()
       .join(".");
 
     global.TRACE_MAX_LENGTH = Math.max(global.TRACE_MAX_LENGTH, callStackTraceMsg.length);

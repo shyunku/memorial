@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { VscChromeClose, VscChromeMaximize, VscChromeMinimize, VscChromeRestore, VscGear } from "react-icons/vsc";
+import {
+  VscChromeClose,
+  VscChromeMaximize,
+  VscChromeMinimize,
+  VscChromeRestore,
+  VscGear,
+  VscSync,
+} from "react-icons/vsc";
 import IpcSender from "utils/IpcSender";
 import "./TopBar.scss";
 import PackageJson from "../../package.json";
@@ -54,6 +61,31 @@ const TopBar = () => {
     });
   };
 
+  const initialize = () => {
+    Prompt.float(
+      "데이터 초기화",
+      "정말 초기화하시겠습니까?\n\n" + "모든 데이터가 기기에서 삭제되며, 이후 서버로부터 로드됩니다.",
+      {
+        confirmText: "초기화 및 동기화",
+        onConfirm: async () => {
+          IpcSender.req.system.initializeState(({ success, data }) => {
+            if (success) {
+              Prompt.float("데이터 초기화", "데이터 초기화가 완료되었습니다.\n페이지를 새로고침합니다.", {
+                confirmText: "확인",
+                onConfirm: () => {
+                  // refresh
+                  window.location.reload();
+                },
+                ignorable: false,
+              });
+            }
+          });
+        },
+        onCancel: () => {},
+      }
+    );
+  };
+
   useEffect(() => {
     IpcSender.system.isMaximizable(({ success, data }) => {
       if (success) {
@@ -86,9 +118,12 @@ const TopBar = () => {
         <div className="menu-item" onClick={logout}>
           <IoLogOutOutline />
         </div>
-        <div className="menu-item" onClick={null}>
-          <VscGear />
+        <div className="menu-item" onClick={initialize}>
+          <VscSync />
         </div>
+        {/* <div className="menu-item" onClick={null}>
+          <VscGear />
+        </div> */}
         <div className="menu-item" onClick={minimize}>
           <VscChromeMinimize />
         </div>

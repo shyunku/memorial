@@ -35,6 +35,11 @@ const Prompt = () => {
     finalize();
   };
 
+  const onIgnore = () => {
+    options?.onIgnore?.();
+    finalize();
+  };
+
   useEffect(() => {
     const listener = (data) => {
       const promptData = data.data;
@@ -102,7 +107,7 @@ const Prompt = () => {
         JsxUtil.classByCondition(!ignorable, "not-ignorable")
       }
     >
-      <AutoBlurDiv className={"custom-prompt"} focused={visible} blurHandler={ignorable ? onCancel : null}>
+      <AutoBlurDiv className={"custom-prompt"} focused={visible} blurHandler={ignorable ? onIgnore : null}>
         <div className="title">{title}</div>
         {contents.length > 0 && (
           <div className="contents">
@@ -131,12 +136,12 @@ const Prompt = () => {
           ))}
         </div>
         <div className="buttons">
-          {options.confirmBtn && (
+          {options?.onConfirm && (
             <div className="button confirm" onClick={onConfirm}>
               {options.confirmText}
             </div>
           )}
-          {options.cancelBtn && (
+          {options?.onCancel && (
             <div className="button" onClick={onCancel}>
               {options.cancelText}
             </div>
@@ -169,12 +174,11 @@ const DEFAULT_OPTIONS = {
   allowEmptyInputs: false,
   ignorable: true,
   inputs: [],
-  confirmBtn: true,
-  cancelBtn: true,
   confirmText: "확인",
   cancelText: "취소",
   onConfirm: () => {},
   onCancel: () => {},
+  onIgnore: () => {},
   extraBtns: [],
 };
 

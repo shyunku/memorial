@@ -234,7 +234,6 @@ const RootLayout = () => {
                       onConfirm: () => {
                         window.location.reload();
                       },
-                      cancelBtn: false,
                     }
                   );
                 } else {
@@ -270,7 +269,6 @@ const RootLayout = () => {
                           onConfirm: () => {
                             window.location.reload();
                           },
-                          cancelBtn: false,
                         }
                       );
                     } else {
@@ -300,7 +298,6 @@ const RootLayout = () => {
           onConfirm: () => {
             window.location.reload();
           },
-          cancelBtn: false,
         }
       );
     });
@@ -315,7 +312,6 @@ const RootLayout = () => {
             dispatch(removeAuth());
             window.location.href = "/login";
           },
-          cancelBtn: false,
         });
       }
     });

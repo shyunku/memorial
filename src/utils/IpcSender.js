@@ -125,6 +125,9 @@ const IpcSender = {
       mismatchTxAcceptMine: (start, end, callback) => {
         sender("system/mismatchTxAcceptMine", callback, start, end);
       },
+      initializeState: (callback) => {
+        sender("system/initializeState", callback);
+      },
     },
     auth: {
       sendGoogleOauthResult: (result, callback) => {

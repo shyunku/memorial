@@ -1,8 +1,22 @@
 const fs = require("fs");
 const Constants = require("./constants");
-const ArchCategory = require("../objects/ArchCategory.constants");
+const ArchCategory = require("../constants/ArchCategory.constants");
 const Request = require("../core/request");
 const isBuildMode = !process.env.ELECTRON_START_URL;
+const PackageJson = require("../../../package.json");
+
+/**
+ * @returns {string}
+ */
+function getServerFinalEndpoint() {
+  const appServerEndpoint = PackageJson?.config?.app_server_endpoint;
+  if (!appServerEndpoint)
+    throw new Error("App server endpoint is not defined in package.json");
+  const appServerApiVersion = PackageJson?.config?.app_server_api_version;
+  if (!appServerApiVersion)
+    throw new Error("App server API version is not defined in package.json");
+  return `${appServerEndpoint}/${appServerApiVersion}`;
+}
 
 async function sleep(milli) {
   return new Promise((resolve, reject) => {
@@ -18,28 +32,41 @@ function registerSocketLogger(socket, color = console.RESET) {
     let originalCallback = callback;
     callback = (data_, ...arg) => {
       if (!Constants.SocketSilentTopics.includes(topic)) {
-        let mergedArguments = arg.map((param) => console.shorten(param)).join(" ");
+        let mergedArguments = arg
+          .map((param) => console.shorten(param))
+          .join(" ");
 
         if (data_) {
           if (data_.code) {
             let { code, data } = data_;
-            let arrow = code === Request.ok ? console.wrap("<--", console.GREEN) : console.wrap("<-X-", console.RED);
+            let arrow =
+              code === Request.ok
+                ? console.wrap("<--", console.GREEN)
+                : console.wrap("<-X-", console.RED);
             console.system(
-              `${console.wrap("Socket", color)} ${arrow} ${console.wrap(topic, console.MAGENTA)} ${console.shorten(
-                data
-              )} ${mergedArguments}`
+              `${console.wrap("Socket", color)} ${arrow} ${console.wrap(
+                topic,
+                console.MAGENTA
+              )} ${console.shorten(data)} ${mergedArguments}`
             );
           } else {
             console.system(
-              `${console.wrap("Socket", color)} ${console.wrap("<--", console.GREEN)} ${console.wrap(
-                topic,
-                console.MAGENTA
-              )} ${console.shorten(data_)} ${mergedArguments}`
+              `${console.wrap("Socket", color)} ${console.wrap(
+                "<--",
+                console.GREEN
+              )} ${console.wrap(topic, console.MAGENTA)} ${console.shorten(
+                data_
+              )} ${mergedArguments}`
             );
           }
         } else {
           let arrow = console.wrap("<--", console.GREEN);
-          console.system(`${console.wrap("Socket", color)} ${arrow} ${console.wrap(topic, console.MAGENTA)}`);
+          console.system(
+            `${console.wrap("Socket", color)} ${arrow} ${console.wrap(
+              topic,
+              console.MAGENTA
+            )}`
+          );
         }
       }
 
@@ -52,12 +79,14 @@ function registerSocketLogger(socket, color = console.RESET) {
   let originalSocketEventEmitter = socket.emit;
   socket.emit = function (topic, ...socketArguments) {
     if (!Constants.SocketSilentTopics.includes(topic)) {
-      let mergedArguments = socketArguments.map((param) => console.shorten(param)).join(" ");
+      let mergedArguments = socketArguments
+        .map((param) => console.shorten(param))
+        .join(" ");
       console.system(
-        `${console.wrap("Socket", color)} ${console.wrap("-->", console.CYAN)} ${console.wrap(
-          topic,
-          console.MAGENTA
-        )} ${mergedArguments}`
+        `${console.wrap("Socket", color)} ${console.wrap(
+          "-->",
+          console.CYAN
+        )} ${console.wrap(topic, console.MAGENTA)} ${mergedArguments}`
       );
     }
     originalSocketEventEmitter.apply(socket, [topic, ...socketArguments]);
@@ -97,7 +126,8 @@ function formatFileSize(rawByte, precision = 0) {
   }
 
   const multiFactor = Math.pow(10, precision);
-  const factored = Math.round((rawByte * multiFactor).toFixed(precision + 1)) / multiFactor;
+  const factored =
+    Math.round((rawByte * multiFactor).toFixed(precision + 1)) / multiFactor;
 
   return `${Math.floor(factored)}${units[unitIndex]}`;
 }

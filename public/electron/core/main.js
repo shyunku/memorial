@@ -9,29 +9,33 @@ const { app } = require("electron");
 const isBuildMode = !process.env.ELECTRON_START_URL;
 const appDataPath = app.getAppPath();
 
-const PreloadResult = require("../modules/preload").all(isBuildMode, appDataPath);
+require("../modules/preload").all(isBuildMode, appDataPath);
 const Ipc = require("./ipc");
 const Window = require("./window");
 // const Socket = require("./socket");
 const Updater = require("../modules/updater");
-const ArchCategory = require("../objects/ArchCategory.constants");
+const ArchCategory = require("../constants/ArchCategory.constants");
 const Util = require("../modules/util");
 const UpdaterFlag = Updater.UPDATER_RESULT_FLAG;
-const Database = require("../modules/sqlite3");
-const WindowPropertyFactory = require("../objects/WindowPropertyFactory");
 const FileSystem = require("../modules/filesystem");
-const Session = require("./session");
+const ServiceGroup = require("./serviceGroup");
 /* ---------------------------------------- Declaration ---------------------------------------- */
 /* -------------------- General -------------------- */
 // Main context window of process
 let mainWindow;
+
+// Manage service packages as a group
+const serviceGroup = new ServiceGroup();
 
 /**
  * Flag that indicates whether this process context is on production mode.
  * Only deployed version of program should have this value as true, otherwise this will be false.
  */
 process.env.NODE_ENV =
-  process.env.NODE_ENV && process.env.NODE_ENV.trim().toLowerCase() == "development" ? "development" : "production";
+  process.env.NODE_ENV &&
+  process.env.NODE_ENV.trim().toLowerCase() == "development"
+    ? "development"
+    : "production";
 let isProdMode = process.env.NODE_ENV === "production";
 let buildLevel = isProdMode + isBuildMode;
 
@@ -45,10 +49,6 @@ const userDataPath = FileSystem.getUserDataPath(buildLevel);
 const checkUpdate = true;
 
 /* ---------------------------------------- Pre-execute statements ---------------------------------------- */
-// Ipc.setSockets(Socket.socket);
-// Socket.setIpc(Ipc);
-Updater.setIpc(Ipc);
-
 console.debug(`[Platform/OS] ${osLabel} (${osCategory})`);
 console.debug(`[Build Level] ${buildLevel}`);
 console.debug(`[Execution Mode] ${process.env.NODE_ENV}`);
@@ -57,20 +57,18 @@ console.debug(`[Build Mode] ${isBuildMode}`);
 console.debug(`[AppData Path] ${appDataPath}`);
 console.debug(`[UserData Path] ${userDataPath}`);
 
-Database.setSystemInfo(buildLevel, userDataPath);
-Database.initializeRoot();
-
-Ipc.setDatabaseContext(Database);
-
 /* ---------------------------------------- Main execute statements ---------------------------------------- */
 app.on("ready", async () => {
   try {
-    // database check & initialize
+    // initialize & configure all services
+    serviceGroup.injectReferences();
+    serviceGroup.configure();
 
     // listen for default electron events
     listenForDefaultElectronEvents();
 
     if (isProdMode && checkUpdate) {
+      // TODO :: implement
       // const window = await Window.createUpdaterWindow(true);
       // const { result: checkUpdateResult, data } = await Updater.checkForUpdates(osCategory);
       // switch (checkUpdateResult) {
@@ -99,21 +97,6 @@ app.on("ready", async () => {
     // TODO :: check utility of this command
     // powerSaveBlocker.start('prevent-app-suspension');
     // app.commandLine.appendSwitch('webrtc-max-cpu-consumption-percentage', '100');
-
-    // initialize session
-    Session.initialize();
-
-    mainWindow = Window.createMainWindow();
-    mainWindow.once("ready-to-show", () => {
-      mainWindow.show();
-      mainWindow.focus();
-    });
-
-    // dev test
-    // mainWindow.webContents.session.clearCache(() => {});
-
-    Ipc.setMainWindow(mainWindow);
-    Window.setWindowStateChangeListener(mainWindow, Ipc);
   } catch (err) {
     console.error(err);
     app.quit();

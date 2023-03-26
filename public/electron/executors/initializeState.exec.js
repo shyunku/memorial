@@ -1,6 +1,7 @@
 const { v4 } = require("uuid");
 const assert = require("assert");
 const TxContent = require("../user_modules/TxContent");
+const { clearDatabase } = require("../user_modules/databaseUtil");
 
 class InitializeStateTxContent extends TxContent {
   constructor(tasks, categories) {
@@ -26,10 +27,7 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
   const categories = txReq.categories;
 
   // delete all (neccessary?)
-  await db.run("DELETE FROM tasks");
-  await db.run("DELETE FROM categories");
-  await db.run("DELETE FROM tasks_categories");
-  await db.run("DELETE FROM subtasks");
+  await clearDatabase(db);
 
   // insert tasks
   let bidirectionalTasks = {};
