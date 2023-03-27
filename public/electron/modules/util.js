@@ -1,4 +1,3 @@
-const fs = require("fs");
 const Constants = require("./constants");
 const ArchCategory = require("../constants/ArchCategory.constants");
 const Request = require("../core/request");
@@ -18,12 +17,28 @@ function getServerFinalEndpoint() {
   return `${appServerEndpoint}/${appServerApiVersion}`;
 }
 
+/**
+ * @returns {string}
+ */
+function getWebsocketFinalEndpoint() {
+  const appServerFinalEndpoint = getServerFinalEndpoint();
+  return `${appServerFinalEndpoint.replace(/http/g, "ws")}/websocket/connect`;
+}
+
 async function sleep(milli) {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       resolve();
     }, milli);
   });
+}
+
+function shorten(obj, maxLength = 100) {
+  let str = JSON.stringify(obj);
+  if (str.length > maxLength) {
+    return str.substring(0, maxLength) + "...";
+  }
+  return str;
 }
 
 function registerSocketLogger(socket, color = console.RESET) {
@@ -146,7 +161,10 @@ module.exports = {
   isProductionMode,
   getSystemArchCategory,
   getSystemArchitectureLabel,
+  getServerFinalEndpoint,
+  getWebsocketFinalEndpoint,
   formatFileSize,
   sleep,
+  shorten,
   reqIdTag,
 };

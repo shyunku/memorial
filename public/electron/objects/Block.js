@@ -1,4 +1,5 @@
 const sha256 = require("sha256");
+const { jsonMarshal } = require("../util/TxUtil");
 
 class Block {
   constructor(number, txHash, prevBlockHash) {
@@ -15,8 +16,7 @@ class Block {
       prevBlockHash: this.prevBlockHash,
     };
     const buffer = jsonMarshal(raw);
-    const hash = sha256(buffer);
-    return hash;
+    return sha256(buffer);
   }
 
   static emptyBlock() {

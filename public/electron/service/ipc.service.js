@@ -1,6 +1,6 @@
-const {reqIdTag} = require("../modules/util");
-const {ipcMain} = require("electron");
-const IpcRouter = require("../util/IpcRouter");
+const { reqIdTag } = require("../modules/util");
+const { ipcMain } = require("electron");
+const IpcRouter = require("../objects/IpcRouter");
 const Request = require("../core/request");
 
 const COLOR = console.RGB(78, 119, 138);
@@ -8,8 +8,10 @@ const TAG = console.wrap("IpcMain", COLOR);
 
 const silentTopics = [];
 
-class IpcService {
+class IpcService extends IpcRouter {
   constructor() {
+    super();
+
     /** @type {WindowService} */
     this.windowService = null;
 
@@ -51,14 +53,14 @@ class IpcService {
     const userId = this.userService.getCurrent();
     if (userId == null) throw new Error("User ID is null");
     const syncerContext = await this.syncerService.getUserSyncerContext(userId);
-    return syncerContext.getLocalLastBlockNumber();
+    return await syncerContext.getLocalLastBlockNumber();
   }
 
   async getUserLastRemoteBlockNumber() {
     const userId = this.userService.getCurrent();
     if (userId == null) throw new Error("User ID is null");
     const syncerContext = await this.syncerService.getUserSyncerContext(userId);
-    return syncerContext.getRemoteLastBlockNumber();
+    return await syncerContext.getRemoteLastBlockNumber();
   }
 
   /**
@@ -117,8 +119,8 @@ class IpcService {
           console.MAGENTA
         )})`
       );
-    let packagedData = {success, data};
-    let sendeeCount = IpcRouter.broadcast(topic, reqId, packagedData, ...extra);
+    let packagedData = { success, data };
+    let sendeeCount = this.broadcast(topic, reqId, packagedData, ...extra);
 
     if (silentTopics.includes(topic)) return;
     console.system(
@@ -134,7 +136,7 @@ class IpcService {
 
   // send raw data (without success flag)
   emiter(topic, reqId, data) {
-    let sendeeCount = IpcRouter.broadcast(topic, reqId, data);
+    let sendeeCount = this.broadcast(topic, reqId, data);
 
     if (silentTopics.includes(topic)) return;
     console.system(
@@ -154,8 +156,8 @@ class IpcService {
         : socketResponse.code
       : null;
 
-    let packagedData = {success, data};
-    let sendeeCount = IpcRouter.broadcast(topic, packagedData);
+    let packagedData = { success, data };
+    let sendeeCount = this.broadcast(topic, packagedData);
 
     if (silentTopics.includes(topic)) return;
     console.system(
@@ -170,8 +172,8 @@ class IpcService {
   }
 
   silentSender(topic, success, data) {
-    let packagedData = {success, data};
-    IpcRouter.broadcast(topic, packagedData);
+    let packagedData = { success, data };
+    this.broadcast(topic, packagedData);
   }
 
   fastSilentSender(topic, socketResponse) {
@@ -182,8 +184,8 @@ class IpcService {
         : socketResponse.code
       : null;
 
-    let packagedData = {success, data};
-    IpcRouter.broadcast(topic, packagedData);
+    let packagedData = { success, data };
+    this.broadcast(topic, packagedData);
   }
 }
 

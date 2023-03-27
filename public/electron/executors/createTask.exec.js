@@ -1,9 +1,21 @@
 const { v4 } = require("uuid");
 const assert = require("assert");
-const TxContent = require("../user_modules/TxContent");
+const TxContent = require("../objects/TxContent");
 
 class CreateTaskTxContent extends TxContent {
-  constructor(tid, title, createdAt, doneAt, memo, done, dueDate, repeatPeriod, repeatStartAt, categories, prevTaskId) {
+  constructor(
+    tid,
+    title,
+    createdAt,
+    doneAt,
+    memo,
+    done,
+    dueDate,
+    repeatPeriod,
+    repeatStartAt,
+    categories,
+    prevTaskId
+  ) {
     super();
 
     this.tid = tid;
@@ -23,10 +35,14 @@ class CreateTaskTxContent extends TxContent {
 const createTaskPre = async (db) => {
   const newTid = v4();
   // find tid is null
-  let lastTidList = await db.all("SELECT tid FROM tasks WHERE next IS NULL LIMIT 1;");
+  let lastTidList = await db.all(
+    "SELECT tid FROM tasks WHERE next IS NULL LIMIT 1;"
+  );
   if (lastTidList.length > 1) {
     console.log(lastTidList);
-    throw new Error(`tasks that ID is null is more than 1. (${lastTidList.length})`);
+    throw new Error(
+      `tasks that ID is null is more than 1. (${lastTidList.length})`
+    );
   }
   let [lastTask] = lastTidList;
 
@@ -37,11 +53,19 @@ const createTaskPre = async (db) => {
 };
 
 /**
+ * @param {string} reqId?
+ * @param {ServiceGroup} serviceGroup
  * @param {CreateTaskTxContent} txReq
  */
-const createTask = async (db, reqId, { sender }, txReq) => {
+const createTask = async (reqId, serviceGroup, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new CreateTaskTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(
+    new CreateTaskTxContent().instanceOf(txReq),
+    "Transaction request is not instance of class"
+  );
+
+  const userId = serviceGroup.userService.getCurrent();
+  const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
 
   await db.run(
     "INSERT INTO tasks (tid, title, created_at, done_at, memo, done, due_date, repeat_period, repeat_start_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -57,18 +81,26 @@ const createTask = async (db, reqId, { sender }, txReq) => {
   );
 
   if (txReq.prevTaskId != null) {
-    await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, txReq.tid, txReq.prevTaskId);
+    await db.run(
+      `UPDATE tasks SET next = ? WHERE tid = ?;`,
+      txReq.tid,
+      txReq.prevTaskId
+    );
   }
 
   // add category to task
   const categories = txReq.categories;
   if (categories) {
     for (let cid in categories) {
-      await db.run(`INSERT INTO tasks_categories (tid, cid) VALUES (?, ?);`, txReq.tid, cid);
+      await db.run(
+        `INSERT INTO tasks_categories (tid, cid) VALUES (?, ?);`,
+        txReq.tid,
+        cid
+      );
     }
   }
 
-  sender("task/addTask", reqId, true, txReq);
+  serviceGroup.ipcService.sender("task/addTask", reqId, true, txReq);
 };
 
 module.exports = {

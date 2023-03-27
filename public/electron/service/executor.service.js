@@ -24,12 +24,29 @@ const { updateSubtaskDone } = require("../executors/updateSubtaskDone.exec");
 const TX_TYPE = require("../constants/TxType.constants");
 const Transaction = require("../objects/Transaction");
 const Block = require("../objects/Block");
+const { sortFields } = require("../util/TxUtil");
 
 class ExecutorService {
+  constructor() {
+    this.ipcService = null;
+    this.userService = null;
+    this.databaseService = null;
+    this.syncerService = null;
+
+    this.serviceGroup = null;
+  }
+
   /**
    * @param serviceGroup {ServiceGroup}
    */
-  constructor(serviceGroup) {}
+  inject(serviceGroup) {
+    this.ipcService = serviceGroup.ipcService;
+    this.userService = serviceGroup.userService;
+    this.databaseService = serviceGroup.databaseService;
+    this.syncerService = serviceGroup.syncerService;
+
+    this.serviceGroup = serviceGroup;
+  }
 
   makeTransaction(type, data, blockNumber) {
     const timestamp = Date.now();
@@ -40,7 +57,15 @@ class ExecutorService {
     return new Transaction(schemeVersion, type, timestamp, data, blockNumber);
   }
 
-  async getBlockHash(db, blockNumber, txHash) {
+  /**
+   * @param blockNumber {number}
+   * @param txHash {string}
+   * @returns {Promise<*>}
+   */
+  async getLocalBlockHash(blockNumber, txHash) {
+    const userId = await this.userService.getCurrent();
+    const db = await this.databaseService.getUserDatabaseContext(userId);
+
     const [rawTxs] = await db.all(
       "SELECT * FROM transactions WHERE block_number = ?",
       blockNumber
@@ -73,9 +98,9 @@ class ExecutorService {
   }
 
   /**
-   * @param reqId {number}
+   * @param reqId {string}
    * @param tx {Transaction}
-   * @param blockHash? {string}
+   * @param blockHash {?string}
    * @returns {Promise<void>}
    */
   async applyTransaction(reqId, tx, blockHash = null) {
@@ -83,78 +108,87 @@ class ExecutorService {
     if (!(tx instanceof Transaction))
       throw new Error("tx is not instance of Transaction");
     if (tx.type == null) throw new Error("Transaction type is null");
-    let expectedBlockHash = await getBlockHash(db, tx.blockNumber, tx.hash);
+    let expectedBlockHash = await this.getLocalBlockHash(
+      tx.blockNumber,
+      tx.hash
+    );
     if (blockHash == null) {
+      if (expectedBlockHash == null)
+        throw new Error(`Local block hash of #${tx.blockNumber} not found`);
       blockHash = expectedBlockHash;
-    } else if (blockHash != expectedBlockHash) {
+    } else if (blockHash !== expectedBlockHash) {
       throw new Error(
         `Block hash mismatch: ${blockHash} != ${expectedBlockHash}`
       );
     }
 
-    const { setLastBlockNumberWithoutUserId, sender } = Ipc;
-    const args = [db, reqId, Ipc];
-
     // console.debug(JSON.stringify(tx, null, 4));
     console.debug(tx);
 
+    const userId = await this.userService.getCurrent();
+    const db = await this.databaseService.getUserDatabaseContext(userId);
     await db.begin();
 
     try {
       switch (tx.type) {
         case TX_TYPE.INITIALIZE:
-          await initializeState(...args, tx.content, tx.blockNumber);
+          await initializeState(
+            reqId,
+            this.serviceGroup,
+            tx.content,
+            tx.blockNumber
+          );
           break;
         case TX_TYPE.CREATE_TASK:
-          await createTask(...args, tx.content);
+          await createTask(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.DELETE_TASK:
-          await deleteTask(...args, tx.content);
+          await deleteTask(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.UPDATE_TASK_ORDER:
-          await updateTaskOrder(...args, tx.content);
+          await updateTaskOrder(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.UPDATE_TASK_TITLE:
-          await updateTaskTitle(...args, tx.content);
+          await updateTaskTitle(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.UPDATE_TASK_DUE_DATE:
-          await updateTaskDueDate(...args, tx.content);
+          await updateTaskDueDate(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.UPDATE_TASK_MEMO:
-          await updateTaskMemo(...args, tx.content);
+          await updateTaskMemo(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.CREATE_CATEGORY:
-          await createCategory(...args, tx.content);
+          await createCategory(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.DELETE_CATEGORY:
-          await deleteCategory(...args, tx.content);
+          await deleteCategory(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.ADD_TASK_CATEGORY:
-          await addTaskCategory(...args, tx.content);
+          await addTaskCategory(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.UPDATE_TASK_DONE:
-          await updateTaskDone(...args, tx.content);
+          await updateTaskDone(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.DELETE_TASK_CATEGORY:
-          await deleteTaskCategory(...args, tx.content);
+          await deleteTaskCategory(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.UPDATE_TASK_REPEAT_PERIOD:
-          await updateTaskRepeatPeriod(...args, tx.content);
+          await updateTaskRepeatPeriod(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.CREATE_SUBTASK:
-          await createSubtask(...args, tx.content);
+          await createSubtask(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.DELETE_SUBTASK:
-          await deleteSubtask(...args, tx.content);
+          await deleteSubtask(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.UPDATE_SUBTASK_TITLE:
-          await updateSubtaskTitle(...args, tx.content);
+          await updateSubtaskTitle(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.UPDATE_SUBTASK_DUE_DATE:
-          await updateSubtaskDueDate(...args, tx.content);
+          await updateSubtaskDueDate(reqId, this.serviceGroup, tx.content);
           break;
         case TX_TYPE.UPDATE_SUBTASK_DONE:
-          await updateSubtaskDone(...args, tx.content);
+          await updateSubtaskDone(reqId, this.serviceGroup, tx.content);
           break;
         default:
           throw new Error("Transaction type is not supported");
@@ -178,11 +212,16 @@ class ExecutorService {
         ]
       );
 
-      setLastBlockNumberWithoutUserId(tx.blockNumber);
+      await this.syncerService.setLocalLastBlockNumber(userId, tx.blockNumber);
       await db.commit();
 
       // send to ipc
-      sender("system/lastTxUpdateTime", null, true, tx.timestamp);
+      this.ipcService.sender(
+        "system/lastTxUpdateTime",
+        null,
+        true,
+        tx.timestamp
+      );
     } catch (err) {
       try {
         await db.rollback();

@@ -1,6 +1,6 @@
 const { v4 } = require("uuid");
 const assert = require("assert");
-const TxContent = require("../user_modules/TxContent");
+const TxContent = require("../objects/TxContent");
 
 class CreateSubtaskTxContent extends TxContent {
   constructor(tid, sid, title, createdAt, doneAt, dueDate, done) {
@@ -23,11 +23,19 @@ const createSubtaskPre = async () => {
 };
 
 /**
+ * @param {string} reqId?
+ * @param {ServiceGroup} serviceGroup
  * @param {CreateSubtaskTxContent} txReq
  */
-const createSubtask = async (db, reqId, { sender }, txReq) => {
+const createSubtask = async (reqId, serviceGroup, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new CreateSubtaskTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(
+    new CreateSubtaskTxContent().instanceOf(txReq),
+    "Transaction request is not instance of class"
+  );
+
+  const userId = serviceGroup.userService.getCurrent();
+  const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
 
   await db.run(
     "INSERT INTO subtasks (sid, title, created_at, done_at, due_date, done, tid) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -40,7 +48,7 @@ const createSubtask = async (db, reqId, { sender }, txReq) => {
     txReq.tid
   );
 
-  sender("task/createSubtask", reqId, true, {
+  serviceGroup.ipcService.sender("task/createSubtask", reqId, true, {
     sid: txReq.sid,
     title: txReq.title,
     createdAt: txReq.createdAt,

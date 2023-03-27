@@ -1,6 +1,6 @@
 const { v4 } = require("uuid");
 const assert = require("assert");
-const TxContent = require("../user_modules/TxContent");
+const TxContent = require("../objects/TxContent");
 
 class AddTaskCategoryTxContent extends TxContent {
   constructor(tid, cid) {
@@ -12,14 +12,26 @@ class AddTaskCategoryTxContent extends TxContent {
 }
 
 /**
+ * @param {string} reqId?
+ * @param {ServiceGroup} serviceGroup
  * @param {AddTaskCategoryTxContent} txReq
  */
-const addTaskCategory = async (db, reqId, { sender }, txReq) => {
+const addTaskCategory = async (reqId, serviceGroup, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new AddTaskCategoryTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(
+    new AddTaskCategoryTxContent().instanceOf(txReq),
+    "Transaction request is not instance of class"
+  );
 
-  await db.run("INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)", txReq.tid, txReq.cid);
-  sender("task/addTaskCategory", reqId, true, {
+  const userId = serviceGroup.userService.getCurrent();
+  const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
+
+  await db.run(
+    "INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)",
+    txReq.tid,
+    txReq.cid
+  );
+  serviceGroup.ipcService.sender("task/addTaskCategory", reqId, true, {
     tid: txReq.tid,
     cid: txReq.cid,
   });

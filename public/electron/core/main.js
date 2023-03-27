@@ -10,15 +10,13 @@ const isBuildMode = !process.env.ELECTRON_START_URL;
 const appDataPath = app.getAppPath();
 
 require("../modules/preload").all(isBuildMode, appDataPath);
-const Ipc = require("./ipc");
-const Window = require("./window");
-// const Socket = require("./socket");
-const Updater = require("../modules/updater");
+// const Updater = require("../modules/updater");
 const ArchCategory = require("../constants/ArchCategory.constants");
 const Util = require("../modules/util");
-const UpdaterFlag = Updater.UPDATER_RESULT_FLAG;
+// const UpdaterFlag = Updater.UPDATER_RESULT_FLAG;
 const FileSystem = require("../modules/filesystem");
 const ServiceGroup = require("./serviceGroup");
+const { getBuildLevel } = require("../util/SystemUtil");
 /* ---------------------------------------- Declaration ---------------------------------------- */
 /* -------------------- General -------------------- */
 // Main context window of process
@@ -33,22 +31,26 @@ const serviceGroup = new ServiceGroup();
  */
 process.env.NODE_ENV =
   process.env.NODE_ENV &&
-  process.env.NODE_ENV.trim().toLowerCase() == "development"
+  process.env.NODE_ENV.trim().toLowerCase() === "development"
     ? "development"
     : "production";
 let isProdMode = process.env.NODE_ENV === "production";
-let buildLevel = isProdMode + isBuildMode;
+let buildLevel = getBuildLevel();
 
 const osCategory = Util.getSystemArchCategory();
 const osLabel = Util.getSystemArchitectureLabel();
 
 const isWindowsOS = osCategory === ArchCategory.Windows;
 const isMacOS = osCategory === ArchCategory.MacOS;
-const userDataPath = FileSystem.getUserDataPath(buildLevel);
+const userDataPath = FileSystem.getUserDataPath();
 
 const checkUpdate = true;
 
 /* ---------------------------------------- Pre-execute statements ---------------------------------------- */
+if (!isWindowsOS && !isMacOS) {
+  console.error(`[Platform/OS] ${osLabel} (${osCategory}) is not supported`);
+  process.exit(-1);
+}
 console.debug(`[Platform/OS] ${osLabel} (${osCategory})`);
 console.debug(`[Build Level] ${buildLevel}`);
 console.debug(`[Execution Mode] ${process.env.NODE_ENV}`);
@@ -60,15 +62,15 @@ console.debug(`[UserData Path] ${userDataPath}`);
 /* ---------------------------------------- Main execute statements ---------------------------------------- */
 app.on("ready", async () => {
   try {
+    // listen for default electron events
+    listenForDefaultElectronEvents();
+
     // initialize & configure all services
     serviceGroup.injectReferences();
     serviceGroup.configure();
 
-    // listen for default electron events
-    listenForDefaultElectronEvents();
-
     if (isProdMode && checkUpdate) {
-      // TODO :: implement
+      // TODO :: implement this
       // const window = await Window.createUpdaterWindow(true);
       // const { result: checkUpdateResult, data } = await Updater.checkForUpdates(osCategory);
       // switch (checkUpdateResult) {

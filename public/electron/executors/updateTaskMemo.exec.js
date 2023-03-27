@@ -1,6 +1,6 @@
 const { v4 } = require("uuid");
 const assert = require("assert");
-const TxContent = require("../user_modules/TxContent");
+const TxContent = require("../objects/TxContent");
 
 class UpdateTaskMemoTxContent extends TxContent {
   constructor(tid, memo) {
@@ -12,14 +12,27 @@ class UpdateTaskMemoTxContent extends TxContent {
 }
 
 /**
+ * @param {string} reqId?
+ * @param {ServiceGroup} serviceGroup
  * @param {UpdateTaskMemoTxContent} txReq
  */
-const updateTaskMemo = async (db, reqId, { sender }, txReq) => {
+const updateTaskMemo = async (reqId, serviceGroup, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new UpdateTaskMemoTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(
+    new UpdateTaskMemoTxContent().instanceOf(txReq),
+    "Transaction request is not instance of class"
+  );
 
-  await db.run("UPDATE tasks SET memo = ? WHERE tid = ?", txReq.memo, txReq.tid);
-  sender("task/updateTaskMemo", reqId, true, {
+  const userId = serviceGroup.userService.getCurrent();
+  const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
+
+  await db.run(
+    "UPDATE tasks SET memo = ? WHERE tid = ?",
+    txReq.memo,
+    txReq.tid
+  );
+
+  serviceGroup.ipcService.sender("task/updateTaskMemo", reqId, true, {
     tid: txReq.tid,
     memo: txReq.memo,
   });

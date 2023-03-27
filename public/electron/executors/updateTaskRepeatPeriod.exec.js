@@ -1,6 +1,6 @@
 const { v4 } = require("uuid");
 const assert = require("assert");
-const TxContent = require("../user_modules/TxContent");
+const TxContent = require("../objects/TxContent");
 
 class UpdateTaskRepeatPeriodTxContent extends TxContent {
   constructor(tid, repeatPeriod) {
@@ -12,28 +12,55 @@ class UpdateTaskRepeatPeriodTxContent extends TxContent {
 }
 
 /**
+ * @param {string} reqId?
+ * @param {ServiceGroup} serviceGroup
  * @param {UpdateTaskRepeatPeriodTxContent} txReq
  */
-const updateTaskRepeatPeriod = async (db, reqId, { sender }, txReq) => {
+const updateTaskRepeatPeriod = async (reqId, serviceGroup, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new UpdateTaskRepeatPeriodTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(
+    new UpdateTaskRepeatPeriodTxContent().instanceOf(txReq),
+    "Transaction request is not instance of class"
+  );
+
+  const userId = serviceGroup.userService.getCurrent();
+  const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
 
   if (txReq.repeatPeriod == null) {
-    result = await db.run("UPDATE tasks SET repeat_period = NULL, repeat_start_at = NULL WHERE tid = ?", txReq.tid);
+    await db.run(
+      "UPDATE tasks SET repeat_period = NULL, repeat_start_at = NULL WHERE tid = ?",
+      txReq.tid
+    );
   } else {
-    let repeatStartAt = await db.get("SELECT repeat_start_at FROM tasks WHERE tid = ?", txReq.tid);
+    let repeatStartAt = await db.get(
+      "SELECT repeat_start_at FROM tasks WHERE tid = ?",
+      txReq.tid
+    );
     if (repeatStartAt == null) {
-      repeatStartAt = await db.get("SELECT due_date FROM tasks WHERE tid = ?", txReq.tid);
+      repeatStartAt = await db.get(
+        "SELECT due_date FROM tasks WHERE tid = ?",
+        txReq.tid
+      );
       if (repeatStartAt != null) {
-        await db.run("UPDATE tasks SET repeat_start_at = ? WHERE tid = ?", repeatStartAt, txReq.tid);
+        await db.run(
+          "UPDATE tasks SET repeat_start_at = ? WHERE tid = ?",
+          repeatStartAt,
+          txReq.tid
+        );
       } else {
-        throw Error(`Trying to update repeat period of task that has no due date. (tid: ${txReq.tid})`);
+        throw Error(
+          `Trying to update repeat period of task that has no due date. (tid: ${txReq.tid})`
+        );
       }
     }
-    result = await db.run("UPDATE tasks SET repeat_period = ? WHERE tid = ?", txReq.repeatPeriod, txReq.tid);
+    await db.run(
+      "UPDATE tasks SET repeat_period = ? WHERE tid = ?",
+      txReq.repeatPeriod,
+      txReq.tid
+    );
   }
 
-  sender("task/updateTaskRepeatPeriod", reqId, true, {
+  serviceGroup.ipcService.sender("task/updateTaskRepeatPeriod", reqId, true, {
     tid: txReq.tid,
     repeatPeriod: txReq.repeatPeriod,
   });

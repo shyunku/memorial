@@ -3,6 +3,11 @@ class UserService {
     this.userId = null;
   }
 
+  /**
+   * @param serviceGroup {ServiceGroup}
+   */
+  inject(serviceGroup) {}
+
   setCurrent(userId) {
     this.userId = userId;
   }

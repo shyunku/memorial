@@ -1,6 +1,6 @@
 const { v4 } = require("uuid");
 const assert = require("assert");
-const TxContent = require("../user_modules/TxContent");
+const TxContent = require("../objects/TxContent");
 
 class DeleteTaskTxContent extends TxContent {
   constructor(tid, prevTaskId) {
@@ -12,9 +12,14 @@ class DeleteTaskTxContent extends TxContent {
 }
 
 const deleteTaskPre = async (db, taskId) => {
-  let prevTaskList = await db.all("SELECT * FROM tasks WHERE next = ?;", taskId);
+  let prevTaskList = await db.all(
+    "SELECT * FROM tasks WHERE next = ?;",
+    taskId
+  );
   if (prevTaskList.length > 1) {
-    throw new Error(`tasks that ID is null is more than 1. (${prevTaskList.length})`);
+    throw new Error(
+      `tasks that ID is null is more than 1. (${prevTaskList.length})`
+    );
   }
 
   let [prevTask] = prevTaskList;
@@ -25,17 +30,28 @@ const deleteTaskPre = async (db, taskId) => {
 };
 
 /**
+ * @param {string} reqId?
+ * @param {ServiceGroup} serviceGroup
  * @param {DeleteTaskTxContent} txReq
  */
-const deleteTask = async (db, reqId, { sender }, txReq) => {
+const deleteTask = async (reqId, serviceGroup, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new DeleteTaskTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(
+    new DeleteTaskTxContent().instanceOf(txReq),
+    "Transaction request is not instance of class"
+  );
+
+  const userId = serviceGroup.userService.getCurrent();
+  const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
 
   // delete subtasks first
   await db.run("DELETE FROM subtasks WHERE tid = ?", txReq.tid);
 
   // get next task
-  let [curTask] = await db.all("SELECT * FROM tasks WHERE tid = ? LIMIT 1;", txReq.tid);
+  let [curTask] = await db.all(
+    "SELECT * FROM tasks WHERE tid = ? LIMIT 1;",
+    txReq.tid
+  );
   let nextTaskId = curTask.next ?? null;
 
   await db.run("UPDATE tasks SET next = NULL WHERE next = ?;", txReq.tid);
@@ -44,9 +60,14 @@ const deleteTask = async (db, reqId, { sender }, txReq) => {
 
   // update previous task's next
   if (txReq.prevTaskId != null) {
-    await db.run(`UPDATE tasks SET next = ? WHERE tid = ?;`, nextTaskId, txReq.prevTaskId);
+    await db.run(
+      `UPDATE tasks SET next = ? WHERE tid = ?;`,
+      nextTaskId,
+      txReq.prevTaskId
+    );
   }
-  sender("task/deleteTask", reqId, true, {
+
+  serviceGroup.ipcService.sender("task/deleteTask", reqId, true, {
     tid: txReq.tid,
   });
 };

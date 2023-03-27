@@ -51,7 +51,9 @@ module.exports = (loggerModule) => {
         if (value instanceof Error) {
           const errorStack = value.stack;
           const matched = errorStack.match(/[.a-zA-Z0-9]+\:[0-9]+/g);
-          const matchedTraces = matched ? matched.slice(0, global.ERROR_TRACE_SIZE) : [];
+          const matchedTraces = matched
+            ? matched.slice(0, global.ERROR_TRACE_SIZE)
+            : [];
           let traceTexts = [];
 
           for (let trace of matchedTraces) {
@@ -60,7 +62,9 @@ module.exports = (loggerModule) => {
 
             const filename =
               filenameSegments.length > 1
-                ? filenameSegments.slice(0, filenameSegments.length - 1).join(".")
+                ? filenameSegments
+                  .slice(0, filenameSegments.length - 1)
+                  .join(".")
                 : lineSegments[0];
 
             const lastSegment = lineSegments[lineSegments.length - 1];
@@ -70,7 +74,12 @@ module.exports = (loggerModule) => {
 
           traceTexts = traceTexts.reverse();
           return (
-            console.wrap(`[Trace: ${traceTexts.length > 0 ? traceTexts.join(".") : "unknown"}]`, console.RED) +
+            console.wrap(
+              `[Trace: ${
+                traceTexts.length > 0 ? traceTexts.join(".") : "unknown"
+              }]`,
+              console.RED
+            ) +
             " " +
             value.message
           );
@@ -79,13 +88,29 @@ module.exports = (loggerModule) => {
         try {
           let stringifiedContent = JSON.stringify(value);
           if (newLineLimit && stringifiedContent.length > newLineLimit) {
-            return "\n" + JSON.stringify(param, null, 4);
+            return "\n" + JSON.stringify(value, null, 4);
           }
           return stringifiedContent;
         } catch (err) {
           return "[Circular Object]";
         }
     }
+  };
+
+  const filenamePrettier = (fullFilename) => {
+    // should include extension
+    const segments = fullFilename.split(".");
+    if (segments.length === 1) return fullFilename;
+    let filename = "";
+    for (let i = 0; i < segments.length - 1; i++) {
+      let segment = segments[i];
+      if (i > 0) {
+        // make camel
+        segment = segment[0].toUpperCase() + segment.slice(1);
+      }
+      filename += segment;
+    }
+    return filename;
   };
 
   const tracer = () => {
@@ -106,12 +131,12 @@ module.exports = (loggerModule) => {
     let callStackTraceMsg = slicedCallStack
       .reverse()
       .map((entry) => {
-        let { column, line, file } = entry;
+        let {column, line, file} = entry;
         if (file === null) return "null";
 
         let pathSegments = file.split("\\");
         let lastSegment = pathSegments.last();
-        let cleanFileName = lastSegment.split(".").first();
+        let cleanFileName = filenamePrettier(lastSegment);
         let shortenFileName = cleanFileName.split("/").last();
 
         if (shortenFileName === lastSegmentTrace) {
@@ -123,7 +148,10 @@ module.exports = (loggerModule) => {
       })
       .join(".");
 
-    global.TRACE_MAX_LENGTH = Math.max(global.TRACE_MAX_LENGTH, callStackTraceMsg.length);
+    global.TRACE_MAX_LENGTH = Math.max(
+      global.TRACE_MAX_LENGTH,
+      callStackTraceMsg.length
+    );
     return callStackTraceMsg;
   };
 
@@ -133,8 +161,13 @@ module.exports = (loggerModule) => {
 
     let timeSegment = moment(currentDate).format("YY/MM/DD HH:mm:ss.SSS");
     let levelSegment = console.wrap(level.padEnd(6, " "), levelColorCode);
-    let traceSegment = console.wrap(tracer().padEnd(global.TRACE_MAX_LENGTH, " "), console.YELLOW);
+    let traceSegment = console.wrap(
+      tracer().padEnd(global.TRACE_MAX_LENGTH, " "),
+      console.YELLOW
+    );
+
     let contentSegment = arg.map((argument) => shorten(argument)).join(" ");
+    if (level === "ERROR") contentSegment = console.wrap(contentSegment, console.RED);
 
     const finalString = `${timeSegment} ${levelSegment} ${traceSegment} ${contentSegment}`;
 

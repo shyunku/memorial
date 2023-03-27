@@ -1,6 +1,6 @@
 const { v4 } = require("uuid");
 const assert = require("assert");
-const TxContent = require("../user_modules/TxContent");
+const TxContent = require("../objects/TxContent");
 const moment = require("moment");
 
 class UpdateTaskDoneTxContent extends TxContent {
@@ -14,13 +14,24 @@ class UpdateTaskDoneTxContent extends TxContent {
 }
 
 /**
+ * @param {string} reqId?
+ * @param {ServiceGroup} serviceGroup
  * @param {UpdateTaskDoneTxContent} txReq
  */
-const updateTaskDone = async (db, reqId, { sender }, txReq) => {
+const updateTaskDone = async (reqId, serviceGroup, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new UpdateTaskDoneTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(
+    new UpdateTaskDoneTxContent().instanceOf(txReq),
+    "Transaction request is not instance of class"
+  );
 
-  let task = await db.get("SELECT * FROM tasks WHERE tid = ? LIMIT 1", txReq.tid);
+  const userId = serviceGroup.userService.getCurrent();
+  const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
+
+  let task = await db.get(
+    "SELECT * FROM tasks WHERE tid = ? LIMIT 1",
+    txReq.tid
+  );
   if (task != null && task.repeat_period != null) {
     let repeatStartAt = task.repeat_start_at ?? task.due_date;
     let repeatPeriod = task.repeat_period;
@@ -38,7 +49,10 @@ const updateTaskDone = async (db, reqId, { sender }, txReq) => {
 
     if (repeatPeriodUnit != null) {
       nextDueDate = moment(repeatStartAt);
-      while (nextDueDate.isBefore(moment()) || nextDueDate.isSameOrBefore(moment(task.due_date))) {
+      while (
+        nextDueDate.isBefore(moment()) ||
+        nextDueDate.isSameOrBefore(moment(task.due_date))
+      ) {
         nextDueDate = moment(nextDueDate).add(1, repeatPeriodUnit);
       }
       nextDueDate = nextDueDate.valueOf();
@@ -54,7 +68,7 @@ const updateTaskDone = async (db, reqId, { sender }, txReq) => {
         nextDueDate,
         txReq.tid
       );
-      sender(
+      serviceGroup.ipcService.sender(
         "task/updateTaskDone",
         reqId,
         true,
@@ -70,13 +84,13 @@ const updateTaskDone = async (db, reqId, { sender }, txReq) => {
       throw new Error("nextDueDate is null");
     }
   } else if (task != null) {
-    let result = await db.run(
+    await db.run(
       "UPDATE tasks SET done = ?, done_at = ? WHERE tid = ?",
       txReq.done,
       txReq.doneAt,
       txReq.tid
     );
-    sender(
+    serviceGroup.ipcService.sender(
       "task/updateTaskDone",
       reqId,
       true,

@@ -2,12 +2,9 @@
  * @param ipcService {IpcService}
  */
 const { app, BrowserWindow, powerMonitor } = require("electron");
-const Window = require("../core/window");
-const Exec = require("../user_modules/executeRouter");
 const Request = require("../core/request");
 const sha256 = require("sha256");
-const Util = require("../modules/util");
-const IpcRouter = require("../util/IpcRouter");
+const IpcRouter = require("../objects/IpcRouter");
 const {
   createTaskPre,
   CreateTaskTxContent,
@@ -56,13 +53,14 @@ const {
   CreateCategoryTxContent,
 } = require("../executors/createCategory.exec");
 const { DeleteCategoryTxContent } = require("../executors/deleteCategory.exec");
-const { TX_TYPE } = require("../user_modules/executeRouter");
+const { getServerFinalEndpoint } = require("../modules/util");
+const TX_TYPE = require("../constants/TxType.constants");
 
 /**
  * @param s {IpcService}
  */
 module.exports = function (s) {
-  const appServerFinalEndpoint = Util.getServerFinalEndpoint();
+  const appServerFinalEndpoint = getServerFinalEndpoint();
   /* ---------------------------------------- System ---------------------------------------- */
   s.register("system/terminate_signal", (event, reqId, param) => {
     app.quit();
@@ -117,7 +115,7 @@ module.exports = function (s) {
 
   s.register("system/subscribe", (event, reqId, webContentsId, topics) => {
     if (!Array.isArray(topics)) topics = [topics];
-    IpcRouter.addListenersByWebContentsId(topics, webContentsId);
+    s.addListenersByWebContentsId(topics, webContentsId);
   });
 
   s.register("system/computer_idle_time", (event, reqId) => {
@@ -126,7 +124,7 @@ module.exports = function (s) {
   });
 
   s.register("__callback__", (event, reqId, topic, data) => {
-    IpcRouter.broadcast(topic, data);
+    s.broadcast(topic, data);
   });
 
   /* ---------------------------------------- Custom ---------------------------------------- */
@@ -216,12 +214,9 @@ module.exports = function (s) {
         return;
       }
       // check remote transactions
-      if (!socket.connected()) {
-        throw new Error("socket is not connected");
-      }
       const socket = await s.getUserWebsocketContext();
-      let waitingBlockNumber = await socket.sendSync("waitingBlockNumber");
-      s.sender("system/isDatabaseClear", reqId, true, waitingBlockNumber === 1);
+      let lastBlockNumber = await socket.sendSync("lastBlockNumber");
+      s.sender("system/isDatabaseClear", reqId, true, lastBlockNumber === 0);
     } catch (err) {
       s.sender("system/isDatabaseClear", reqId, false);
       throw err;
@@ -254,8 +249,8 @@ module.exports = function (s) {
       try {
         const newLastBlockNumber = startNumber - 1;
         const syncerCtx = await s.getUserSyncerContext();
-        await syncerCtx.applySnapshot(newLastBlockNumber);
-        // TODO :: sync after
+        const remoteLastBlockNumber = await syncerCtx.remoteLastBlockNumber();
+        await syncerCtx.snapSync(newLastBlockNumber, remoteLastBlockNumber);
         s.sender("system/mismatchTxAcceptTheirs", reqId, true);
       } catch (err) {
         s.sender("system/mismatchTxAcceptTheirs", reqId, false);
@@ -303,7 +298,7 @@ module.exports = function (s) {
       let user;
 
       // check if user exists already
-      let isSignupNeeded = false;
+      let isSignupNeeded;
       let users = await rootDB.all(
         "SELECT * FROM users WHERE google_email = ?;",
         google_email
@@ -529,8 +524,8 @@ module.exports = function (s) {
             "auth/signUp: already exists in local (but newly created in server)"
           );
           if (
-            user.auth_id != signupRequest.authId ||
-            user.auth_encrypted_pw != signupRequest.encryptedPassword
+            user.auth_id !== signupRequest.authId ||
+            user.auth_encrypted_pw !== signupRequest.encryptedPassword
           ) {
             // but info mismatch, automatically update re-create
             console.warn(
@@ -781,7 +776,7 @@ module.exports = function (s) {
         preResult.prevTaskId
       );
       const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-      const tx = Exec.makeTransaction(
+      const tx = s.executorService.makeTransaction(
         TX_TYPE.CREATE_TASK,
         txContent,
         targetBlockNumber
@@ -803,7 +798,7 @@ module.exports = function (s) {
       let preResult = await deleteTaskPre(db, taskId);
       const txContent = new DeleteTaskTxContent(taskId, preResult.prevTaskId);
       const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-      const tx = Exec.makeTransaction(
+      const tx = s.executorService.makeTransaction(
         TX_TYPE.DELETE_TASK,
         txContent,
         targetBlockNumber
@@ -838,7 +833,7 @@ module.exports = function (s) {
           preResult.targetPrevTaskId
         );
         const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-        const tx = Exec.makeTransaction(
+        const tx = s.executorService.makeTransaction(
           TX_TYPE.UPDATE_TASK_ORDER,
           txContent,
           targetBlockNumber
@@ -857,7 +852,7 @@ module.exports = function (s) {
     try {
       const txContent = new UpdateTaskTitleTxContent(taskId, title);
       const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-      const tx = Exec.makeTransaction(
+      const tx = s.executorService.makeTransaction(
         TX_TYPE.UPDATE_TASK_TITLE,
         txContent,
         targetBlockNumber
@@ -877,7 +872,7 @@ module.exports = function (s) {
       try {
         const txContent = new UpdateTaskDueDateTxContent(taskId, dueDate);
         const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-        const tx = Exec.makeTransaction(
+        const tx = s.executorService.makeTransaction(
           TX_TYPE.UPDATE_TASK_DUE_DATE,
           txContent,
           targetBlockNumber
@@ -896,7 +891,7 @@ module.exports = function (s) {
     try {
       const txContent = new UpdateTaskMemoTxContent(taskId, memo);
       const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-      const tx = Exec.makeTransaction(
+      const tx = s.executorService.makeTransaction(
         TX_TYPE.UPDATE_TASK_MEMO,
         txContent,
         targetBlockNumber
@@ -916,7 +911,7 @@ module.exports = function (s) {
       try {
         const txContent = new UpdateTaskDoneTxContent(taskId, done, doneAt);
         const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-        const tx = Exec.makeTransaction(
+        const tx = s.executorService.makeTransaction(
           TX_TYPE.UPDATE_TASK_DONE,
           txContent,
           targetBlockNumber
@@ -937,7 +932,7 @@ module.exports = function (s) {
       try {
         const txContent = new AddTaskCategoryTxContent(taskId, categoryId);
         const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-        const tx = Exec.makeTransaction(
+        const tx = s.executorService.makeTransaction(
           TX_TYPE.ADD_TASK_CATEGORY,
           txContent,
           targetBlockNumber
@@ -958,7 +953,7 @@ module.exports = function (s) {
       try {
         const txContent = new DeleteTaskCategoryTxContent(taskId, categoryId);
         const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-        const tx = Exec.makeTransaction(
+        const tx = s.executorService.makeTransaction(
           TX_TYPE.DELETE_TASK_CATEGORY,
           txContent,
           targetBlockNumber
@@ -982,7 +977,7 @@ module.exports = function (s) {
           repeatPeriod
         );
         const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-        const tx = Exec.makeTransaction(
+        const tx = s.executorService.makeTransaction(
           TX_TYPE.UPDATE_TASK_REPEAT_PERIOD,
           txContent,
           targetBlockNumber
@@ -1010,7 +1005,7 @@ module.exports = function (s) {
         subtask.done
       );
       const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-      const tx = Exec.makeTransaction(
+      const tx = s.executorService.makeTransaction(
         TX_TYPE.CREATE_SUBTASK,
         txContent,
         targetBlockNumber
@@ -1028,7 +1023,7 @@ module.exports = function (s) {
     try {
       const txContent = new DeleteSubtaskTxContent(taskId, subtaskId);
       const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-      const tx = Exec.makeTransaction(
+      const tx = s.executorService.makeTransaction(
         TX_TYPE.DELETE_SUBTASK,
         txContent,
         targetBlockNumber
@@ -1052,7 +1047,7 @@ module.exports = function (s) {
           title
         );
         const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-        const tx = Exec.makeTransaction(
+        const tx = s.executorService.makeTransaction(
           TX_TYPE.UPDATE_SUBTASK_TITLE,
           txContent,
           targetBlockNumber
@@ -1077,7 +1072,7 @@ module.exports = function (s) {
           dueDate
         );
         const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-        const tx = Exec.makeTransaction(
+        const tx = s.executorService.makeTransaction(
           TX_TYPE.UPDATE_SUBTASK_DUE_DATE,
           txContent,
           targetBlockNumber
@@ -1103,7 +1098,7 @@ module.exports = function (s) {
           doneAt
         );
         const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-        const tx = Exec.makeTransaction(
+        const tx = s.executorService.makeTransaction(
           TX_TYPE.UPDATE_SUBTASK_DONE,
           txContent,
           targetBlockNumber
@@ -1140,7 +1135,7 @@ module.exports = function (s) {
         category.color
       );
       const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-      const tx = Exec.makeTransaction(
+      const tx = s.executorService.makeTransaction(
         TX_TYPE.CREATE_CATEGORY,
         txContent,
         targetBlockNumber
@@ -1158,7 +1153,7 @@ module.exports = function (s) {
     try {
       const txContent = new DeleteCategoryTxContent(categoryId);
       const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
-      const tx = Exec.makeTransaction(
+      const tx = s.executorService.makeTransaction(
         TX_TYPE.DELETE_CATEGORY,
         txContent,
         targetBlockNumber

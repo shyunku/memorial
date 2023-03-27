@@ -21,6 +21,11 @@ class WindowService {
     this.mainWindow = null;
   }
 
+  /**
+   * @param serviceGroup {ServiceGroup}
+   */
+  inject(serviceGroup) {}
+
   initialize() {
     this.mainWindow = this.createMainWindow();
     this.mainWindow.once("ready-to-show", () => {

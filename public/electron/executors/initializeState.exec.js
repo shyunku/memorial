@@ -1,8 +1,7 @@
-const { v4 } = require("uuid");
 const assert = require("assert");
-const TxContent = require("../user_modules/TxContent");
-const { clearDatabase } = require("../user_modules/databaseUtil");
+const TxContent = require("../objects/TxContent");
 
+// this is state
 class InitializeStateTxContent extends TxContent {
   constructor(tasks, categories) {
     super();
@@ -13,11 +12,17 @@ class InitializeStateTxContent extends TxContent {
 }
 
 /**
+ * @param {?string} reqId
+ * @param {ServiceGroup} serviceGroup
  * @param {InitializeStateTxContent} txReq
+ * @param {number} blockNumber
  */
-const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
+const initializeState = async (reqId, serviceGroup, txReq, blockNumber) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new InitializeStateTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(
+    new InitializeStateTxContent().instanceOf(txReq),
+    "Transaction request is not instance of class"
+  );
 
   if (blockNumber !== 1) {
     throw new Error("InitializeState can be executed only at block 1");
@@ -26,8 +31,10 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
   const tasks = txReq.tasks;
   const categories = txReq.categories;
 
-  // delete all (neccessary?)
-  await clearDatabase(db);
+  // delete all (necessary?)
+  const userId = serviceGroup.userService.getCurrent();
+  const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
+  await db.clear();
 
   // insert tasks
   let bidirectionalTasks = {};
@@ -36,7 +43,7 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
     bidirectionalTasks[task.tid] = { ...task };
   }
 
-  // remap to bidirection
+  // remap to bidirectional
   for (const tid in bidirectionalTasks) {
     const task = bidirectionalTasks[tid];
     if (task.next) {
@@ -49,7 +56,9 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
 
   // sort tasks
   let reverseSortedTasks = [];
-  let lastTask = Object.values(bidirectionalTasks).find((task) => task.next == "");
+  let lastTask = Object.values(bidirectionalTasks).find(
+    (task) => task.next === ""
+  );
   let iter = lastTask;
   while (iter != null) {
     reverseSortedTasks.push(iter);
@@ -97,7 +106,11 @@ const initializeState = async (db, reqId, { sender }, txReq, blockNumber) => {
   for (const tid in tasks) {
     const task = tasks[tid];
     for (const cid in task.categories) {
-      await db.run("INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)", task.tid, cid);
+      await db.run(
+        "INSERT INTO tasks_categories (tid, cid) VALUES (?, ?)",
+        task.tid,
+        cid
+      );
     }
     for (const sid in task.subtasks) {
       const subtask = task.subtasks[sid];

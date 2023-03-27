@@ -2,9 +2,11 @@ const { app } = require("electron");
 const fs = require("fs");
 const url = require("url");
 const path = require("path");
+const { getBuildLevel } = require("../util/SystemUtil");
 
-function getUserDataPath(buildLevel) {
+function getUserDataPath() {
   const userDataPath = app.getPath("userData");
+  const buildLevel = getBuildLevel();
 
   switch (buildLevel) {
     case 0:
@@ -16,10 +18,13 @@ function getUserDataPath(buildLevel) {
       return userDataPath;
     case 2:
       return userDataPath;
+    default:
+      throw new Error("Invalid build level");
   }
 }
 
-function getAppResourcesPath(buildLevel) {
+function getAppResourcesPath() {
+  const buildLevel = getBuildLevel();
   const appDataPath = app.getAppPath();
   const resourceParentKeys = ["public", "build", "../"];
   const resourceParent = resourceParentKeys[buildLevel];
@@ -89,7 +94,8 @@ async function copydirRecursivelySync(source, dest) {
     const currentSource = path.join(source, file);
 
     if (isAsar(currentSource)) {
-      if (fs.existsSync(targetRootFolder) === false) fs.mkdirSync(targetRootFolder);
+      if (fs.existsSync(targetRootFolder) === false)
+        fs.mkdirSync(targetRootFolder);
       fs.copyFileSync(currentSource, targetRootFolder);
     } else if (isSymbolicLink(currentSource) === true) {
       symlink(currentSource, targetRootFolder);

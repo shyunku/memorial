@@ -1,6 +1,6 @@
 const { v4 } = require("uuid");
 const assert = require("assert");
-const TxContent = require("../user_modules/TxContent");
+const TxContent = require("../objects/TxContent");
 
 class DeleteSubtaskTxContent extends TxContent {
   constructor(tid, sid) {
@@ -12,14 +12,23 @@ class DeleteSubtaskTxContent extends TxContent {
 }
 
 /**
+ * @param {string} reqId?
+ * @param {ServiceGroup} serviceGroup
  * @param {DeleteSubtaskTxContent} txReq
  */
-const deleteSubtask = async (db, reqId, { sender }, txReq) => {
+const deleteSubtask = async (reqId, serviceGroup, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new DeleteSubtaskTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(
+    new DeleteSubtaskTxContent().instanceOf(txReq),
+    "Transaction request is not instance of class"
+  );
+
+  const userId = serviceGroup.userService.getCurrent();
+  const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
 
   await db.run("DELETE FROM subtasks WHERE sid = ?", txReq.sid);
-  sender("task/deleteSubtask", reqId, true, {
+
+  serviceGroup.ipcService.sender("task/deleteSubtask", reqId, true, {
     sid: txReq.sid,
     tid: txReq.tid,
   });

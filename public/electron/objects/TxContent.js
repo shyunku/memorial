@@ -1,10 +1,18 @@
+const { shorten } = require("../modules/util");
+
 class TxContent {
   constructor() {}
 
   instanceOf(object) {
     // check object
     if (object == null) throw new Error("Object is null");
-    if (typeof object !== "object") throw new Error(`Data is not object (actual: ${typeof object}))`);
+    if (typeof object !== "object") {
+      throw new Error(
+        `Data is not object , given: ${typeof object}, value: ${shorten(
+          object
+        )}`
+      );
+    }
 
     // check properties
     // iterate properties

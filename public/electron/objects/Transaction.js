@@ -1,4 +1,5 @@
 const sha256 = require("sha256");
+const { decodeParseBase64, jsonMarshal } = require("../util/TxUtil");
 
 class Transaction {
   constructor(version, type, timestamp, content, blockNumber) {
@@ -15,6 +16,9 @@ class Transaction {
     this.hash = this.getHash();
   }
 
+  /**
+   * @returns {string}
+   */
   getHash() {
     const raw = {
       version: this.version,
@@ -23,8 +27,7 @@ class Transaction {
       content: this.content,
     };
     const buffer = jsonMarshal(raw);
-    const hash = sha256(buffer);
-    return hash;
+    return sha256(buffer);
   }
 }
 

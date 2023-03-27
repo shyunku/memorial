@@ -1,6 +1,6 @@
 const { v4 } = require("uuid");
 const assert = require("assert");
-const TxContent = require("../user_modules/TxContent");
+const TxContent = require("../objects/TxContent");
 
 class CreateCategoryTxContent extends TxContent {
   constructor(cid, title, secret, locked, color) {
@@ -21,11 +21,19 @@ const createCategoryPre = async () => {
 };
 
 /**
+ * @param {string} reqId?
+ * @param {ServiceGroup} serviceGroup
  * @param {CreateCategoryTxContent} txReq
  */
-const createCategory = async (db, reqId, { sender }, txReq) => {
+const createCategory = async (reqId, serviceGroup, txReq) => {
   // assert that txReq is instance of CreateTaskTxContent
-  assert(new CreateCategoryTxContent().instanceOf(txReq), "Transaction request is not instance of class");
+  assert(
+    new CreateCategoryTxContent().instanceOf(txReq),
+    "Transaction request is not instance of class"
+  );
+
+  const userId = serviceGroup.userService.getCurrent();
+  const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
 
   await db.run(
     "INSERT INTO categories (cid, title, secret, locked, color) VALUES (?, ?, ?, ?, ?)",
@@ -35,7 +43,8 @@ const createCategory = async (db, reqId, { sender }, txReq) => {
     txReq.locked,
     txReq.color
   );
-  sender("category/createCategory", reqId, true, {
+
+  serviceGroup.ipcService.sender("category/createCategory", reqId, true, {
     cid: txReq.cid,
     title: txReq.title,
     secret: txReq.secret,

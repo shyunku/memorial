@@ -1,4 +1,6 @@
-const Exec = require("../user_modules/executeRouter");
+const Transaction = require("../objects/Transaction");
+const { initializeState } = require("../executors/initializeState.exec");
+const TransactionRequest = require("../objects/TransactionRequest");
 
 class SyncerContext {
   /**
@@ -7,35 +9,96 @@ class SyncerContext {
    */
   constructor(userId, serviceGroup) {
     this.userId = userId;
+    this.serviceGroup = serviceGroup;
+
+    /** @type {DatabaseService} */
     this.databaseService = serviceGroup.databaseService;
+
+    /** @type {WebsocketService} */
+    this.websocketService = serviceGroup.websocketService;
+
+    /** @type {IpcService} */
+    this.ipcService = serviceGroup.ipcService;
+
+    /** @type {ExecutorService} */
+    this.executorService = serviceGroup.executorService;
 
     this.localLastBlockNumber = null;
     this.remoteLastBlockNumber = null;
+
+    /** @type {DatabaseContext} */
+    this.db = null;
+    /** @type {WebsocketContext} */
+    this.socket = null;
   }
 
-  getLocalLastBlockNumber() {
+  async initialize() {
+    this.db = await this.databaseService.getUserDatabaseContext(this.userId);
+    if (this.db == null) throw new Error("Database is null");
+    this.socket = await this.websocketService.getUserWebsocketContext(
+      this.userId
+    );
+    if (this.socket == null) throw new Error("Socket is null");
+  }
+
+  async getLocalLastBlockNumberFromDatabase() {
+    const [transaction] = await this.db.all(
+      "SELECT * FROM transactions ORDER BY block_number DESC LIMIT 1"
+    );
+    if (transaction == null) return 0;
+    return transaction.block_number;
+  }
+
+  async getRemoteLastBlockNumberFromServer() {
+    this.remoteLastBlockNumber = await this.socket.sendSync("lastBlockNumber");
+    return this.remoteLastBlockNumber;
+  }
+
+  async getLocalLastBlockNumber() {
+    if (this.localLastBlockNumber == null) {
+      this.localLastBlockNumber =
+        await this.getLocalLastBlockNumberFromDatabase();
+    }
     return this.localLastBlockNumber;
   }
 
-  getRemoteLastBlockNumber() {
+  async getRemoteLastBlockNumber() {
+    if (this.remoteLastBlockNumber == null) {
+      this.remoteLastBlockNumber =
+        await this.getRemoteLastBlockNumberFromServer();
+    }
     return this.remoteLastBlockNumber;
+  }
+
+  setLocalLastBlockNumber(blockNumber) {
+    this.localLastBlockNumber = blockNumber;
+  }
+
+  /**
+   * @param blockNumber {number}
+   */
+  setRemoteLastBlockNumber(blockNumber) {
+    this.remoteLastBlockNumber = blockNumber;
   }
 
   async sendTransaction(tx) {
     try {
-      if (socket == null) throw new Error("Socket is not connected");
-      if (!(tx instanceof Exec.Transaction))
+      if (this.socket == null) throw new Error("Socket is not connected");
+      if (!(tx instanceof Transaction))
         throw new Error("Invalid transaction type (not Transaction)");
 
-      const blockHash = await Exec.getBlockHash(db, tx.blockNumber, tx.hash);
-      const txRequest = Exec.TransactionRequest.fromTransaction(tx, blockHash);
+      const blockHash = await this.executorService.getLocalBlockHash(
+        tx.blockNumber,
+        tx.hash
+      );
+      const txRequest = TransactionRequest.fromTransaction(tx, blockHash);
 
-      if (socket.connected()) {
-        return await socket.emitSync("transaction", txRequest);
+      if (this.socket.connected()) {
+        return await this.socket.sendSync("transaction", txRequest);
       }
     } catch (err) {
       console.error(err);
-      sender("transaction/error", null, false, err.message, tx);
+      this.ipcService.sender("transaction/error", null, false, err.message, tx);
     }
   }
 
@@ -49,8 +112,8 @@ class SyncerContext {
         rawTx.content,
         number
       );
-      await txExecutor(db, null, ipc, tx, blockHash);
-      setLastBlockNumber(userId, number);
+      console.debug(blockHash);
+      await this.executorService.applyTransaction(null, tx, blockHash);
     } catch (err) {
       throw err;
     }
@@ -58,18 +121,26 @@ class SyncerContext {
 
   async snapSync(startBlockNumber, endBlockNumber) {
     try {
+      // get snapshot
+      await this.applySnapshot(startBlockNumber);
+      // sync after snapshot
+      await this.fullSync(startBlockNumber + 1, endBlockNumber);
     } catch (err) {
-      console.error(`Error occured while snap sync`);
+      console.error(`Error occurred while snap sync`);
       console.error(err);
     }
   }
 
   async fullSync(startBlockNumber, endBlockNumber) {
     try {
-      // verify services
-      await this.verifyServices();
+      if (endBlockNumber < startBlockNumber) {
+        console.debug(
+          `No need to sync, startBlockNumber: ${startBlockNumber}, endBlockNumber: ${endBlockNumber}`
+        );
+        return;
+      }
 
-      let blocks = await this.socketService.emitSync("syncBlocks", {
+      let blocks = await this.socket.sendSync("syncBlocks", {
         startBlockNumber,
         endBlockNumber,
       });
@@ -89,54 +160,47 @@ class SyncerContext {
       try {
         for (let block of sortedBlocks) {
           syncingBlock = block.number;
-          await saveBlockAndExecute(block);
+          await this.saveBlockAndExecute(block);
         }
       } catch (err) {
         console.error(
-          `Error occured while syncing blocks, error occured at block number ${syncingBlock}`
+          `Error occurred while syncing blocks at block number ${syncingBlock}`
         );
         throw err;
       }
     } catch (err) {
-      console.error(`Error occured while full sync`);
+      console.error(`Error occurred while full sync`);
       console.error(err);
+      throw err;
     }
   }
 
+  /**
+   * @param blockNumber {number}
+   * @returns {Promise<void>}
+   */
   async applySnapshot(blockNumber) {
-    if (!socket.connected()) {
-      throw new Error("socket is not connected");
-    }
-
-    if (setDb == null || typeof setDb !== "function") {
-      throw new Error("setDb is not function");
-    }
-
-    if (userId == null) {
-      throw new Error("userId is null");
-    }
-
     // get state from remote
-    let state = await socket.emitSync("stateByBlockNumber", {
+    let state = await this.socket.sendSync("stateByBlockNumber", {
       blockNumber,
     });
 
-    let block = await socket.emitSync("blockByBlockNumber", {
+    let block = await this.socket.sendSync("blockByBlockNumber", {
       blockNumber,
     });
 
     try {
-      // try delete all rows in all tables
-      await clearDatabase(db);
+      // try to delete all rows in all tables
+      await this.db.clear();
     } catch (err) {
       try {
         // delete user database
-        await db.close();
-
-        await databaseContext.deleteDatabase(userId);
-        await databaseContext.initialize(userId);
-        let newDb = await databaseContext.getContext();
-        setDb(newDb);
+        await this.db.close();
+        await this.databaseService.deleteUserDatabase(this.userId);
+        await this.databaseService.initializeUserDatabase(this.userId);
+        this.db = await this.databaseService.getUserDatabaseContext(
+          this.userId
+        );
       } catch (cErr) {
         console.error(cErr);
         throw err;
@@ -155,7 +219,7 @@ class SyncerContext {
       );
       const rawContent = tx.content;
       const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
-      await db.run(
+      await this.db.run(
         `INSERT INTO transactions (version, type, timestamp, content, hash, block_number, block_hash) VALUES (?, ?, ?, ?, ?, ?, ?);`,
         [
           tx.version,
@@ -169,10 +233,121 @@ class SyncerContext {
       );
 
       // insert state to local database
-      await initializeState(db, null, Ipc, state, 1);
+      await initializeState(null, this.serviceGroup, state, 1);
     }
 
-    Ipc.setLastBlockNumber(userId, blockNumber);
+    this.setLocalLastBlockNumber(blockNumber);
+  }
+
+  // clear transactions & states
+  async handleDeleteTransactionsAfter(blockNumber) {
+    try {
+      console.info(`Deleting transactions after block number ${blockNumber}`);
+      const newLastBlockNumber = blockNumber - 1;
+      await this.applySnapshot(newLastBlockNumber);
+      this.ipcService.sender("system/stateRollback", null, true);
+    } catch (err) {
+      console.error(err);
+      this.ipcService.sender("system/stateRollback", null, false);
+    }
+  }
+
+  async getLocalBlockHash(blockNumber) {
+    const db = await this.databaseService.getUserDatabaseContext(this.userId);
+    let [rawTx] = await db.all(
+      `SELECT * FROM transactions WHERE block_number = ?;`,
+      [blockNumber]
+    );
+    if (rawTx == null) return null;
+    return rawTx.block_hash;
+  }
+
+  async getRemoteBlockHash(blockNumber) {
+    return await this.socket.sendSync("blockHashByBlockNumber", {
+      blockNumber: blockNumber,
+    });
+  }
+
+  async getOldestLocalBlockNumber() {
+    const db = await this.databaseService.getUserDatabaseContext(this.userId);
+    let [rawTx] = await db.all(
+      `SELECT * FROM transactions ORDER BY block_number ASC LIMIT 1;`
+    );
+    if (rawTx == null) return null;
+    return rawTx.block_number;
+  }
+
+  // find max block number that is equal or less than given block number
+  async findLeftMostLocalBlockNumber(rightBound) {
+    const db = await this.databaseService.getUserDatabaseContext(this.userId);
+    let [rightMost] = await db.all(
+      `SELECT * FROM transactions WHERE block_number <= ? ORDER BY block_number DESC LIMIT 1;`,
+      [rightBound]
+    );
+    return rightMost?.block_number ?? null;
+  }
+
+  // find min block number that is equal or greater than given block number
+  async findRightMostLocalBlockNumber(leftBound) {
+    const db = await this.databaseService.getUserDatabaseContext(this.userId);
+    let [leftMost] = await db.all(
+      `SELECT * FROM transactions WHERE block_number >= ? ORDER BY block_number ASC LIMIT 1;`,
+      [leftBound]
+    );
+    return leftMost?.block_number ?? null;
+  }
+
+  // Mismatch Finding Algorithm (MFA)
+  // find mismatched block number with binary search even if local db has missing area
+  // best: O(logN), worst: O(N)
+  async findBlockHashMismatchStartNumber(left, right) {
+    if (left > right) return null;
+    if (left <= 0) return null;
+
+    const mid = Math.floor((left + right) / 2);
+
+    const localBlockHash = await this.getLocalBlockHash(mid);
+    if (localBlockHash != null) {
+      // local db has this transaction
+      const remoteBlockHash = await this.getRemoteBlockHash(mid);
+      if (localBlockHash === remoteBlockHash)
+        return this.findBlockHashMismatchStartNumber(mid + 1, right);
+      return this.findBlockHashMismatchStartNumber(left, mid - 1);
+    }
+
+    // local db has no transaction here... (maybe truncated)
+    // ...leftMost, [missing area], rightMost...
+    // ...L3, L2, L1, [missing], R1, R2, R3...
+    let leftMost = await this.findLeftMostLocalBlockNumber(mid - 1);
+    let rightMost = await this.findRightMostLocalBlockNumber(mid + 1);
+
+    console.debug(
+      `[MFA] No route on ${mid}, split: [~${leftMost}] | [${rightMost}~]`
+    );
+
+    // R1 doesn't exist, find just left side
+    if (rightMost == null)
+      return await this.findBlockHashMismatchStartNumber(left, leftMost);
+    // L1 doesn't exist, find just right side
+    if (leftMost == null)
+      return await this.findBlockHashMismatchStartNumber(rightMost, right);
+
+    // check R1 first
+    const firstRightMostMismatch = await this.findBlockHashMismatchStartNumber(
+      rightMost,
+      rightMost
+    );
+
+    // R1 matched in right most (no need to search left side)
+    if (firstRightMostMismatch == null)
+      return await this.findBlockHashMismatchStartNumber(left, leftMost);
+
+    // R1 mismatched and leftMost exists, so check left side (worst case)
+    let leftSideMismatch = await this.findBlockHashMismatchStartNumber(
+      left,
+      leftMost
+    );
+    return leftSideMismatch ?? rightMost;
   }
 }
 
