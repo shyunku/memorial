@@ -361,6 +361,23 @@ class DatabaseContext {
     }
   }
 
+  async clearExceptTransactions() {
+    await this.begin();
+    try {
+      const tables = await this.all(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'transactions';"
+      );
+      for (let i = 0; i < tables.length; i++) {
+        const table = tables[i];
+        await this.run(`DELETE FROM ${table.name};`);
+      }
+      await this.commit();
+    } catch (err) {
+      await this.rollback();
+      throw err;
+    }
+  }
+
   get(query, ...args) {
     console.system(
       `${TAG} ${console.wrap(`<-[GET]->`, console.BLUE)} ${console.wrap(
@@ -377,7 +394,7 @@ class DatabaseContext {
     });
   }
 
-  run(query, ...args) {
+  async run(query, ...args) {
     console.system(
       `${TAG} ${console.wrap(`--[RUN]->`, console.BLUE)} ${console.wrap(
         "sqlite3: " + query,

@@ -19,9 +19,6 @@ const ServiceGroup = require("./serviceGroup");
 const { getBuildLevel } = require("../util/SystemUtil");
 /* ---------------------------------------- Declaration ---------------------------------------- */
 /* -------------------- General -------------------- */
-// Main context window of process
-let mainWindow;
-
 // Manage service packages as a group
 const serviceGroup = new ServiceGroup();
 
@@ -62,9 +59,6 @@ console.debug(`[UserData Path] ${userDataPath}`);
 /* ---------------------------------------- Main execute statements ---------------------------------------- */
 app.on("ready", async () => {
   try {
-    // listen for default electron events
-    listenForDefaultElectronEvents();
-
     // initialize & configure all services
     serviceGroup.injectReferences();
     serviceGroup.configure();
@@ -106,11 +100,11 @@ app.on("ready", async () => {
   }
 });
 
-function listenForDefaultElectronEvents() {
-  app.on("browser-window-created", (e, window) => {
-    if (mainWindow == null || window.id === mainWindow.id) return;
-    window.setMenu(null);
-    window.webContents.session.clearCache(() => {});
-    // window.webContents.openDevTools();
-  });
-}
+app.on("browser-window-created", (e, window) => {
+  const mainWindow = serviceGroup.windowService.mainWindow;
+  if (mainWindow == null || window.id === mainWindow.id) return;
+  console.debug("turn off menu bar");
+  window.setMenu(null);
+  window.webContents.session.clearCache(() => {});
+  // window.webContents.openDevTools();
+});

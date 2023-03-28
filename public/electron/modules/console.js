@@ -59,13 +59,7 @@ module.exports = (loggerModule) => {
           for (let trace of matchedTraces) {
             const filenameSegments = trace.split(".");
             const lineSegments = trace.split(":");
-
-            const filename =
-              filenameSegments.length > 1
-                ? filenameSegments
-                  .slice(0, filenameSegments.length - 1)
-                  .join(".")
-                : lineSegments[0];
+            const filename = filenamePrettier(trace);
 
             const lastSegment = lineSegments[lineSegments.length - 1];
             const [line] = lastSegment.match(/([0-9]+)/g);
@@ -131,7 +125,7 @@ module.exports = (loggerModule) => {
     let callStackTraceMsg = slicedCallStack
       .reverse()
       .map((entry) => {
-        let {column, line, file} = entry;
+        let { column, line, file } = entry;
         if (file === null) return "null";
 
         let pathSegments = file.split("\\");
@@ -167,7 +161,8 @@ module.exports = (loggerModule) => {
     );
 
     let contentSegment = arg.map((argument) => shorten(argument)).join(" ");
-    if (level === "ERROR") contentSegment = console.wrap(contentSegment, console.RED);
+    if (level === "ERROR")
+      contentSegment = console.wrap(contentSegment, console.RED);
 
     const finalString = `${timeSegment} ${levelSegment} ${traceSegment} ${contentSegment}`;
 

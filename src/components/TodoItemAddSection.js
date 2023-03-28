@@ -11,7 +11,7 @@ const TodoItemAddSection = ({ onTaskAdd, category }) => {
   const [newTodoRepeatPeriod, setNewTodoRepeatPeriod] = useState(null);
 
   const onAddTodoItem = () => {
-    if (newTodoItemContent.length == 0) return;
+    if (newTodoItemContent.length === 0) return;
     const newTask = new Task(newTodoItemContent, newTodoItemDate);
     newTask.repeatPeriod = newTodoRepeatPeriod;
     if (category != null && category.default == false) {
@@ -29,7 +29,7 @@ const TodoItemAddSection = ({ onTaskAdd, category }) => {
         className={
           "input-wrapper" +
           JsxUtil.classByCondition(newTodoItemFocused, "focused") +
-          JsxUtil.classByCondition(newTodoItemContent.length == 0, "hidden")
+          JsxUtil.classByCondition(newTodoItemContent.length === 0, "hidden")
         }
       >
         <input

@@ -282,6 +282,10 @@ module.exports = function (s) {
       // initialize state
       const syncerCtx = await s.getUserSyncerContext();
       await syncerCtx.applySnapshot(0);
+      // get remote last block number
+      const remoteLastBlockNumber = await syncerCtx.getRemoteLastBlockNumber();
+      // sync to remote last block number
+      await syncerCtx.fullSync(1, remoteLastBlockNumber);
       s.sender("system/initializeState", reqId, true);
     } catch (err) {
       s.sender("system/initializeState", reqId, false);
@@ -345,7 +349,9 @@ module.exports = function (s) {
 
         await rootDB.run(
           "UPDATE users SET access_token = ?, refresh_token = ? WHERE uid = ?;",
-          [accessToken, refreshToken, userId]
+          accessToken,
+          refreshToken,
+          userId
         );
         s.sender("auth/registerAuthInfoSync", reqId, true);
       } catch (err) {

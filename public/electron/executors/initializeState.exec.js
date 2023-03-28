@@ -34,7 +34,7 @@ const initializeState = async (reqId, serviceGroup, txReq, blockNumber) => {
   // delete all (necessary?)
   const userId = serviceGroup.userService.getCurrent();
   const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
-  await db.clear();
+  await db.clearExceptTransactions();
 
   // insert tasks
   let bidirectionalTasks = {};

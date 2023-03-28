@@ -334,6 +334,7 @@ class WebsocketContext {
 
     // local last block number
     let localLastBlockNumber = await syncer.getLocalLastBlockNumber();
+    console.info(`Local Last block number: ${localLastBlockNumber}`);
     let commonBlockNumber = Math.min(
       localLastBlockNumber,
       remoteLastBlockNumber

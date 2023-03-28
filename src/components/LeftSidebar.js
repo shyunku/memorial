@@ -65,7 +65,9 @@ const LeftSidebar = ({
     if (localNonce === remoteNonce) return ["synchronized", "동기화 완료"];
     return [
       "synchronizing",
-      `동기화 중 (${Math.abs(localNonce - remoteNonce)}개 남음)`,
+      `동기화 중 - ${Math.abs(
+        localNonce - remoteNonce
+      )}개 남음 (${localNonce} / ${remoteNonce})`,
     ];
   }, [offlineMode, localNonce, remoteNonce]);
 

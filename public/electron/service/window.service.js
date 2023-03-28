@@ -16,6 +16,7 @@ const urlPrefix =
 
 class WindowService {
   constructor(ipcService) {
+    /** @type {IpcService} */
     this.ipcService = null;
 
     this.mainWindow = null;
@@ -24,7 +25,9 @@ class WindowService {
   /**
    * @param serviceGroup {ServiceGroup}
    */
-  inject(serviceGroup) {}
+  inject(serviceGroup) {
+    this.ipcService = serviceGroup.ipcService;
+  }
 
   initialize() {
     this.mainWindow = this.createMainWindow();
@@ -227,18 +230,18 @@ class WindowService {
     window.setPosition(parseInt(x - size[0] / 2), parseInt(y - size[1] / 2));
   }
 
-  setWindowStateChangeListener(window, Ipc) {
+  setWindowStateChangeListener(window) {
     window.on("minimize", (e) => {
-      Ipc.sender("win_state_changed", null, true, "minimize");
+      this.ipcService.sender("win_state_changed", null, true, "minimize");
     });
     window.on("maximize", (e) => {
-      Ipc.sender("win_state_changed", null, true, "maximize");
+      this.ipcService.sender("win_state_changed", null, true, "maximize");
     });
     window.on("unmaximize", (e) => {
-      Ipc.sender("win_state_changed", null, true, "unmaximize");
+      this.ipcService.sender("win_state_changed", null, true, "unmaximize");
     });
     window.on("restore", (e) => {
-      Ipc.sender("win_state_changed", null, true, "restore");
+      this.ipcService.sender("win_state_changed", null, true, "restore");
     });
   }
 }

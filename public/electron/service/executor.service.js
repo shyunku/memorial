@@ -84,13 +84,13 @@ class ExecutorService {
       console.debug(`Initial state hash: ${prevBlockHash}`);
     } else {
       // standard block hash
-      const [prevRawTxs] = await db.all(
+      const [prevRawTx] = await db.all(
         "SELECT * FROM transactions WHERE block_number = ?",
         prevBlockNumber
       );
-      if (prevRawTxs == null)
+      if (prevRawTx == null)
         throw new Error(`No transactions in block ${prevBlockNumber}`);
-      prevBlockHash = prevRawTxs.block_hash;
+      prevBlockHash = prevRawTx.block_hash;
     }
     const currentBlock = new Block(blockNumber, txHash, prevBlockHash);
     console.debug(currentBlock);
