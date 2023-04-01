@@ -1,6 +1,7 @@
 const Transaction = require("../objects/Transaction");
 const { initializeState } = require("../executors/initializeState.exec");
 const TransactionRequest = require("../objects/TransactionRequest");
+const { fastInterval } = require("../../../src/utils/Common");
 
 class SyncerContext {
   /**
@@ -32,6 +33,26 @@ class SyncerContext {
     this.socket = null;
 
     this.listenReady = false;
+
+    // event queue handler
+    this.eventQueueIndexer = 0;
+    this.eventQueue = {};
+    this.handlingEvents = false;
+
+    // loop handler
+    this.loopInterval = fastInterval(async () => {
+      if (this.handlingEvents) return;
+      this.handlingEvents = true;
+      const copied = { ...this.eventQueue };
+      this.eventQueue = {};
+
+      for (const key in copied) {
+        const promise = copied[key];
+        await promise();
+      }
+
+      this.handlingEvents = false;
+    }, 500);
   }
 
   async initialize() {
@@ -95,6 +116,10 @@ class SyncerContext {
     );
   }
 
+  addEventQueue(promise) {
+    this.eventQueue[this.eventQueueIndexer++] = promise;
+  }
+
   /**
    * @param ready {boolean}
    */
@@ -146,20 +171,24 @@ class SyncerContext {
   }
 
   async saveBlockAndExecute(block) {
-    try {
-      let { tx: rawTx, number, blockHash } = block;
-      const tx = new Transaction(
-        rawTx.version,
-        rawTx.type,
-        rawTx.timestamp,
-        rawTx.content,
-        number
-      );
-      console.debug(blockHash);
-      await this.executorService.applyTransaction(null, tx, blockHash);
-    } catch (err) {
-      throw err;
-    }
+    this.addEventQueue(
+      () =>
+        new Promise(async (resolve, reject) => {
+          try {
+            let { tx: rawTx, number, hash: blockHash } = block;
+            const tx = new Transaction(
+              rawTx.version,
+              rawTx.type,
+              rawTx.timestamp,
+              rawTx.content,
+              number
+            );
+            await this.executorService.applyTransaction(null, tx, blockHash);
+          } catch (err) {
+            throw err;
+          }
+        })
+    );
   }
 
   async snapSync(startBlockNumber, endBlockNumber) {
