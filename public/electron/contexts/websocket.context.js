@@ -160,16 +160,18 @@ class WebsocketContext {
         )
       );
       this.ipcService.emiter("socket/connected", null, null);
-      // emit("test", "Hello world");
-      try {
-        let lastRemoteBlock = await this.sendSync(
-          "lastRemoteBlock",
-          null,
-          5000
-        );
-        await this.handleLastRemoteBlock(lastRemoteBlock);
-      } catch (err) {
-        console.error(`Waiting block number error`, err);
+      const syncer = await this.syncerService.getUserSyncerContext(this.userId);
+      if (syncer.stateListenReady) {
+        try {
+          let lastRemoteBlock = await this.sendSync(
+            "lastRemoteBlock",
+            null,
+            10000
+          );
+          await this.handleLastRemoteBlock(lastRemoteBlock);
+        } catch (err) {
+          console.error(`Waiting block number error`, err);
+        }
       }
     });
 

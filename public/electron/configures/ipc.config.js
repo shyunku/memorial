@@ -310,6 +310,17 @@ module.exports = function (s) {
     }
   });
 
+  s.register("system/stateListenReady", async (event, reqId, ready) => {
+    try {
+      const syncerCtx = await s.getUserSyncerContext();
+      await syncerCtx.stateListenReady(ready);
+      s.sender("system/stateListenReady", reqId, true);
+    } catch (err) {
+      s.sender("system/stateListenReady", reqId, false);
+      throw err;
+    }
+  });
+
   s.register("auth/sendGoogleOauthResult", async (event, reqId, data) => {
     try {
       const rootDB = await s.databaseService.getRootDatabaseContext();
@@ -1260,5 +1271,6 @@ module.exports = function (s) {
   );
 
   /* ---------------------------------------- Test ---------------------------------------- */
-  s.register("test_signal", (event, param) => {});
+  s.register("test_signal", (event, param) => {
+  });
 };

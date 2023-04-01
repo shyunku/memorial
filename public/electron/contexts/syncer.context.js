@@ -30,6 +30,8 @@ class SyncerContext {
     this.db = null;
     /** @type {WebsocketContext} */
     this.socket = null;
+
+    this.listenReady = false;
   }
 
   async initialize() {
@@ -91,6 +93,30 @@ class SyncerContext {
       true,
       blockNumber
     );
+  }
+
+  /**
+   * @param ready {boolean}
+   */
+  async stateListenReady(ready) {
+    this.listenReady = ready;
+    if (ready) {
+      try {
+        const socket = await this.websocketService.getUserWebsocketContext(
+          this.userId
+        );
+        if (socket.connected()) {
+          let lastRemoteBlock = await socket.sendSync(
+            "lastRemoteBlock",
+            null,
+            10000
+          );
+          await this.socket.handleLastRemoteBlock(lastRemoteBlock);
+        }
+      } catch (err) {
+        console.error(`Waiting block number error`, err);
+      }
+    }
   }
 
   /**

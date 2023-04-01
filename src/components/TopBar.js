@@ -13,12 +13,17 @@ import PackageJson from "../../package.json";
 import { IoLogOutOutline } from "react-icons/io5";
 import Prompt from "molecules/Prompt";
 import { useDispatch, useSelector } from "react-redux";
-import { accountInfoSlice, removeAccount, removeAuth } from "store/accountSlice";
-import { useNavigate } from "react-router-dom";
+import {
+  accountInfoSlice,
+  removeAccount,
+  removeAuth,
+} from "store/accountSlice";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import Toast, { Toaster } from "molecules/Toast";
 import JsxUtil from "utils/JsxUtil";
+import { applyEmptyState } from "../hooks/UseTransaction";
 
-const TopBar = () => {
+const TopBar = ({ addPromise }) => {
   const accountInfo = useSelector(accountInfoSlice);
   const offlineMode = accountInfo.offlineMode;
 
@@ -64,20 +69,15 @@ const TopBar = () => {
   const initialize = () => {
     Prompt.float(
       "데이터 초기화",
-      "정말 초기화하시겠습니까?\n\n" + "모든 데이터가 기기에서 삭제되며, 이후 서버로부터 로드됩니다.",
+      "정말 초기화하시겠습니까?\n\n" +
+        "모든 데이터가 기기에서 삭제되며, 이후 서버로부터 자동 복구됩니다.",
       {
         confirmText: "초기화 및 동기화",
         onConfirm: async () => {
+          applyEmptyState({ addPromise });
           IpcSender.req.system.initializeState(({ success, data }) => {
             if (success) {
-              Prompt.float("데이터 초기화", "데이터 초기화가 완료되었습니다.\n페이지를 새로고침합니다.", {
-                confirmText: "확인",
-                onConfirm: () => {
-                  // refresh
-                  window.location.reload();
-                },
-                ignorable: false,
-              });
+              Toast.success("데이터 자동 복구가 완료되었습니다.");
             }
           });
         },
@@ -111,7 +111,11 @@ const TopBar = () => {
     <div className="component top-bar">
       <div className="drag-section"></div>
       <div className="title">Memorial - {PackageJson.version}v</div>
-      <div className={"server-status" + JsxUtil.classByCondition(offlineMode, "offline")}>
+      <div
+        className={
+          "server-status" + JsxUtil.classByCondition(offlineMode, "offline")
+        }
+      >
         <div className="status">{offlineMode ? "오프라인" : "온라인"} 모드</div>
       </div>
       <div className="menu-section">
@@ -127,7 +131,10 @@ const TopBar = () => {
         <div className="menu-item" onClick={minimize}>
           <VscChromeMinimize />
         </div>
-        <div className="menu-item" onClick={(e) => (maximized ? unmaximize(e) : maximize(e))}>
+        <div
+          className="menu-item"
+          onClick={(e) => (maximized ? unmaximize(e) : maximize(e))}
+        >
           {maximized ? <VscChromeRestore /> : <VscChromeMaximize />}
         </div>
         <div className="menu-item close" onClick={close}>

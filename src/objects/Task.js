@@ -54,6 +54,7 @@ class Task extends Mutatable {
   addCategory(category) {
     if (!(category instanceof Category)) {
       console.error("invalid category", category);
+      console.log(this);
       return;
     }
     this.categories[category.id] = category;
@@ -95,7 +96,8 @@ class Task extends Mutatable {
   }
 
   getFulfilledSubTaskCount() {
-    return Object.values(this.subtasks).filter((subtask) => subtask.done).length;
+    return Object.values(this.subtasks).filter((subtask) => subtask.done)
+      .length;
   }
 
   static fromObject(obj) {

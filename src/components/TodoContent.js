@@ -28,6 +28,23 @@ import {
 } from "utils/Common";
 import { useSelector } from "react-redux";
 import { accountAuthSlice, accountInfoSlice } from "store/accountSlice";
+import {
+  applyAddTask,
+  applyAddTaskCategory,
+  applyCreateSubtask,
+  applyDeleteSubtask,
+  applyDeleteTask,
+  applyDeleteTaskCategory,
+  applyUpdateSubtaskDone,
+  applyUpdateSubtaskDueDate,
+  applyUpdateSubtaskTitle,
+  applyUpdateTaskDone,
+  applyUpdateTaskDueDate,
+  applyUpdateTaskMemo,
+  applyUpdateTaskOrder,
+  applyUpdateTaskRepeatPeriod,
+  applyUpdateTaskTitle,
+} from "../hooks/UseTransaction";
 
 const TASK_VIEW_MODE = {
   LIST: "리스트",
@@ -43,9 +60,16 @@ const SORT_MODE = {
   CREATED_DATE: "생성일",
 };
 
-const TodoContent = () => {
+const TodoContent = (callback, deps) => {
   const props = useOutletContext();
-  const { selectedTodoMenuType, category: passedCategory, categories } = props;
+  const {
+    selectedTodoMenuType,
+    category: passedCategory,
+    addPromise,
+    states,
+  } = props;
+
+  const { taskMap, categories } = states;
 
   const [currentSortMode, setCurrentSortMode] = useState(SORT_MODE.IMPORTANT);
   const [timer, setTimer] = useState(0);
@@ -60,7 +84,6 @@ const TodoContent = () => {
   }, [lastTxUpdateTime, timer]);
 
   // main objects
-  const [taskMap, setTaskMap] = useState({});
   const [selectedTodoItemId, setSelectedTodoItemId] = useState(null);
   const [taskViewMode, setTaskViewMode] = useState(TASK_VIEW_MODE.LIST);
 
@@ -155,32 +178,48 @@ const TodoContent = () => {
     }
   }, [currentSortMode]);
 
-  const getTaskListSync = useCallback(() => {
+  const getCategoryListSync = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      IpcSender.req.category.getCategoryList(({ success, data }) => {
+        if (success) {
+          const newCategories = {};
+          data.forEach((category) => {
+            const c = Category.fromEntity(category);
+            c.default = false;
+            newCategories[category.cid] = c;
+          });
+          resolve({ categories: newCategories });
+        } else {
+          Toast.error("Failed to fetch data category list");
+          console.error(`Failed to get category list`);
+          reject();
+        }
+      });
+    });
+  }, []);
+
+  const getTaskListSync = useCallback((transition) => {
     return new Promise((resolve, reject) => {
       IpcSender.req.task.getTaskList(({ success, data }) => {
         if (success) {
           // covert to Task objects
-          setTaskMap((taskMap) => {
-            const newTaskMap = {};
-            for (let i = 0; i < data.length; i++) {
-              const raw = data[i];
-              const task = Task.fromEntity(raw);
-              newTaskMap[task.id] = task;
-            }
+          const newTaskMap = {};
+          for (let i = 0; i < data.length; i++) {
+            const raw = data[i];
+            const task = Task.fromEntity(raw);
+            newTaskMap[task.id] = task;
+          }
 
-            // rearrange tasks and set next/prev nodes (linked list)
-            for (let rawTask of data) {
-              const nextTaskId = rawTask.next;
-              const nextTask =
-                nextTaskId != null ? newTaskMap[nextTaskId] : null;
-              const curTask = newTaskMap[rawTask.tid];
+          // rearrange tasks and set next/prev nodes (linked list)
+          for (let rawTask of data) {
+            const nextTaskId = rawTask.next;
+            const nextTask = nextTaskId != null ? newTaskMap[nextTaskId] : null;
+            const curTask = newTaskMap[rawTask.tid];
 
-              if (curTask) curTask.next = nextTask;
-              if (nextTask) nextTask.prev = curTask;
-            }
-            return { ...taskMap, ...newTaskMap };
-          });
-          resolve();
+            if (curTask) curTask.next = nextTask;
+            if (nextTask) nextTask.prev = curTask;
+          }
+          resolve({ ...transition, taskMap: { ...taskMap, ...newTaskMap } });
         } else {
           console.error("failed to get task list");
           reject();
@@ -189,23 +228,21 @@ const TodoContent = () => {
     });
   }, []);
 
-  const getSubTaskListSync = useCallback(() => {
+  const getSubTaskListSync = useCallback((transition) => {
+    // fetch all subtasks
     return new Promise((resolve, reject) => {
-      // fetch all subtasks
+      const { taskMap } = transition;
       IpcSender.req.task.getSubtaskList(({ success, data }) => {
         if (success) {
-          setTaskMap((taskMap) => {
-            for (let i = 0; i < data.length; i++) {
-              const subtaskEntity = data[i];
-              const subtask = Subtask.fromEntity(subtaskEntity);
-              const taskId = subtaskEntity.tid;
-              if (taskMap[taskId]) {
-                taskMap[taskId].addSubtask(subtask);
-              }
+          for (let i = 0; i < data.length; i++) {
+            const subtaskEntity = data[i];
+            const subtask = Subtask.fromEntity(subtaskEntity);
+            const taskId = subtaskEntity.tid;
+            if (taskMap[taskId]) {
+              taskMap[taskId].addSubtask(subtask);
             }
-            return { ...taskMap };
-          });
-          resolve();
+          }
+          resolve({ ...transition, taskMap: { ...taskMap } });
         } else {
           console.error("failed to get subtask list");
           reject();
@@ -214,24 +251,22 @@ const TodoContent = () => {
     });
   }, []);
 
-  const getTasksCategoriesListSync = useCallback(() => {
+  const getTasksCategoriesListSync = useCallback((transition) => {
     return new Promise((resolve, reject) => {
+      const { taskMap, categories } = transition;
       IpcSender.req.tasks_categories.getTasksCategoriesList(
         ({ success, data }) => {
           if (success) {
-            setTaskMap((taskMap) => {
-              for (let i = 0; i < data.length; i++) {
-                const taskCategoryEntity = data[i];
-                const taskId = taskCategoryEntity.tid;
-                const categoryId = taskCategoryEntity.cid;
-                const category = categories[categoryId];
-                if (taskMap[taskId]) {
-                  taskMap[taskId].addCategory(category);
-                }
+            for (let i = 0; i < data.length; i++) {
+              const taskCategoryEntity = data[i];
+              const taskId = taskCategoryEntity.tid;
+              const categoryId = taskCategoryEntity.cid;
+              const category = categories[categoryId];
+              if (taskMap[taskId]) {
+                taskMap[taskId].addCategory(category);
               }
-              return { ...taskMap };
-            });
-            resolve();
+            }
+            resolve({ ...transition, taskMap: { ...taskMap } });
           } else {
             console.error("failed to get task list");
             reject();
@@ -239,26 +274,42 @@ const TodoContent = () => {
         }
       );
     });
-  }, [categories]);
+  }, []);
+
+  const fetchAll = useCallback(async () => {
+    let transition;
+    transition = await getCategoryListSync();
+    transition = await getTaskListSync(transition);
+    transition = await getSubTaskListSync(transition);
+    await getTasksCategoriesListSync(transition);
+    addPromise(
+      () =>
+        new Promise((resolve) => {
+          resolve(transition);
+        })
+    );
+    await IpcSender.req.system.stateListenReady(true);
+  }, [
+    addPromise,
+    getSubTaskListSync,
+    getTaskListSync,
+    getTasksCategoriesListSync,
+  ]);
 
   useEffect(() => {
-    if (!categories) return;
     (async () => {
-      await getTaskListSync();
-      await getSubTaskListSync();
-      await getTasksCategoriesListSync();
+      await fetchAll();
     })();
 
-    IpcSender.onAll("system/initializeState", async () => {
-      await getTaskListSync();
-      await getSubTaskListSync();
-      await getTasksCategoriesListSync();
-    });
+    IpcSender.onAll("system/initializeState", fetchAll);
 
     return () => {
       IpcSender.offAll("system/initializeState");
+      (async () => {
+        await IpcSender.req.system.stateListenReady(false);
+      })();
     };
-  }, [categories]);
+  }, [fetchAll]);
 
   /* ------------------------------ Handlers ------------------------------ */
   const onTaskAdd = (task) => {
@@ -372,272 +423,72 @@ const TodoContent = () => {
     });
 
     IpcSender.onAll("task/addTask", ({ success, data }) => {
-      if (success) {
-        const task = new Task();
-        task.id = data.tid;
-        task.createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
-        task.doneAt = data.doneAt ? new Date(data.doneAt) : null;
-        task.dueDate = data.dueDate ? new Date(data.dueDate) : null;
-        task.title = data.title;
-        task.memo = data.memo;
-        task.done = data.done;
-        task.categories = data.categories;
-        task.repeatPeriod = data.repeatPeriod;
-        task.repeatStartAt = data.repeatStartAt
-          ? new Date(data.repeatStartAt)
-          : null;
-
-        setTaskMap((taskMap) => {
-          const updated = { ...taskMap };
-          let prevTask = taskMap[data.prevTaskId];
-          if (prevTask) {
-            prevTask.next = task;
-            updated[prevTask.id] = prevTask;
-          }
-          task.prev = prevTask;
-          updated[task.id] = task;
-          console.log(updated, task);
-          return updated;
-        });
-      } else {
-        console.error("failed to add task");
-      }
+      applyAddTask({ addPromise, success, data });
     });
 
     IpcSender.onAll("task/deleteTask", ({ success, data }) => {
-      if (success) {
-        let delTaskId = data.tid;
-        setTaskMap((taskMap) => {
-          const newTaskMap = { ...taskMap };
-          let origNext = newTaskMap[delTaskId]?.next;
-          let origPrev = newTaskMap[delTaskId]?.prev;
-          if (origNext) {
-            origNext.prev = origPrev;
-          }
-          if (origPrev) {
-            origPrev.next = origNext;
-          }
-          delete newTaskMap[delTaskId];
-          return newTaskMap;
-        });
-      } else {
-        console.error("failed to delete task");
-      }
+      applyDeleteTask({ addPromise, success, data });
     });
 
     IpcSender.onAll("task/updateTaskOrder", ({ success, data }) => {
-      if (success) {
-        const { tid: currentTaskId, targetTaskId, afterTarget } = data;
-
-        setTaskMap((taskMap) => {
-          const newTaskMap = { ...taskMap };
-          const targetTask = newTaskMap[targetTaskId];
-          const currentTask = newTaskMap[currentTaskId];
-          const prevTask = currentTask.prev;
-          const nextTask = currentTask.next;
-
-          if (prevTask) prevTask.next = nextTask;
-          if (nextTask) nextTask.prev = prevTask;
-
-          if (afterTarget) {
-            currentTask.prev = targetTask;
-            currentTask.next = targetTask.next;
-            if (targetTask.next) {
-              targetTask.next.prev = currentTask;
-            }
-            targetTask.next = currentTask;
-          } else {
-            currentTask.next = targetTask;
-            currentTask.prev = targetTask.prev;
-            if (targetTask.prev) {
-              targetTask.prev.next = currentTask;
-            }
-            targetTask.prev = currentTask;
-          }
-
-          return newTaskMap;
-        });
-      } else {
-        console.error("failed to update task order");
-      }
+      applyUpdateTaskOrder({ addPromise, success, data });
     });
 
     IpcSender.onAll("task/updateTaskTitle", ({ success, data }) => {
-      if (success) {
-        const { tid, title } = data;
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.title = title;
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update task title");
-      }
+      applyUpdateTaskTitle({ addPromise, success, data });
     });
 
     IpcSender.onAll("task/updateTaskDueDate", ({ success, data }) => {
-      if (success) {
-        let { tid, dueDate } = data;
-        if (dueDate != null) {
-          dueDate = new Date(dueDate);
-        }
-
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.dueDate = dueDate;
-          if (dueDate == null) {
-            task.repeatPeriod = null;
-            task.repeatStartAt = null;
-          } else {
-            task.repeatStartAt = dueDate;
-          }
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update task due date");
-      }
+      applyUpdateTaskDueDate({ addPromise, success, data });
     });
 
     IpcSender.onAll("task/updateTaskMemo", ({ success, data }) => {
-      if (success) {
-        const { tid, memo } = data;
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.memo = memo;
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update task memo");
-      }
+      applyUpdateTaskMemo({ addPromise, success, data });
     });
 
     IpcSender.onAll(
       "task/updateTaskDone",
       ({ success, data }, isRepeated, newDueDate) => {
-        if (success) {
-          const { tid, done, doneAt } = data;
-
-          setTaskMap((taskMap) => {
-            const task = taskMap[tid];
-            if (isRepeated) {
-              task.done = false;
-              task.dueDate = new Date(newDueDate);
-            } else {
-              task.done = done;
-              task.doneAt = doneAt;
-            }
-            return { ...taskMap, [tid]: task };
-          });
-        } else {
-          console.error("failed to update task done");
-        }
+        applyUpdateTaskDone({
+          addPromise,
+          success,
+          data,
+          isRepeated,
+          newDueDate,
+        });
       }
     );
 
     IpcSender.onAll("task/updateTaskRepeatPeriod", ({ success, data }) => {
-      if (success) {
-        const { tid, repeatPeriod } = data;
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.repeatPeriod = repeatPeriod;
-          if (task.repeatStartAt == null) {
-            task.repeatStartAt = task.dueDate;
-          }
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        Toast.error("failed to update task repeat period");
-        console.error("failed to update task repeat period");
-      }
+      applyUpdateTaskRepeatPeriod({ addPromise, success, data });
     });
 
     IpcSender.onAll("task/createSubtask", ({ success, data }) => {
-      if (success) {
-        const { tid, sid, title, createdAt, doneAt, dueDate, done } = data;
-        const subtask = new Subtask();
-        subtask.id = sid;
-        subtask.title = title;
-        subtask.createdAt = new Date(createdAt);
-        subtask.doneAt = doneAt ? new Date(doneAt) : null;
-        subtask.dueDate = dueDate ? new Date(dueDate) : null;
-        subtask.done = done;
-
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.addSubtask(subtask);
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to add subtask");
-      }
+      applyCreateSubtask({ addPromise, success, data });
     });
 
     IpcSender.onAll("task/deleteSubtask", ({ success, data }) => {
-      if (success) {
-        const { tid, sid } = data;
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.deleteSubtask(sid);
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to delete subtask");
-      }
+      applyDeleteSubtask({ addPromise, success, data });
     });
 
     IpcSender.onAll("task/updateSubtaskTitle", ({ success, data }) => {
-      if (success) {
-        const { tid, sid, title } = data;
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          const subtask = task.subtasks[sid];
-          if (subtask == null) {
-            console.error("subtask is null", tid, sid, title);
-            return taskMap;
-          }
-          subtask.title = title;
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update subtask title");
-      }
+      applyUpdateSubtaskTitle({ addPromise, success, data });
     });
 
     IpcSender.onAll("task/updateSubtaskDueDate", ({ success, data }) => {
-      if (success) {
-        const { tid, sid, dueDate } = data;
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          const subtask = task.subtasks[sid];
-          if (subtask == null) {
-            console.error("subtask is null", tid, sid, dueDate);
-            return taskMap;
-          }
-          subtask.dueDate = dueDate ? new Date(dueDate) : null;
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update subtask due date");
-      }
+      applyUpdateSubtaskDueDate({ addPromise, success, data });
     });
 
     IpcSender.onAll("task/updateSubtaskDone", ({ success, data }) => {
-      if (success) {
-        const { tid, sid, done, doneAt } = data;
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          const subtask = task.subtasks[sid];
-          if (subtask == null) {
-            console.error("subtask is null", tid, sid, done, doneAt);
-            return taskMap;
-          }
-          subtask.done = done;
-          subtask.doneAt = doneAt ? new Date(doneAt) : null;
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to update subtask done");
-      }
+      applyUpdateSubtaskDone({ addPromise, success, data });
+    });
+
+    IpcSender.onAll("task/addTaskCategory", ({ success, data }) => {
+      applyAddTaskCategory({ addPromise, success, data });
+    });
+
+    IpcSender.onAll("task/deleteTaskCategory", ({ success, data }) => {
+      applyDeleteTaskCategory({ addPromise, success, data });
     });
 
     let timerThread = fastInterval(() => {
@@ -659,46 +510,12 @@ const TodoContent = () => {
       IpcSender.offAll("task/updateSubtaskTitle");
       IpcSender.offAll("task/updateSubtaskDueDate");
       IpcSender.offAll("task/updateSubtaskDone");
+      IpcSender.offAll("task/addTaskCategory");
+      IpcSender.offAll("task/deleteTaskCategory");
 
       clearInterval(timerThread);
     };
-  }, [categories]);
-
-  useEffect(() => {
-    IpcSender.onAll("task/addTaskCategory", ({ success, data }) => {
-      if (success) {
-        const { tid, cid } = data;
-        console.log(taskMap, categories);
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          const category = categories[cid];
-          console.log(task);
-          task.addCategory(category);
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to add task category");
-      }
-    });
-
-    IpcSender.onAll("task/deleteTaskCategory", ({ success, data }) => {
-      if (success) {
-        const { tid, cid } = data;
-        setTaskMap((taskMap) => {
-          const task = taskMap[tid];
-          task.deleteCategory(cid);
-          return { ...taskMap, [tid]: task };
-        });
-      } else {
-        console.error("failed to delete task category");
-      }
-    });
-
-    return () => {
-      IpcSender.offAll("task/addTaskCategory");
-      IpcSender.offAll("task/deleteTaskCategory");
-    };
-  }, [categories]);
+  }, [addPromise, taskMap, categories]);
 
   return (
     <div className="todo-content">

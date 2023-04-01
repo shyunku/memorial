@@ -148,6 +148,9 @@ const IpcSender = {
       initializeState: (callback) => {
         sender("system/initializeState", callback);
       },
+      stateListenReady: (ready, callback) => {
+        sender("system/stateListenReady", callback, ready);
+      },
     },
     auth: {
       sendGoogleOauthResult: (result, callback) => {

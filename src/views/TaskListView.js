@@ -15,11 +15,19 @@ const TaskListView = ({ taskMap, filteredTaskMap, sorter, ...rest }) => {
     }
     if (sorted.length != Object.values(taskMap).length) {
       console.error("Task list is not sorted correctly");
-      console.log(sorted, taskMap);
+      // console.log(sorted, taskMap);
+      for (let tid in taskMap) {
+        let task = taskMap[tid];
+        console.log(
+          `${task?.prev?.id?.substr(0, 5) ?? null} <- ${tid?.substr(0, 5)} -> ${
+            task?.next?.id?.substr(0, 5) ?? null
+          }`
+        );
+      }
       for (let t of Object.values(taskMap)) {
-        if (sorted.indexOf(t) == -1) {
+        if (sorted.indexOf(t) === -1) {
           sorted.push(t);
-          console.log(t);
+          // console.log(t);
         }
       }
     }
@@ -63,11 +71,19 @@ const TaskListView = ({ taskMap, filteredTaskMap, sorter, ...rest }) => {
       <div className="todo-item-groups">
         <div className="todo-item-group">
           <div className="title">해야할 일 ({notDoneTaskList.length})</div>
-          <TaskList taskList={notDoneTaskList} draggable={sorter == null} {...rest} />
+          <TaskList
+            taskList={notDoneTaskList}
+            draggable={sorter == null}
+            {...rest}
+          />
         </div>
         <div className="todo-item-group">
           <div className="title">완료됨 ({doneTaskList.length})</div>
-          <TaskList taskList={doneTaskList} draggable={sorter == null} {...rest} />
+          <TaskList
+            taskList={doneTaskList}
+            draggable={sorter == null}
+            {...rest}
+          />
         </div>
       </div>
     </div>

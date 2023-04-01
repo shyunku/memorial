@@ -2,7 +2,7 @@ import TopBar from "components/TopBar";
 import Loading from "molecules/Loading";
 import Prompt from "molecules/Prompt";
 import Toast from "molecules/Toast";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Outlet, useNavigate, useOutletContext } from "react-router-dom";
 import {
@@ -13,6 +13,8 @@ import {
 } from "store/accountSlice";
 import IpcSender from "utils/IpcSender";
 import "./Root.layout.scss";
+import * as uuid from "uuid";
+import { colorize } from "../utils/Common";
 
 const RootLayout = () => {
   const context = useOutletContext();
@@ -35,9 +37,78 @@ const RootLayout = () => {
   const [socketReady, setSocketReady] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
 
+  const [promises, setPromises] = useState({});
+  const [executing, setExecuting] = useState(false);
+  const [promiseCounter, setPromiseCounter] = useState(0);
+
+  const emptyState = useMemo(() => {
+    return {
+      taskMap: {},
+      categories: {},
+    };
+  }, []);
+
+  const [states, setStates] = useState(emptyState);
+
   const tryAtOffline = useMemo(() => {
     return !(socketReady && socketConnected);
   }, [socketReady, socketConnected]);
+
+  const addPromise = useCallback((promise) => {
+    setPromiseCounter((pc) => {
+      setPromises((prev) => {
+        const promiseUuid = pc;
+        let newPromises = { ...prev, [promiseUuid]: promise };
+        // console.log(`--> added promise ${promiseUuid}`);
+        return newPromises;
+      });
+      return pc + 1;
+    });
+  }, []);
+
+  const executePromises = useCallback(async () => {
+    const promiseLength = Object.keys(promises).length;
+    if (promiseLength === 0 || executing) return;
+
+    setExecuting(true);
+    const proms = { ...promises };
+    // pop first promise
+    const poppedPromiseKey = Object.keys(proms)[0];
+
+    if (poppedPromiseKey == null) {
+      setExecuting(false);
+      return;
+    }
+
+    setPromises((ps) => {
+      const copied = { ...ps };
+      delete copied[poppedPromiseKey];
+      // console.log(`<-- deleted promise ${poppedPromiseKey}`);
+      return copied;
+    });
+
+    try {
+      const promise = proms[poppedPromiseKey];
+      const transition = await promise(states);
+      console.log(colorize.blue(`[Execute promise ${poppedPromiseKey}]`));
+      // console.log("<-- transition", transition, states);
+      setStates((prev) => {
+        if (transition == null) return emptyState;
+        const copied = { ...prev };
+        for (let key in transition) {
+          copied[key] = { ...transition[key] };
+        }
+        return copied;
+      });
+    } catch (err) {
+      console.error(err);
+    }
+    setExecuting(false);
+  }, [promises, executing, states]);
+
+  useEffect(() => {
+    executePromises();
+  }, [promises, executing, states, executePromises]);
 
   const goBackToLoginPage = () => {
     navigate("/login");
@@ -403,10 +474,10 @@ const RootLayout = () => {
 
   return (
     <div className="root-layout">
-      <TopBar />
+      <TopBar addPromise={addPromise} />
       <div className="root-layout__content">
         {databaseReady ? (
-          <Outlet context={{ localNonce, remoteNonce }} />
+          <Outlet context={{ localNonce, remoteNonce, addPromise, states }} />
         ) : (
           <div
             style={{

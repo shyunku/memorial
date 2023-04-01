@@ -26,6 +26,10 @@ import IpcSender from "utils/IpcSender";
 import JsxUtil from "utils/JsxUtil";
 import "./LeftSidebar.scss";
 import ProfileImage from "./ProfileImage";
+import {
+  applyCreateCategory,
+  applyDeleteCategory,
+} from "../hooks/UseTransaction";
 
 export const TODO_MENU_TYPE = {
   ALL: "모든 할일",
@@ -37,15 +41,10 @@ export const TODO_MENU_TYPE_TO_ICON = {
   [TODO_MENU_TYPE.TODAY]: <IoToday />,
 };
 
-const LeftSidebar = ({
-  setSelectedTodoMenuType,
-  selectedTodoMenuType,
-  categories,
-  onCategoryAdd,
-  onCategoryDelete,
-}) => {
+const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
   const context = useOutletContext();
-  const { localNonce, remoteNonce } = context;
+  const { localNonce, remoteNonce, addPromise, states } = context;
+  const { categories } = states;
 
   const accountInfo = useSelector(accountInfoSlice);
   const offlineMode = accountInfo?.offlineMode ?? false;
@@ -103,7 +102,6 @@ const LeftSidebar = ({
   };
 
   const onCustomCategorySelect = (e, categoryId) => {
-    console.log("select");
     e.stopPropagation();
     const category = categories[categoryId];
     if (category) {
@@ -148,32 +146,18 @@ const LeftSidebar = ({
 
   useEffect(() => {
     IpcSender.onAll("category/createCategory", ({ success, data }) => {
-      if (success) {
-        const category = new Category();
-        category.id = data.cid;
-        category.title = data.title;
-        category.secret = data.secret;
-        category.locked = data.locked;
-        category.color = data.color;
-        onCategoryAdd?.(category, data.cid);
-      } else {
-        Toast.error("카테고리 생성에 실패했습니다.");
-      }
+      applyCreateCategory({ success, data, addPromise });
     });
 
     IpcSender.onAll("category/deleteCategory", ({ success, data }) => {
-      if (success) {
-        onCategoryDelete?.(data.cid);
-      } else {
-        Toast.error("카테고리 삭제에 실패했습니다.");
-      }
+      applyDeleteCategory({ success, data, addPromise });
     });
 
     return () => {
       IpcSender.offAll("category/createCategory");
       IpcSender.offAll("category/deleteCategory");
     };
-  }, [onCategoryDelete]);
+  }, [states]);
 
   return (
     <div className="component left-sidebar">

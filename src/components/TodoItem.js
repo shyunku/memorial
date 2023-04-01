@@ -65,28 +65,37 @@ const TodoItem = ({
 
   const dueDateText = useMemo(() => {
     if (!todo.dueDate) return "기한 없음";
-    if (moment(todo.dueDate).isSame(moment().subtract(1, "day"), "day")) return "어제";
+    if (moment(todo.dueDate).isSame(moment().subtract(1, "day"), "day"))
+      return "어제";
     if (moment(todo.dueDate).isSame(moment(), "day")) return "오늘";
-    if (moment(todo.dueDate).isSame(moment().add(1, "day"), "day")) return "내일";
-    if (moment(todo.dueDate).isSame(moment().add(2, "day"), "day")) return "모레";
+    if (moment(todo.dueDate).isSame(moment().add(1, "day"), "day"))
+      return "내일";
+    if (moment(todo.dueDate).isSame(moment().add(2, "day"), "day"))
+      return "모레";
     return moment(todo.dueDate).format("YY.MM.DD");
   }, [JSON.stringify(todo.dueDate)]);
 
   const dueTimeText = useMemo(() => {
     if (!todo.dueDate) return "";
     const dueMoment = moment(todo.dueDate);
-    if (dueMoment.hours() === 23 && dueMoment.minutes() === 59) return " 자정 전";
-    if (dueMoment.hours() === 0 && dueMoment.minutes() === 0) return " 새벽 0시";
+    if (dueMoment.hours() === 23 && dueMoment.minutes() === 59)
+      return " 자정 전";
+    if (dueMoment.hours() === 0 && dueMoment.minutes() === 0)
+      return " 새벽 0시";
     if (dueMoment.minutes() === 0) return dueMoment.format(" A h시");
     return moment(todo.dueDate).format(" A h시 mm분");
   }, [JSON.stringify(todo.dueDate)]);
 
   const repeatTimeText = useMemo(() => {
     if (!todo.repeatStartAt) return "";
-    if (todo.repeatPeriod == "day") return `매일 ${moment(todo.repeatStartAt).format("A h시 mm분")}`;
-    if (todo.repeatPeriod == "week") return `매주 ${moment(todo.repeatStartAt).format("ddd요일")}`;
-    if (todo.repeatPeriod == "month") return `매월 ${moment(todo.repeatStartAt).format("D일")}`;
-    if (todo.repeatPeriod == "year") return `매년 ${moment(todo.repeatStartAt).format("M월 D일")}`;
+    if (todo.repeatPeriod == "day")
+      return `매일 ${moment(todo.repeatStartAt).format("A h시 mm분")}`;
+    if (todo.repeatPeriod == "week")
+      return `매주 ${moment(todo.repeatStartAt).format("ddd요일")}`;
+    if (todo.repeatPeriod == "month")
+      return `매월 ${moment(todo.repeatStartAt).format("D일")}`;
+    if (todo.repeatPeriod == "year")
+      return `매년 ${moment(todo.repeatStartAt).format("M월 D일")}`;
     return "";
   }, [todo.repeatStartAt, todo.repeatPeriod]);
 
@@ -100,7 +109,10 @@ const TodoItem = ({
 
   const remainTimeText = useMemo(() => {
     if (remainTimeMilli == null) return "";
-    return fromRelativeTime(remainTimeMilli < 0 ? -remainTimeMilli : remainTimeMilli, { showLayerCount: 3 });
+    return fromRelativeTime(
+      remainTimeMilli < 0 ? -remainTimeMilli : remainTimeMilli,
+      { showLayerCount: 3 }
+    );
   }, [remainTimeMilli]);
 
   const categoryTags = useMemo(() => {
@@ -206,7 +218,8 @@ const TodoItem = ({
 
   const linkedListTestJsx = (
     <div className="title">
-      {todo.prev ? `${todo.prev.id} <- ` : ""}[{todo.id}]{todo.next ? ` -> ${todo.next.id}` : ""}
+      {todo.prev ? `${todo.prev.id} <- ` : ""}[{todo.id}]
+      {todo.next ? ` -> ${todo.next.id}` : ""}
     </div>
   );
 
@@ -225,7 +238,12 @@ const TodoItem = ({
       todo-id={todo.id}
       draggable={draggable}
     >
-      <AutoBlurDiv blurHandler={blurHandler} reference={expandableRef} focused={selected} {...rest}>
+      <AutoBlurDiv
+        blurHandler={blurHandler}
+        reference={expandableRef}
+        focused={selected}
+        {...rest}
+      >
         <div className="delete-button" onClick={(e) => onTaskDelete(todo.id)}>
           <VscChromeClose />
         </div>
@@ -234,9 +252,16 @@ const TodoItem = ({
           <div className="left-side">
             <div className="title">{todo.title}</div>
             {todo.dueDate != null && (
-              <div className={"due-date" + JsxUtil.classByCondition(todo.dueDate != null, "active")}>
+              <div
+                className={
+                  "due-date" +
+                  JsxUtil.classByCondition(todo.dueDate != null, "active")
+                }
+              >
                 {dueDateText} {dueTimeText}
-                {todoCtx.repeatPeriod != null && todo.dueDate && ` (${repeatTimeText})`}
+                {todoCtx.repeatPeriod != null &&
+                  todo.dueDate &&
+                  ` (${repeatTimeText})`}
               </div>
             )}
           </div>
@@ -260,7 +285,12 @@ const TodoItem = ({
             />
           </div>
         </DraggableZone>
-        <ExpandableDiv reference={expandableRef} expand={selected} className={"expandable-options"} transition={350}>
+        <ExpandableDiv
+          reference={expandableRef}
+          expand={selected}
+          className={"expandable-options"}
+          transition={350}
+        >
           <div className="options-wrapper">
             <div className="section metadata">
               <input
@@ -295,7 +325,9 @@ const TodoItem = ({
                     <div
                       className="category-tag card"
                       key={category.id}
-                      onClick={(e) => onTaskCategoryDelete?.(todo.id, category.id)}
+                      onClick={(e) =>
+                        onTaskCategoryDelete?.(todo.id, category.id)
+                      }
                     >
                       {category.title}
                     </div>
@@ -303,7 +335,11 @@ const TodoItem = ({
                 })}
                 <div
                   className={
-                    "category-adder-wrapper" + JsxUtil.classByCondition(filteredCategories.length === 0, "hide")
+                    "category-adder-wrapper" +
+                    JsxUtil.classByCondition(
+                      filteredCategories.length === 0,
+                      "hide"
+                    )
                   }
                 >
                   <div
@@ -348,7 +384,10 @@ const TodoItem = ({
                     {sortedSubtaskList.map((subtask, i) => {
                       return (
                         <div
-                          className={"dependency-node" + JsxUtil.classByCondition(subtask.done, "fulfilled")}
+                          className={
+                            "dependency-node" +
+                            JsxUtil.classByCondition(subtask.done, "fulfilled")
+                          }
                           key={subtask.id}
                         >
                           <div className="grabber">
@@ -356,7 +395,11 @@ const TodoItem = ({
                               className="circle"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onSubtaskDone?.(todo.id, subtask.id, !subtask.done);
+                                onSubtaskDone?.(
+                                  todo.id,
+                                  subtask.id,
+                                  !subtask.done
+                                );
                               }}
                             ></div>
                           </div>
@@ -369,10 +412,18 @@ const TodoItem = ({
                       const titleInput = subTaskTitleInputMap[subtask.id] ?? "";
                       return (
                         <div
-                          className={"sub-task" + JsxUtil.classByCondition(subtask.done, "fulfilled")}
+                          className={
+                            "sub-task" +
+                            JsxUtil.classByCondition(subtask.done, "fulfilled")
+                          }
                           key={subtask.id}
                         >
-                          <div className="delete-button" onClick={(e) => onSubtaskDelete?.(todo.id, subtask.id)}>
+                          <div
+                            className="delete-button"
+                            onClick={(e) =>
+                              onSubtaskDelete?.(todo.id, subtask.id)
+                            }
+                          >
                             <VscChromeClose />
                           </div>
                           <div className="sub-task-title">
@@ -401,7 +452,11 @@ const TodoItem = ({
                             <DueDateMenu
                               date={subtask.dueDate}
                               setDate={(date) => {
-                                onSubtaskDueDateChange?.(todo.id, subtask.id, date);
+                                onSubtaskDueDateChange?.(
+                                  todo.id,
+                                  subtask.id,
+                                  date
+                                );
                               }}
                             />
                           </div>
@@ -412,7 +467,11 @@ const TodoItem = ({
                 </div>
                 <div
                   className={
-                    "sub-task-add-section sub-task" + JsxUtil.classByCondition(newSubtaskTitle.length == 0, "hidden")
+                    "sub-task-add-section sub-task" +
+                    JsxUtil.classByCondition(
+                      newSubtaskTitle.length == 0,
+                      "hidden"
+                    )
                   }
                 >
                   <input
@@ -423,7 +482,10 @@ const TodoItem = ({
                     onKeyDown={onNewSubtaskTitleKeyDown}
                   ></input>
                   <div className="subtask-options">
-                    <DueDateMenu date={newSubtaskDate} setDate={setNewSubtaskDate} />
+                    <DueDateMenu
+                      date={newSubtaskDate}
+                      setDate={setNewSubtaskDate}
+                    />
                   </div>
                 </div>
               </div>
@@ -432,7 +494,7 @@ const TodoItem = ({
                   <textarea
                     ref={memoRef}
                     placeholder="여기에 메모 작성"
-                    value={editedMemo}
+                    value={editedMemo ?? ""}
                     onChange={(e) => setEditedMemo(e.target.value)}
                     onBlur={onMemoEdit}
                   />

@@ -9,7 +9,6 @@ class Transaction {
   constructor(version, type, timestamp, content, blockNumber) {
     // decode content if needed
     if (typeof content === "string") {
-      console.error("decode");
       content = decodeParseBase64(content);
     }
 
