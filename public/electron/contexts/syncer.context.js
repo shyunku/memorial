@@ -42,7 +42,7 @@ class SyncerContext {
 
     // loop handler
     this.loopInterval = fastInterval(async () => {
-      if (this.remainEvents > 0 || this.handlingEvents) return;
+      if (this.remainEvents == 0 || this.handlingEvents) return;
       this.handlingEvents = true;
       const copied = { ...this.eventQueue };
       this.eventQueue = {};
