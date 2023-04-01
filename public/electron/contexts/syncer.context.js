@@ -49,10 +49,11 @@ class SyncerContext {
       for (const key in copied) {
         const promise = copied[key];
         await promise();
+        console.debug(`handled event ${key}`);
       }
 
       this.handlingEvents = false;
-    }, 500);
+    }, 300);
   }
 
   async initialize() {
@@ -171,24 +172,30 @@ class SyncerContext {
   }
 
   async saveBlockAndExecute(block) {
-    this.addEventQueue(
-      () =>
-        new Promise(async (resolve, reject) => {
-          try {
-            let { tx: rawTx, number, hash: blockHash } = block;
-            const tx = new Transaction(
-              rawTx.version,
-              rawTx.type,
-              rawTx.timestamp,
-              rawTx.content,
-              number
-            );
-            await this.executorService.applyTransaction(null, tx, blockHash);
-          } catch (err) {
-            throw err;
-          }
-        })
-    );
+    return new Promise(async (res, rej) => {
+      this.addEventQueue(
+        () =>
+          new Promise(async (resolve, reject) => {
+            try {
+              let { tx: rawTx, number, hash: blockHash } = block;
+              const tx = new Transaction(
+                rawTx.version,
+                rawTx.type,
+                rawTx.timestamp,
+                rawTx.content,
+                number
+              );
+              await this.executorService.applyTransaction(null, tx, blockHash);
+              res();
+            } catch (err) {
+              rej(err);
+              throw err;
+            } finally {
+              resolve();
+            }
+          })
+      );
+    });
   }
 
   async snapSync(startBlockNumber, endBlockNumber) {

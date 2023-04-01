@@ -62,12 +62,7 @@ const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
     if (offlineMode) return ["offline", "오프라인 모드"];
     if (remoteNonce == null) return ["synchronizing", "동기화 중"];
     if (localNonce === remoteNonce) return ["synchronized", "동기화 완료"];
-    return [
-      "synchronizing",
-      `동기화 중 - ${Math.abs(
-        localNonce - remoteNonce
-      )}개 남음 (${localNonce} / ${remoteNonce})`,
-    ];
+    return ["synchronizing", `동기화 중 - ${localNonce} / ${remoteNonce}`];
   }, [offlineMode, localNonce, remoteNonce]);
 
   const createCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
