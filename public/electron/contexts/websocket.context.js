@@ -378,7 +378,7 @@ class WebsocketContext {
         }
 
         console.info(
-          `finding mismatch start block number in (${oldestLocalBlockNumber} ~ ${commonBlockNumber}})`
+          `finding mismatch start block number in (${oldestLocalBlockNumber} ~ ${commonBlockNumber})`
         );
         const mismatchStartBlockNumber =
           await syncer.findBlockHashMismatchStartNumber(
