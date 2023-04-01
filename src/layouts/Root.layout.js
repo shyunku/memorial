@@ -449,7 +449,7 @@ const RootLayout = () => {
             confirmText: "로그인 페이지로 이동",
             onConfirm: () => {
               dispatch(removeAuth());
-              window.location.href = "/login";
+              navigate("/login");
             },
           }
         );
