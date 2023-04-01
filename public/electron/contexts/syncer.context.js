@@ -1,7 +1,7 @@
 const Transaction = require("../objects/Transaction");
 const { initializeState } = require("../executors/initializeState.exec");
 const TransactionRequest = require("../objects/TransactionRequest");
-const { fastInterval } = require("../../../src/utils/Common");
+const { fastInterval } = require("../util/CommonUtil");
 
 class SyncerContext {
   /**
