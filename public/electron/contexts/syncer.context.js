@@ -345,6 +345,7 @@ class SyncerContext {
   // find mismatched block number with binary search even if local db has missing area
   // best: O(logN), worst: O(N)
   async findBlockHashMismatchStartNumber(left, right) {
+    console.debug(`[MFA] searching ${left} ~ ${right}...`);
     if (left > right) return null;
     if (left <= 0) return null;
 
@@ -354,9 +355,13 @@ class SyncerContext {
     if (localBlockHash != null) {
       // local db has this transaction
       const remoteBlockHash = await this.getRemoteBlockHash(mid);
+      console.debug(
+        `[MFA] comparing ${mid} local: ${localBlockHash}, remote: ${remoteBlockHash}`
+      );
       if (localBlockHash === remoteBlockHash)
-        return this.findBlockHashMismatchStartNumber(mid + 1, right);
-      return this.findBlockHashMismatchStartNumber(left, mid - 1);
+        return await this.findBlockHashMismatchStartNumber(mid + 1, right);
+      let leftSide = await this.findBlockHashMismatchStartNumber(left, mid - 1);
+      return leftSide ?? mid;
     }
 
     // local db has no transaction here... (maybe truncated)
