@@ -34,7 +34,10 @@ const initializeState = async (reqId, serviceGroup, txReq, blockNumber) => {
   // delete all (necessary?)
   const userId = serviceGroup.userService.getCurrent();
   const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
-  await db.clearExceptTransactions();
+  const isClear = await db.isClearExceptTransactions();
+  if (!isClear) {
+    throw new Error("Database is not clear");
+  }
 
   // insert tasks
   let bidirectionalTasks = {};
@@ -56,9 +59,10 @@ const initializeState = async (reqId, serviceGroup, txReq, blockNumber) => {
 
   // sort tasks
   let reverseSortedTasks = [];
-  let lastTask = Object.values(bidirectionalTasks).find(
-    (task) => task.next === ""
-  );
+  let lastTask = Object.values(bidirectionalTasks).find((task) => {
+    return task.next == null || task.next === "";
+  });
+
   let iter = lastTask;
   while (iter != null) {
     reverseSortedTasks.push(iter);

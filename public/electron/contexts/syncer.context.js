@@ -72,6 +72,12 @@ class SyncerContext {
 
   setLocalLastBlockNumber(blockNumber) {
     this.localLastBlockNumber = blockNumber;
+    this.ipcService.sender(
+      "system/localLastBlockNumber",
+      null,
+      true,
+      blockNumber
+    );
   }
 
   /**
@@ -79,9 +85,20 @@ class SyncerContext {
    */
   setRemoteLastBlockNumber(blockNumber) {
     this.remoteLastBlockNumber = blockNumber;
+    this.ipcService.sender(
+      "system/remoteLastBlockNumber",
+      null,
+      true,
+      blockNumber
+    );
   }
 
-  async sendTransaction(tx) {
+  /**
+   * @param tx {Transaction}
+   * @param timeout? {number}
+   * @returns {Promise<any>}
+   */
+  async sendTransaction(tx, timeout) {
     try {
       if (this.socket == null) throw new Error("Socket is not connected");
       if (!(tx instanceof Transaction))
@@ -94,7 +111,7 @@ class SyncerContext {
       const txRequest = TransactionRequest.fromTransaction(tx, blockHash);
 
       if (this.socket.connected()) {
-        return await this.socket.sendSync("transaction", txRequest);
+        return await this.socket.sendSync("transaction", txRequest, timeout);
       }
     } catch (err) {
       console.error(err);
@@ -198,12 +215,13 @@ class SyncerContext {
         await this.db.close();
         await this.databaseService.deleteUserDatabase(this.userId);
         await this.databaseService.initializeUserDatabase(this.userId);
-        this.db = await this.databaseService.getUserDatabaseContext(
-          this.userId
-        );
       } catch (cErr) {
         console.error(cErr);
         throw err;
+      } finally {
+        this.db = await this.databaseService.getUserDatabaseContext(
+          this.userId
+        );
       }
     }
 

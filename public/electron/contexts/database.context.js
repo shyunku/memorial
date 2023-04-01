@@ -10,6 +10,7 @@ const {
   InitializeStateTxContent,
 } = require("../executors/initializeState.exec");
 const TX_TYPE = require("../constants/TxType.constants");
+const { isFieldsSorted } = require("../util/TxUtil");
 
 const COLOR = console.RGB(78, 119, 138);
 const TAG = console.wrap("IpcMain", COLOR);
@@ -28,6 +29,8 @@ class DatabaseContext {
     this.websocketService = serviceGroup.websocketService;
     /** @type {ExecutorService} */
     this.executorService = serviceGroup.executorService;
+    /** @type {SyncerService} */
+    this.syncerService = serviceGroup.syncerService;
   }
 
   /**
@@ -142,7 +145,6 @@ class DatabaseContext {
     const socket = await this.websocketService.getUserWebsocketContext(
       this.userId
     );
-    const syncer = await this.syncerService.getUserSyncerContext(this.userId);
     const userDataPath = FileSystem.getUserDataPath();
     const rootSchemeVersion = "v" + packageJson.config["root_scheme_version"];
     let datafileDirPath = path.join(userDataPath, "datafiles");
@@ -326,7 +328,10 @@ class DatabaseContext {
               1
             );
             await this.executorService.applyTransaction(null, tx);
-            await socket.emitSync("transaction", tx, 15000);
+            const syncerCtx = await this.syncerService.getUserSyncerContext(
+              this.userId
+            );
+            await syncerCtx.sendTransaction(tx, 15000);
 
             // backup or delete old database?
             fs.renameSync(
@@ -345,6 +350,8 @@ class DatabaseContext {
   }
 
   async clear() {
+    await this.useForeignKey(false);
+    await this.useCheckConstraint(false);
     await this.begin();
     try {
       const tables = await this.all(
@@ -358,6 +365,9 @@ class DatabaseContext {
     } catch (err) {
       await this.rollback();
       throw err;
+    } finally {
+      await this.useForeignKey(true);
+      await this.useCheckConstraint(true);
     }
   }
 
@@ -376,6 +386,23 @@ class DatabaseContext {
       await this.rollback();
       throw err;
     }
+  }
+
+  async isClearExceptTransactions() {
+    const tables = await this.all(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'transactions';"
+    );
+    for (let i = 0; i < tables.length; i++) {
+      const table = tables[i];
+      const count = await this.get(
+        `SELECT COUNT(*) AS count FROM ${table.name};`
+      );
+      if (count.count > 0) {
+        console.debug(`table ${table.name} not clear`);
+        return false;
+      }
+    }
+    return true;
   }
 
   get(query, ...args) {
@@ -423,6 +450,14 @@ class DatabaseContext {
         }
       });
     });
+  }
+
+  async useForeignKey(use) {
+    return await this.run(`PRAGMA foreign_keys = ${use ? "ON" : "OFF"};`);
+  }
+
+  async useCheckConstraint(use) {
+    return await this.run(`PRAGMA check_constraints = ${use ? "ON" : "OFF"};`);
   }
 
   /**

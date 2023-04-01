@@ -13,6 +13,10 @@ class SyncerService {
     this.serviceGroup = serviceGroup;
   }
 
+  /**
+   * @param userId {string}
+   * @returns {Promise<SyncerContext>}
+   */
   async getUserSyncerContext(userId) {
     if (userId == null) throw new Error("User ID is null");
     let context = this.userSyncerContexts.get(userId);

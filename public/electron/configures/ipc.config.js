@@ -1,7 +1,7 @@
 /**
  * @param ipcService {IpcService}
  */
-const { app, BrowserWindow, powerMonitor } = require("electron");
+const {app, BrowserWindow, powerMonitor} = require("electron");
 const Request = require("../core/request");
 const sha256 = require("sha256");
 const IpcRouter = require("../objects/IpcRouter");
@@ -23,8 +23,8 @@ const {
 const {
   UpdateTaskDueDateTxContent,
 } = require("../executors/updateTaskDueDate.exec");
-const { UpdateTaskMemoTxContent } = require("../executors/updateTaskMemo.exec");
-const { UpdateTaskDoneTxContent } = require("../executors/updateTaskDone.exec");
+const {UpdateTaskMemoTxContent} = require("../executors/updateTaskMemo.exec");
+const {UpdateTaskDoneTxContent} = require("../executors/updateTaskDone.exec");
 const {
   AddTaskCategoryTxContent,
 } = require("../executors/addTaskCategory.exec");
@@ -38,7 +38,7 @@ const {
   createSubtaskPre,
   CreateSubtaskTxContent,
 } = require("../executors/createSubtask.exec");
-const { DeleteSubtaskTxContent } = require("../executors/deleteSubtask.exec");
+const {DeleteSubtaskTxContent} = require("../executors/deleteSubtask.exec");
 const {
   UpdateSubtaskTitleTxContent,
 } = require("../executors/updateSubtaskTitle.exec");
@@ -52,8 +52,8 @@ const {
   createCategoryPre,
   CreateCategoryTxContent,
 } = require("../executors/createCategory.exec");
-const { DeleteCategoryTxContent } = require("../executors/deleteCategory.exec");
-const { getServerFinalEndpoint } = require("../modules/util");
+const {DeleteCategoryTxContent} = require("../executors/deleteCategory.exec");
+const {getServerFinalEndpoint} = require("../modules/util");
 const TX_TYPE = require("../constants/TxType.constants");
 
 /**
@@ -106,7 +106,7 @@ module.exports = function (s) {
   });
 
   s.register("system/inner-modal", (event, reqId, route, data) => {
-    s.sender("inner-modal", reqId, true, { route, data });
+    s.sender("inner-modal", reqId, true, {route, data});
   });
 
   s.register("system/close-inner-modal", (event, reqId, ...arg) => {
@@ -176,27 +176,27 @@ module.exports = function (s) {
     }
   });
 
-  s.register("system/lastBlockNumber", async (event, reqId) => {
+  s.register("system/localLastBlockNumber", async (event, reqId) => {
     try {
       let lastLocalBlockNumber = await s.getUserLastLocalBlockNumber();
       if (lastLocalBlockNumber == null)
         throw new Error("lastBlockNumber is null");
-      s.sender("system/lastBlockNumber", reqId, true, lastLocalBlockNumber);
+      s.sender("system/localLastBlockNumber", reqId, true, lastLocalBlockNumber);
     } catch (err) {
       throw err;
     }
   });
 
-  s.register("system/waitingBlockNumber", async (event, reqId) => {
+  s.register("system/remoteLastBlockNumber", async (event, reqId) => {
     try {
       let lastRemoteBlockNumber = await s.getUserLastRemoteBlockNumber();
       if (lastRemoteBlockNumber == null)
         throw new Error("lastBlockNumber is null");
       s.sender(
-        "system/waitingBlockNumber",
+        "system/remoteLastBlockNumber",
         reqId,
         true,
-        lastRemoteBlockNumber + 1
+        lastRemoteBlockNumber
       );
     } catch (err) {
       throw err;
@@ -223,22 +223,39 @@ module.exports = function (s) {
     }
   });
 
-  s.register("system/isMigratable", async (event, reqId) => {
+  s.register("system/isLegacyMigrationAvailable", async (event, reqId) => {
     try {
       let legacyDatabaseExists = s.databaseService.doesLegacyDatabaseExists();
-      s.sender("system/isMigratable", reqId, true, legacyDatabaseExists);
+      s.sender(
+        "system/isLegacyMigrationAvailable",
+        reqId,
+        true,
+        legacyDatabaseExists
+      );
     } catch (err) {
-      s.sender("system/isMigratable", reqId, false);
+      s.sender("system/isLegacyMigrationAvailable", reqId, false);
       throw err;
     }
   });
 
-  s.register("system/migrateDatabase", async (event, reqId) => {
+  s.register("system/migrateLegacyDatabase", async (event, reqId) => {
     try {
-      await s.databaseService.migrateLegacyDatabase();
-      s.sender("system/migrateDatabase", reqId, true);
+      const userId = s.userService.getCurrent();
+      let db = await s.databaseService.getUserDatabaseContext(userId);
+      await db.migrateLegacyDatabase();
+      s.sender("system/migrateLegacyDatabase", reqId, true);
     } catch (err) {
-      s.sender("system/migrateDatabase", reqId, false);
+      s.sender("system/migrateLegacyDatabase", reqId, false);
+      throw err;
+    }
+  });
+
+  s.register("system/truncateLegacyDatabase", async (event, reqId) => {
+    try {
+      await s.databaseService.truncateLegacyDatabase();
+      s.sender("system/truncateLegacyDatabase", reqId, true);
+    } catch (err) {
+      s.sender("system/truncateLegacyDatabase", reqId, false);
       throw err;
     }
   });
@@ -296,8 +313,8 @@ module.exports = function (s) {
   s.register("auth/sendGoogleOauthResult", async (event, reqId, data) => {
     try {
       const rootDB = await s.databaseService.getRootDatabaseContext();
-      let { googleUserInfo } = data;
-      let { email: google_email, picture: google_profile_image_url } =
+      let {googleUserInfo} = data;
+      let {email: google_email, picture: google_profile_image_url} =
         googleUserInfo;
       let user;
 
@@ -622,8 +639,8 @@ module.exports = function (s) {
         try {
           if (canLoginWithLocal) {
             let userData = localUsers[0];
-            let { uid, username, google_email: googleEmail } = userData;
-            data.localUser = { uid, username, googleEmail };
+            let {uid, username, google_email: googleEmail} = userData;
+            data.localUser = {uid, username, googleEmail};
           }
         } catch (err) {
           console.error(err);
@@ -633,8 +650,8 @@ module.exports = function (s) {
         return;
       }
 
-      let { auth, user } = result;
-      let { access_token, refresh_token } = auth;
+      let {auth, user} = result;
+      let {access_token, refresh_token} = auth;
       let {
         auth_id,
         uid,
@@ -690,7 +707,7 @@ module.exports = function (s) {
       }
       s.sender("auth/login", reqId, true, result);
     } catch (err) {
-      s.sender("auth/login", reqId, false, { canLoginWithLocal });
+      s.sender("auth/login", reqId, false, {canLoginWithLocal});
       throw err;
     }
   });

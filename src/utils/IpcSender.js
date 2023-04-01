@@ -1,5 +1,6 @@
 import * as uuid from "uuid";
 import { colorize } from "./Common";
+
 const electron = window.require("electron");
 const { ipcRenderer } = electron;
 const remote = window.require("@electron/remote");
@@ -29,7 +30,9 @@ const sender = (topic, callback, ...arg) => {
   const sendId = uuid.v4();
   if (topic !== "system/subscribe") {
     console.debug(
-      `IpcRenderer --> ${colorize.yellow(`[${sendId?.substring(0, 3) ?? "unknown"}]`)} ${colorize.magenta(topic)}`,
+      `IpcRenderer --> ${colorize.yellow(
+        `[${sendId?.substring(0, 3) ?? "unknown"}]`
+      )} ${colorize.magenta(topic)}`,
       ...arg
     );
   }
@@ -70,10 +73,24 @@ const IpcSender = {
       sender("system/isMaximizable", callback, currentWindow.id);
     },
     modal: (url, windowProperty = {}, parameter) => {
-      sender("system/modal", null, currentWindow.id, url, windowProperty, parameter);
+      sender(
+        "system/modal",
+        null,
+        currentWindow.id,
+        url,
+        windowProperty,
+        parameter
+      );
     },
     modeless: (url, windowProperty = {}, parameter) => {
-      sender("system/modeless", null, currentWindow.id, url, windowProperty, parameter);
+      sender(
+        "system/modeless",
+        null,
+        currentWindow.id,
+        url,
+        windowProperty,
+        parameter
+      );
     },
     innerModal: (route, data) => {
       sender("system/inner-modal", null, route, data);
@@ -105,19 +122,22 @@ const IpcSender = {
         sender("system/lastTxUpdateTime", callback);
       },
       getLastBlockNumber: (callback) => {
-        sender("system/lastBlockNumber", callback);
+        sender("system/localLastBlockNumber", callback);
       },
-      getWaitingBlockNumber: (callback) => {
-        sender("system/waitingBlockNumber", callback);
+      getRemoteLastBlockNumber: (callback) => {
+        sender("system/remoteLastBlockNumber", callback);
       },
       isDatabaseClear: (callback) => {
         sender("system/isDatabaseClear", callback);
       },
-      isMigratable: (callback) => {
-        sender("system/isMigratable", callback);
+      isLegacyMigrationAvailable: (callback) => {
+        sender("system/isLegacyMigrationAvailable", callback);
       },
-      migrateDatabase: (callback) => {
-        sender("system/migrateDatabase", callback);
+      migrateLegacyDatabase: (callback) => {
+        sender("system/migrateLegacyDatabase", callback);
+      },
+      truncateLegacyDatabase: (callback) => {
+        sender("system/truncateLegacyDatabase", callback);
       },
       mismatchTxAcceptTheirs: (start, end, callback) => {
         sender("system/mismatchTxAcceptTheirs", callback, start, end);
@@ -210,7 +230,13 @@ const IpcSender = {
         sender("task/deleteTask", callback, taskId);
       },
       updateTaskOrder: (taskId, targetTaskId, afterTarget, callback) => {
-        sender("task/updateTaskOrder", callback, taskId, targetTaskId, afterTarget);
+        sender(
+          "task/updateTaskOrder",
+          callback,
+          taskId,
+          targetTaskId,
+          afterTarget
+        );
       },
       updateTaskTitle: (taskId, title, callback) => {
         sender("task/updateTaskTitle", callback, taskId, title);
@@ -243,10 +269,23 @@ const IpcSender = {
         sender("task/updateSubtaskTitle", callback, taskId, subtaskId, title);
       },
       updateSubtaskDueDate: (taskId, subtaskId, dueDate, callback) => {
-        sender("task/updateSubtaskDueDate", callback, taskId, subtaskId, dueDate);
+        sender(
+          "task/updateSubtaskDueDate",
+          callback,
+          taskId,
+          subtaskId,
+          dueDate
+        );
       },
       updateSubtaskDone: (taskId, subtaskId, done, doneAt, callback) => {
-        sender("task/updateSubtaskDone", callback, taskId, subtaskId, done, doneAt);
+        sender(
+          "task/updateSubtaskDone",
+          callback,
+          taskId,
+          subtaskId,
+          done,
+          doneAt
+        );
       },
     },
     category: {
@@ -296,7 +335,9 @@ const IpcSender = {
     });
   },
   removeAllListeners: () => {
-    console.warn(`Do not use removeAllListeners() as possible. It interferes with the internal logic.`);
+    console.warn(
+      `Do not use removeAllListeners() as possible. It interferes with the internal logic.`
+    );
     ipcRenderer.removeAllListeners();
   },
   sendCallback: (topic, data) => {
@@ -309,7 +350,9 @@ const IpcSender = {
     const newCallback = (e, reqId, ...data) => {
       if (reqId == null) return;
       console.debug(
-        `IpcRenderer <-- ${colorize.cyan(`[${reqId?.substr(0, 3) ?? "unknown"}]`)} ${colorize.magenta(topic)}`,
+        `IpcRenderer <-- ${colorize.cyan(
+          `[${reqId?.substr(0, 3) ?? "unknown"}]`
+        )} ${colorize.magenta(topic)}`,
         ...data
       );
       originalCallback(reqId, ...data);
@@ -321,7 +364,12 @@ const IpcSender = {
   onAll: (topic, callback) => {
     autoSubscribe(topic);
     const newCallback = (e, reqId, ...data) => {
-      console.debug(`IpcRenderer <-- ${colorize.yellow(`[ALL]`)} ${colorize.magenta(topic)}`, ...data);
+      console.debug(
+        `IpcRenderer <-- ${colorize.yellow(`[ALL]`)} ${colorize.magenta(
+          topic
+        )}`,
+        ...data
+      );
       return callback(...data);
     };
 

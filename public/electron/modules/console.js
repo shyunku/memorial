@@ -44,6 +44,8 @@ module.exports = (loggerModule) => {
   };
 
   const shorten = (value, newLineLimit = null) => {
+    if (value === null) return "null";
+    if (value === undefined) return "undefined";
     switch (typeof value) {
       case "string":
         return value;

@@ -104,16 +104,28 @@ const RootLayout = () => {
                 confirmText: "가져오기",
                 cancelText: "무시",
                 onConfirm: () => {
-                  IpcSender.req.system.migrateDatabase(({ success, data }) => {
-                    if (success) {
-                      Toast.success(
-                        "데이터베이스 마이그레이션이 완료되었습니다."
-                      );
-                    } else {
-                      Toast.error("데이터베이스 마이그레이션에 실패했습니다.");
+                  IpcSender.req.system.migrateLegacyDatabase(
+                    ({ success, data }) => {
+                      if (success) {
+                        Prompt.float(
+                          "데이터베이스 마이그레이션 성공",
+                          "데이터베이스 마이그레이션이 완료되었습니다.\n페이지를 새로고침합니다.",
+                          {
+                            ignorable: false,
+                            confirmText: "새로고침",
+                            onConfirm: () => {
+                              window.location.reload();
+                            },
+                          }
+                        );
+                      } else {
+                        Toast.error(
+                          "데이터베이스 마이그레이션에 실패했습니다."
+                        );
+                      }
+                      resolve();
                     }
-                    resolve();
-                  });
+                  );
                 },
                 onCancel: () => {
                   resolve();
@@ -126,9 +138,18 @@ const RootLayout = () => {
                       color: "white",
                     },
                     onClick: () => {
-                      // TODO :: backup legacy database
-                      console.log("delete old database");
-                      resolve();
+                      IpcSender.req.system.truncateLegacyDatabase(
+                        ({ success, data }) => {
+                          if (success) {
+                            Toast.success(
+                              "이전 데이터가 삭제(백업)되었습니다."
+                            );
+                          } else {
+                            Toast.error("이전 데이터 삭제에 실패했습니다.");
+                          }
+                          resolve();
+                        }
+                      );
                     },
                   },
                 ],
@@ -212,9 +233,9 @@ const RootLayout = () => {
 
     IpcSender.onAll("socket/connected", async (data) => {
       setSocketConnected(true);
-      IpcSender.req.system.getWaitingBlockNumber();
+      IpcSender.req.system.getRemoteLastBlockNumber();
 
-      IpcSender.req.system.isMigratable(
+      IpcSender.req.system.isLegacyMigrationAvailable(
         async ({ success, data: migratable }) => {
           if (success && migratable) {
             await promptMigration();
@@ -228,7 +249,7 @@ const RootLayout = () => {
       Toast.error("서버 동기화에 실패했습니다. 잠시 후 다시 시도해주세요.");
     });
 
-    IpcSender.onAll("system/lastBlockNumber", ({ success, data }) => {
+    IpcSender.onAll("system/localLastBlockNumber", ({ success, data }) => {
       if (success) {
         if (typeof data === "number") {
           setLocalNonce(data);
@@ -236,10 +257,10 @@ const RootLayout = () => {
       }
     });
 
-    IpcSender.onAll("system/waitingBlockNumber", ({ success, data }) => {
+    IpcSender.onAll("system/remoteLastBlockNumber", ({ success, data }) => {
       if (success) {
         if (typeof data === "number") {
-          setRemoteNonce(data - 1);
+          setRemoteNonce(data);
         }
       }
     });
@@ -368,8 +389,8 @@ const RootLayout = () => {
       IpcSender.offAll("socket/disconnected");
       IpcSender.offAll("socket/connected");
       IpcSender.offAll("transaction/error");
-      IpcSender.offAll("system/lastBlockNumber");
-      IpcSender.offAll("system/waitingBlockNumber");
+      IpcSender.offAll("system/localLastBlockNumber");
+      IpcSender.offAll("system/remoteLastBlockNumber");
       IpcSender.offAll("system/mismatchTxHashFound");
       IpcSender.offAll("system/stateRollback");
       IpcSender.offAll("system/socketError");

@@ -9,6 +9,7 @@ const Request = require("../core/request");
 const { getCommonCloseReasonByCode } = require("../util/WebsocketUtil");
 const Block = require("../objects/Block");
 const TransactionRequest = require("../objects/TransactionRequest");
+const { jsonUnmarshal } = require("../util/TxUtil");
 
 const color = console.RGB(190, 75, 255);
 const coloredSocket = console.wrap("Websock", color);
@@ -428,9 +429,7 @@ class WebsocketContext {
         [remoteLastBlockNumber, localLastBlockNumber]
       );
       let txRequests = txs.map((tx) => {
-        const contentBuffer = Buffer.from(tx.content);
-        const jsonContent = contentBuffer.toString("utf-8");
-        const parsedContent = JSON.parse(jsonContent);
+        const parsedContent = jsonUnmarshal(tx.content);
         return new TransactionRequest(
           tx.version,
           tx.type,

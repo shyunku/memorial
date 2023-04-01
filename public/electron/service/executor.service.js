@@ -24,7 +24,7 @@ const { updateSubtaskDone } = require("../executors/updateSubtaskDone.exec");
 const TX_TYPE = require("../constants/TxType.constants");
 const Transaction = require("../objects/Transaction");
 const Block = require("../objects/Block");
-const { sortFields } = require("../util/TxUtil");
+const { sortFields, jsonMarshal, isFieldsSorted } = require("../util/TxUtil");
 
 class ExecutorService {
   constructor() {
@@ -53,7 +53,6 @@ class ExecutorService {
     const schemeVersion = PackageJson.config.scheme_version;
 
     // sort fields
-    data = sortFields(data);
     return new Transaction(schemeVersion, type, timestamp, data, blockNumber);
   }
 
@@ -63,6 +62,7 @@ class ExecutorService {
    * @returns {Promise<*>}
    */
   async getLocalBlockHash(blockNumber, txHash) {
+    console.debug(blockNumber, txHash);
     const userId = await this.userService.getCurrent();
     const db = await this.databaseService.getUserDatabaseContext(userId);
 
@@ -98,7 +98,7 @@ class ExecutorService {
   }
 
   /**
-   * @param reqId {string}
+   * @param reqId {?string}
    * @param tx {Transaction}
    * @param blockHash {?string}
    * @returns {Promise<void>}
@@ -129,74 +129,84 @@ class ExecutorService {
     const db = await this.databaseService.getUserDatabaseContext(userId);
     await db.begin();
 
+    const copiedTxContent = JSON.parse(JSON.stringify(tx.content));
+
     try {
       switch (tx.type) {
         case TX_TYPE.INITIALIZE:
           await initializeState(
             reqId,
             this.serviceGroup,
-            tx.content,
+            copiedTxContent,
             tx.blockNumber
           );
           break;
         case TX_TYPE.CREATE_TASK:
-          await createTask(reqId, this.serviceGroup, tx.content);
+          await createTask(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.DELETE_TASK:
-          await deleteTask(reqId, this.serviceGroup, tx.content);
+          await deleteTask(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.UPDATE_TASK_ORDER:
-          await updateTaskOrder(reqId, this.serviceGroup, tx.content);
+          await updateTaskOrder(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.UPDATE_TASK_TITLE:
-          await updateTaskTitle(reqId, this.serviceGroup, tx.content);
+          await updateTaskTitle(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.UPDATE_TASK_DUE_DATE:
-          await updateTaskDueDate(reqId, this.serviceGroup, tx.content);
+          await updateTaskDueDate(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.UPDATE_TASK_MEMO:
-          await updateTaskMemo(reqId, this.serviceGroup, tx.content);
+          await updateTaskMemo(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.CREATE_CATEGORY:
-          await createCategory(reqId, this.serviceGroup, tx.content);
+          await createCategory(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.DELETE_CATEGORY:
-          await deleteCategory(reqId, this.serviceGroup, tx.content);
+          await deleteCategory(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.ADD_TASK_CATEGORY:
-          await addTaskCategory(reqId, this.serviceGroup, tx.content);
+          await addTaskCategory(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.UPDATE_TASK_DONE:
-          await updateTaskDone(reqId, this.serviceGroup, tx.content);
+          await updateTaskDone(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.DELETE_TASK_CATEGORY:
-          await deleteTaskCategory(reqId, this.serviceGroup, tx.content);
+          await deleteTaskCategory(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.UPDATE_TASK_REPEAT_PERIOD:
-          await updateTaskRepeatPeriod(reqId, this.serviceGroup, tx.content);
+          await updateTaskRepeatPeriod(
+            reqId,
+            this.serviceGroup,
+            copiedTxContent
+          );
           break;
         case TX_TYPE.CREATE_SUBTASK:
-          await createSubtask(reqId, this.serviceGroup, tx.content);
+          await createSubtask(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.DELETE_SUBTASK:
-          await deleteSubtask(reqId, this.serviceGroup, tx.content);
+          await deleteSubtask(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.UPDATE_SUBTASK_TITLE:
-          await updateSubtaskTitle(reqId, this.serviceGroup, tx.content);
+          await updateSubtaskTitle(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.UPDATE_SUBTASK_DUE_DATE:
-          await updateSubtaskDueDate(reqId, this.serviceGroup, tx.content);
+          await updateSubtaskDueDate(reqId, this.serviceGroup, copiedTxContent);
           break;
         case TX_TYPE.UPDATE_SUBTASK_DONE:
-          await updateSubtaskDone(reqId, this.serviceGroup, tx.content);
+          await updateSubtaskDone(reqId, this.serviceGroup, copiedTxContent);
           break;
         default:
           throw new Error("Transaction type is not supported");
       }
 
+      // check txContent
+      if (!isFieldsSorted(tx.content)) {
+        throw new Error("Transaction content is not sorted");
+      }
+
       // decode tx.content
-      const rawContent = tx.content;
-      const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
+      const decodedBuffer = jsonMarshal(tx.content);
 
       // insert block (as transaction) into local db
       await db.run(

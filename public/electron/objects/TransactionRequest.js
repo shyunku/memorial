@@ -10,6 +10,7 @@ class TransactionRequest extends Transaction {
     if (tx == null) throw new Error("Transaction is null");
     if (!(tx instanceof Transaction))
       throw new Error("tx is not instance of Transaction");
+
     return new TransactionRequest(
       tx.version,
       tx.type,
