@@ -37,14 +37,16 @@ class SyncerContext {
     // event queue handler
     this.eventQueueIndexer = 0;
     this.eventQueue = {};
+    this.remainEvents = 0;
     this.handlingEvents = false;
 
     // loop handler
     this.loopInterval = fastInterval(async () => {
-      if (this.handlingEvents) return;
+      if (this.remainEvents > 0 || this.handlingEvents) return;
       this.handlingEvents = true;
       const copied = { ...this.eventQueue };
       this.eventQueue = {};
+      this.remainEvents = 0;
 
       for (const key in copied) {
         const promise = copied[key];
@@ -53,7 +55,7 @@ class SyncerContext {
       }
 
       this.handlingEvents = false;
-    }, 300);
+    }, 10);
   }
 
   async initialize() {
@@ -119,6 +121,7 @@ class SyncerContext {
 
   addEventQueue(promise) {
     this.eventQueue[this.eventQueueIndexer++] = promise;
+    this.remainEvents++;
   }
 
   /**
