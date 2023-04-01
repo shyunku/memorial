@@ -129,8 +129,13 @@ const TodoItem = ({
     return todoCtx.subtasks ?? {};
   });
   const sortedSubtaskList = useMemo(() => {
-    return Object.values(subtaskMap);
-  }, [JSON.stringify(subtaskMap)]);
+    return Object.values(subtaskMap).sort((a, b) => {
+      // sort by createdAt
+      const aCreatedAt = new moment(a.createdAt).valueOf();
+      const bCreatedAt = new moment(b.createdAt).valueOf();
+      return aCreatedAt - bCreatedAt;
+    });
+  }, [subtaskMap]);
 
   const [subTaskTitleInputMap, setSubTaskTitleInputMap] = useState(
     Object.values(subtaskMap).reduce((map, subtask) => {
