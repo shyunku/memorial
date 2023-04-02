@@ -288,6 +288,7 @@ class DatabaseContext {
               secret: oldCategory.secret == true,
               locked: oldCategory.secret == true,
               color: oldCategory.color,
+              createdAt: 0,
             };
             categories[newId] = category;
           }

@@ -8,7 +8,10 @@ const jsonMarshal = (v) => {
     return Buffer.from([]);
   } else {
     const str = JSON.stringify(v);
-    return Buffer.from(str, "utf8");
+    const buf = Buffer.from(str, "utf8");
+    if (str !== buf.toString("utf8"))
+      throw new Error("Buffer conversion failed");
+    return buf;
   }
 };
 

@@ -1263,7 +1263,7 @@ module.exports = function (s) {
     "category/checkCategoryPassword",
     async (event, reqId, hashedPassword) => {
       try {
-        const rootDB = await s.getRootDatabaseContext();
+        const rootDB = await s.databaseService.getRootDatabaseContext();
         let results = await rootDB.all(
           "SELECT * FROM users WHERE auth_hashed_pw = ?",
           hashedPassword

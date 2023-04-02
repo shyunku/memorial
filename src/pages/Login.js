@@ -39,7 +39,8 @@ const Login = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState("");
 
-  const [googleBindingCancelHover, setGoogleBindingCancelHover] = useState(false);
+  const [googleBindingCancelHover, setGoogleBindingCancelHover] =
+    useState(false);
 
   const goToHome = async (_user, _auth, withOffline = false) => {
     if (withOffline) {
@@ -74,7 +75,11 @@ const Login = () => {
       );
 
       console.log(auth);
-      await IpcSender.req.auth.registerAuthInfoSync(user?.uid, auth?.access_token?.token, auth?.refresh_token?.token);
+      await IpcSender.req.auth.registerAuthInfoSync(
+        user?.uid,
+        auth?.access_token?.token,
+        auth?.refresh_token?.token
+      );
 
       setCurrentUserInfo(null);
       setCurrentUserAuth(null);
@@ -97,17 +102,21 @@ const Login = () => {
   const goBackToLogin = (force = false) => {
     // if user is on signup mode & has google auth info/user info, then show prompt
     if (force === false && signupMode && googleBinding) {
-      Prompt.float("회원가입 취소", "계정 연동을 위한 회원가입을 취소하시겠습니까?", {
-        confirmText: "취소",
-        cancelText: "계속 진행",
-        onConfirm: async () => {
-          setGoogleBinding(false);
-          setSigninId("");
-          setSigninPassword("");
-          setSignupMode(false);
-        },
-        onCancel: () => {},
-      });
+      Prompt.float(
+        "회원가입 취소",
+        "계정 연동을 위한 회원가입을 취소하시겠습니까?",
+        {
+          confirmText: "취소",
+          cancelText: "계속 진행",
+          onConfirm: async () => {
+            setGoogleBinding(false);
+            setSigninId("");
+            setSigninPassword("");
+            setSignupMode(false);
+          },
+          onCancel: () => {},
+        }
+      );
     } else {
       setSigninId("");
       setSigninPassword("");
@@ -118,42 +127,53 @@ const Login = () => {
   const onGoogleLoginSuccess = (userInfo) => {
     console.log(userInfo);
     const { auth, googleUserInfo } = userInfo;
-    const { email: googleEmail, id: googleAuthId, picture: googleProfileImageUrl } = googleUserInfo;
+    const {
+      email: googleEmail,
+      id: googleAuthId,
+      picture: googleProfileImageUrl,
+    } = googleUserInfo;
 
-    IpcSender.req.auth.sendGoogleOauthResult(userInfo, async ({ success, data }) => {
-      if (success) {
-        const { isSignupNeeded, user } = data;
-        if (isSignupNeeded) {
-          setCurrentUserInfo({ googleEmail, googleAuthId, googleProfileImageUrl });
-          setCurrentUserAuth(auth);
-          setGoogleBinding(true);
+    IpcSender.req.auth.sendGoogleOauthResult(
+      userInfo,
+      async ({ success, data }) => {
+        if (success) {
+          const { isSignupNeeded, user } = data;
+          if (isSignupNeeded) {
+            setCurrentUserInfo({
+              googleEmail,
+              googleAuthId,
+              googleProfileImageUrl,
+            });
+            setCurrentUserAuth(auth);
+            setGoogleBinding(true);
 
-          Prompt.float(
-            "구글 계정 연동",
-            "오프라인에서도 사용가능하려면 회원가입을 해야합니다.\n이미 계정을 보유하고 있으시다면 로그인해주세요.",
-            {
-              confirmText: "계정 연동",
-              cancelText: "이미 계정이 있음",
-              onConfirm: () => {
-                // redirect to signup page
-                goToSignUp();
-              },
-              onCancel: () => {
-                // redirect to login page
-                setGoogleBinding(false);
-                goBackToLogin();
-              },
-            }
-          );
-          return;
+            Prompt.float(
+              "구글 계정 연동",
+              "오프라인에서도 사용가능하려면 회원가입을 해야합니다.\n이미 계정을 보유하고 있으시다면 로그인해주세요.",
+              {
+                confirmText: "계정 연동",
+                cancelText: "이미 계정이 있음",
+                onConfirm: () => {
+                  // redirect to signup page
+                  goToSignUp();
+                },
+                onCancel: () => {
+                  // redirect to login page
+                  // setGoogleBinding(false);
+                  goBackToLogin();
+                },
+              }
+            );
+            return;
+          }
+
+          Toast.success("로그인되었습니다.");
+          goToHome(user, auth);
+        } else {
+          Toast.error("구글 계정 인증 정보 등록에 실패했습니다.");
         }
-
-        Toast.success("로그인되었습니다.");
-        goToHome(user, auth);
-      } else {
-        Toast.error("구글 계정 인증 정보 등록에 실패했습니다.");
       }
-    });
+    );
   };
 
   const tryLoginWithGoogleOauth = async () => {
@@ -272,7 +292,9 @@ const Login = () => {
                 Toast.error("이미 사용 중인 아이디입니다.");
                 break;
               case "TRY_TO_BIND_GOOGLE":
-                Toast.error("이미 사용 중인 구글 계정이 있으신가요? 구글 계정으로 로그인해주세요.");
+                Toast.error(
+                  "이미 사용 중인 구글 계정이 있으신가요? 구글 계정으로 로그인해주세요."
+                );
                 break;
               default:
                 console.log(data);
@@ -388,21 +410,25 @@ const Login = () => {
           const userData = data.localUser;
 
           setTimeout(() => {
-            Prompt.float("로컬 계정으로 연결", "서버 연결이 불가능합니다. 로컬 계정으로 연결하시겠습니까?", {
-              confirmText: "로컬 계정 사용",
-              cancelText: "취소",
-              onConfirm: () => {
-                goToHome(
-                  {
-                    uid: userData.uid ?? null,
-                    username: userData.username ?? null,
-                    googleEmail: userData.googleEmail ?? null,
-                  },
-                  null,
-                  true
-                );
-              },
-            });
+            Prompt.float(
+              "로컬 계정으로 연결",
+              "서버 연결이 불가능합니다. 로컬 계정으로 연결하시겠습니까?",
+              {
+                confirmText: "로컬 계정 사용",
+                cancelText: "취소",
+                onConfirm: () => {
+                  goToHome(
+                    {
+                      uid: userData.uid ?? null,
+                      username: userData.username ?? null,
+                      googleEmail: userData.googleEmail ?? null,
+                    },
+                    null,
+                    true
+                  );
+                },
+              }
+            );
           }, 500);
         }
       }
@@ -449,7 +475,9 @@ const Login = () => {
     <div className="page login">
       <div className="login-cover">
         <LoginTopBar />
-        <div className={"form" + JsxUtil.classByCondition(signupMode, "hidden")}>
+        <div
+          className={"form" + JsxUtil.classByCondition(signupMode, "hidden")}
+        >
           <div className="addition">언제 어디서나, 쉽고 편하게.</div>
           <div className="title">메모리얼 로그인</div>
           <div className="input-wrapper">
@@ -458,7 +486,12 @@ const Login = () => {
           </div>
           <div className="input-wrapper">
             <div className="label">비밀번호</div>
-            <Input type="password" onChange={setSigninPassword} value={signinPassword} onEnter={tryLogin} />
+            <Input
+              type="password"
+              onChange={setSigninPassword}
+              value={signinPassword}
+              onEnter={tryLogin}
+            />
           </div>
           <div className="btn login-btn" onClick={tryLogin}>
             로그인
@@ -487,7 +520,9 @@ const Login = () => {
             }
           >
             {googleBinding ? (
-              <div className="text">{googleBindingCancelHover ? "취소" : "구글 계정 연동 중"}</div>
+              <div className="text">
+                {googleBindingCancelHover ? "취소" : "구글 계정 연동 중"}
+              </div>
             ) : (
               <>
                 <div className="img-wrapper">
@@ -498,7 +533,11 @@ const Login = () => {
             )}
           </div>
         </div>
-        <div className={"form signup" + JsxUtil.classByCondition(!signupMode, "hidden")}>
+        <div
+          className={
+            "form signup" + JsxUtil.classByCondition(!signupMode, "hidden")
+          }
+        >
           <div className="addition">오프라인에서도, 언제나 함께.</div>
           <div className="title">메모리얼 회원가입</div>
           <div className="input-wrapper">
@@ -511,7 +550,11 @@ const Login = () => {
           </div>
           <div className="input-wrapper">
             <div className="label">비밀번호 (8자 이상)</div>
-            <Input type="password" onChange={setSignupPassword} value={signupPassword} />
+            <Input
+              type="password"
+              onChange={setSignupPassword}
+              value={signupPassword}
+            />
           </div>
           <div className="input-wrapper">
             <div className="label">비밀번호 확인</div>

@@ -3,6 +3,7 @@ const {
   decodeParseBase64,
   jsonMarshal,
   sortFields,
+  jsonUnmarshal,
 } = require("../util/TxUtil");
 
 class Transaction {
@@ -10,6 +11,7 @@ class Transaction {
     // decode content if needed
     if (typeof content === "string") {
       content = decodeParseBase64(content);
+      console.debug("tx content decoded");
     }
 
     this.version = version;

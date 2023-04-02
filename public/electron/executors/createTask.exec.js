@@ -1,6 +1,7 @@
 const { v4 } = require("uuid");
 const assert = require("assert");
 const TxContent = require("../objects/TxContent");
+const moment = require("moment");
 
 class CreateTaskTxContent extends TxContent {
   constructor(
@@ -27,7 +28,20 @@ class CreateTaskTxContent extends TxContent {
     this.dueDate = dueDate;
     this.repeatPeriod = repeatPeriod;
     this.repeatStartAt = repeatStartAt;
-    this.categories = categories;
+    this.categories = {};
+    for (let cid in categories) {
+      let lc = categories[cid];
+      let c = {
+        cid: cid,
+        title: lc.title,
+        secret: !!lc.secret,
+        locked: !!lc.locked,
+        color: lc.color,
+        createdAt: lc.createdAt ? moment(lc.createdAt).valueOf() : 0,
+      };
+      this.categories[cid] = c;
+    }
+
     this.prevTaskId = prevTaskId;
   }
 }
