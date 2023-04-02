@@ -9,6 +9,7 @@ class Category extends Mutatable {
       secret: "secret",
       locked: "locked",
       color: "color",
+      created_at: "createdAt",
     });
 
     this.id = null;
@@ -16,6 +17,7 @@ class Category extends Mutatable {
     this.secret = secret;
     this.locked = secret;
     this.color = null;
+    this.createdAt = new Date();
     this.default = default_;
   }
 }

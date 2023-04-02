@@ -1172,7 +1172,8 @@ module.exports = function (s) {
         category.title,
         category.secret,
         category.locked,
-        category.color
+        category.color,
+        category.created_at
       );
       const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
       const tx = s.executorService.makeTransaction(

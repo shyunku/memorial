@@ -61,7 +61,7 @@ const TodoItem = ({
       if (!todo.categories[cid]) filtered.push(categories[cid]);
     }
     return filtered;
-  }, [JSON.stringify(categories), JSON.stringify(todo.categories)]);
+  }, [categories, todo.categories]);
 
   const dueDateText = useMemo(() => {
     if (!todo.dueDate) return "기한 없음";
@@ -73,7 +73,7 @@ const TodoItem = ({
     if (moment(todo.dueDate).isSame(moment().add(2, "day"), "day"))
       return "모레";
     return moment(todo.dueDate).format("YY.MM.DD");
-  }, [JSON.stringify(todo.dueDate)]);
+  }, [todo.dueDate]);
 
   const dueTimeText = useMemo(() => {
     if (!todo.dueDate) return "";
@@ -84,7 +84,7 @@ const TodoItem = ({
       return " 새벽 0시";
     if (dueMoment.minutes() === 0) return dueMoment.format(" A h시");
     return moment(todo.dueDate).format(" A h시 mm분");
-  }, [JSON.stringify(todo.dueDate)]);
+  }, [todo.dueDate]);
 
   const repeatTimeText = useMemo(() => {
     console.log(todo.repeatStartAt);
@@ -131,8 +131,10 @@ const TodoItem = ({
   const sortedSubtaskList = useMemo(() => {
     return Object.values(subtaskMap).sort((a, b) => {
       // sort by createdAt
-      const aCreatedAt = new moment(a.createdAt).valueOf();
-      const bCreatedAt = new moment(b.createdAt).valueOf();
+      let aCreatedAt = new moment(a.createdAt).valueOf();
+      let bCreatedAt = new moment(b.createdAt).valueOf();
+      if (isNaN(aCreatedAt)) aCreatedAt = 0;
+      if (isNaN(bCreatedAt)) bCreatedAt = 0;
       return aCreatedAt - bCreatedAt;
     });
   }, [subtaskMap]);

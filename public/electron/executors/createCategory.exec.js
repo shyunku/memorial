@@ -3,7 +3,7 @@ const assert = require("assert");
 const TxContent = require("../objects/TxContent");
 
 class CreateCategoryTxContent extends TxContent {
-  constructor(cid, title, secret, locked, color) {
+  constructor(cid, title, secret, locked, color, createdAt) {
     super();
 
     this.cid = cid;
@@ -11,6 +11,7 @@ class CreateCategoryTxContent extends TxContent {
     this.secret = secret;
     this.locked = locked;
     this.color = color;
+    this.createdAt = createdAt;
   }
 }
 
@@ -36,12 +37,13 @@ const createCategory = async (reqId, serviceGroup, txReq) => {
   const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
 
   await db.run(
-    "INSERT INTO categories (cid, title, secret, locked, color) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO categories (cid, title, secret, locked, color, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     txReq.cid,
     txReq.title,
     txReq.secret,
     txReq.locked,
-    txReq.color
+    txReq.color,
+    txReq.createdAt
   );
 
   serviceGroup.ipcService.sender("category/createCategory", reqId, true, {
@@ -50,6 +52,7 @@ const createCategory = async (reqId, serviceGroup, txReq) => {
     secret: txReq.secret,
     locked: txReq.locked,
     color: txReq.color,
+    createdAt: txReq.createdAt,
   });
 };
 

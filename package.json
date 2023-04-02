@@ -1,9 +1,11 @@
 {
   "name": "memorial",
   "version": "0.2.0",
+  "description": "cross-platform desktop application for memorial service",
   "main": "public/electron/core/main.js",
   "homepage": "./",
   "private": true,
+  "allowMultipleExecution": false,
   "config": {
     "react_port": 9300,
     "scheme_version": 1,

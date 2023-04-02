@@ -95,12 +95,13 @@ const initializeState = async (reqId, serviceGroup, txReq, blockNumber) => {
   for (const cid in categories) {
     const category = categories[cid];
     await db.run(
-      "INSERT INTO categories (cid, title, secret, locked, color) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO categories (cid, title, secret, locked, color, created_at) VALUES (?, ?, ?, ?, ?, ?)",
       category.cid,
       category.title,
       category.secret == 1,
       category.locked == 1,
-      category.color == "" ? null : category.color
+      category.color == "" ? null : category.color,
+      category.createdAt == 0 ? null : category.createdAt
     );
   }
 

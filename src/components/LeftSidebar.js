@@ -30,6 +30,7 @@ import {
   applyCreateCategory,
   applyDeleteCategory,
 } from "../hooks/UseTransaction";
+import moment from "moment";
 
 export const TODO_MENU_TYPE = {
   ALL: "모든 할일",
@@ -64,6 +65,16 @@ const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
     if (localNonce === remoteNonce) return ["synchronized", "동기화 완료"];
     return ["synchronizing", `동기화 중 - ${localNonce} / ${remoteNonce}`];
   }, [offlineMode, localNonce, remoteNonce]);
+
+  const sortedCategories = useMemo(() => {
+    return Object.values(categories).sort((a, b) => {
+      let aCreatedAt = new moment(a.createdAt).valueOf();
+      let bCreatedAt = new moment(b.createdAt).valueOf();
+      if (isNaN(aCreatedAt)) aCreatedAt = 0;
+      if (isNaN(bCreatedAt)) bCreatedAt = 0;
+      return aCreatedAt - bCreatedAt;
+    });
+  }, [categories]);
 
   const createCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
   const addSecretCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
@@ -226,7 +237,7 @@ const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
             </div>
           </div>
           <div className="todo-menus">
-            {Object.values(categories).map((category) => (
+            {sortedCategories.map((category) => (
               <div
                 className={
                   "todo-menu" +

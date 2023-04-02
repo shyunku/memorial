@@ -62,7 +62,6 @@ class ExecutorService {
    * @returns {Promise<*>}
    */
   async getLocalBlockHash(blockNumber, txHash) {
-    console.debug(blockNumber, txHash);
     const userId = await this.userService.getCurrent();
     const db = await this.databaseService.getUserDatabaseContext(userId);
 
