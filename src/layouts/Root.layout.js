@@ -456,6 +456,10 @@ const RootLayout = () => {
       }
     });
 
+    IpcSender.onAll("system/error", (err) => {
+      console.error(err);
+    });
+
     return () => {
       IpcSender.offAll("socket/disconnected");
       IpcSender.offAll("socket/connected");

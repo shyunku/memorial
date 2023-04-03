@@ -148,6 +148,9 @@ const IpcSender = {
       initializeState: (callback) => {
         sender("system/initializeState", callback);
       },
+      clearStatePermanently: (callback) => {
+        sender("system/clearStatePermanently", callback);
+      },
       stateListenReady: (ready, callback) => {
         sender("system/stateListenReady", callback, ready);
       },

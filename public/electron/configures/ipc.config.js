@@ -316,6 +316,22 @@ module.exports = function (s) {
     }
   });
 
+  s.register("system/clearStatePermanently", async (event, reqId) => {
+    try {
+      const db = await s.getUserDatabaseContext();
+      const socket = await s.getUserWebsocketContext();
+      const syncer = await s.getUserSyncerContext();
+      await socket.sendSync("clearStatePermanently");
+      await db.clear();
+      syncer.setLocalLastBlockNumber(0);
+      syncer.setRemoteLastBlockNumber(0);
+      s.sender("system/clearStatePermanently", reqId, true);
+    } catch (err) {
+      s.sender("system/clearStatePermanently", reqId, false);
+      throw err;
+    }
+  });
+
   s.register("system/stateListenReady", async (event, reqId, ready) => {
     try {
       const syncerCtx = await s.getUserSyncerContext();

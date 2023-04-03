@@ -43,6 +43,9 @@ class IpcService extends IpcRouter {
     this.executorService = group.executorService;
   }
 
+  /**
+   * @returns {Promise<DatabaseContext>}
+   */
   async getUserDatabaseContext() {
     const userId = this.userService.getCurrent();
     if (userId == null) throw new Error("User ID is null");

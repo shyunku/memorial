@@ -1,4 +1,4 @@
-const { v4 } = require("uuid");
+const {v4} = require("uuid");
 const {
   reqIdTag,
   getWebsocketFinalEndpoint,
@@ -6,10 +6,10 @@ const {
 } = require("../modules/util");
 const WebSocket = require("ws");
 const Request = require("../core/request");
-const { getCommonCloseReasonByCode } = require("../util/WebsocketUtil");
+const {getCommonCloseReasonByCode} = require("../util/WebsocketUtil");
 const Block = require("../objects/Block");
 const TransactionRequest = require("../objects/TransactionRequest");
-const { jsonUnmarshal } = require("../util/TxUtil");
+const {jsonUnmarshal} = require("../util/TxUtil");
 
 const color = console.RGB(190, 75, 255);
 const coloredSocket = console.wrap("Websock", color);
@@ -39,7 +39,7 @@ class WebsocketContext {
     this.reconnectTimeout = 500;
 
     for (const reqId in this.queue) {
-      const { timeoutHandler } = this.queue[reqId];
+      const {timeoutHandler} = this.queue[reqId];
       clearTimeout(timeoutHandler);
     }
   }
@@ -162,16 +162,7 @@ class WebsocketContext {
       this.ipcService.emiter("socket/connected", null, null);
       const syncer = await this.syncerService.getUserSyncerContext(this.userId);
       if (syncer.stateListenReady) {
-        try {
-          let lastRemoteBlock = await this.sendSync(
-            "lastRemoteBlock",
-            null,
-            10000
-          );
-          await this.handleLastRemoteBlock(lastRemoteBlock);
-        } catch (err) {
-          console.error(`Waiting block number error`, err);
-        }
+        await this.requestLastRemoteBlock();
       }
     });
 
@@ -185,7 +176,7 @@ class WebsocketContext {
     this.on("close", (code) => {
       const commonReason = getCommonCloseReasonByCode(code);
       console.warn(`Disconnect with socket (${code}), reason: ${commonReason}`);
-      this.ipcService.emiter("socket/disconnected", null, { code });
+      this.ipcService.emiter("socket/disconnected", null, {code});
 
       // reconnect
       console.info(`Reconnecting socket in ${this.reconnectTimeout}ms...`);
@@ -194,21 +185,34 @@ class WebsocketContext {
       }, this.reconnectTimeout);
     });
 
-    this.onMessage("test", ({ data }) => {
+    this.onMessage("test", ({data}) => {
       console.debug(data);
     });
 
-    this.onMessage("broadcast_transaction", ({ data: block }) => {
+    this.onMessage("broadcast_transaction", ({data: block}) => {
       syncer.saveBlockAndExecute(block);
     });
 
-    this.onMessage("last_block_number", ({ data: lastRemoteBlockNumber }) => {
+    this.onMessage("last_block_number", ({data: lastRemoteBlockNumber}) => {
       syncer.setRemoteLastBlockNumber(lastRemoteBlockNumber);
     });
 
-    this.onMessage("delete_transaction_after", ({ data: blockNumber }) => {
+    this.onMessage("delete_transaction_after", ({data: blockNumber}) => {
       syncer.handleDeleteTransactionsAfter(blockNumber);
     });
+  }
+
+  async requestLastRemoteBlock() {
+    try {
+      let lastRemoteBlock = await this.sendSync(
+        "lastRemoteBlock",
+        null,
+        10000
+      );
+      await this.handleLastRemoteBlock(lastRemoteBlock);
+    } catch (err) {
+      console.error(`Waiting block number error`, err);
+    }
   }
 
   /**
@@ -288,7 +292,7 @@ class WebsocketContext {
               withCredentials: true,
             }
           );
-          let { access_token, refresh_token } = result;
+          let {access_token, refresh_token} = result;
 
           accessToken_ = access_token.token;
           refreshToken_ = refresh_token.token;
@@ -327,7 +331,7 @@ class WebsocketContext {
   }
 
   async handleLastRemoteBlock(lastRemoteBlock) {
-    const { number: remoteLastBlockNumber } = lastRemoteBlock;
+    const {number: remoteLastBlockNumber} = lastRemoteBlock;
 
     const syncer = await this.syncerService.getUserSyncerContext(this.userId);
     const db = await this.databaseService.getUserDatabaseContext(this.userId);
@@ -369,7 +373,7 @@ class WebsocketContext {
       if (lastCommonLocalBlockHash !== lastCommonRemoteBlockHash) {
         console.warn(
           `Mismatch block hash detected at ${commonBlockNumber},` +
-            ` local: ${lastCommonLocalBlockHash}, remote: ${lastCommonRemoteBlockHash}`
+          ` local: ${lastCommonLocalBlockHash}, remote: ${lastCommonRemoteBlockHash}`
         );
         // last common mismatch, need to find un-dirty block
         let oldestLocalBlockNumber = await syncer.getOldestLocalBlockNumber();
@@ -466,7 +470,7 @@ class WebsocketContext {
   async sendSync(topic, data = null, timeout = 3000) {
     return new Promise((resolve, reject) => {
       const reqId = v4();
-      const packet = { topic, data, reqId };
+      const packet = {topic, data, reqId};
       const callback = (data) => {
         let dataStr = JSON.stringify(data);
         if (dataStr.length > 5000) {
@@ -503,7 +507,7 @@ class WebsocketContext {
         reject(`Request timeout`);
       }, timeout);
 
-      this.queue[reqId] = { callback, errorHandler, timeoutHandler };
+      this.queue[reqId] = {callback, errorHandler, timeoutHandler};
 
       const packetJson = JSON.stringify(packet);
 
@@ -530,7 +534,7 @@ class WebsocketContext {
       return;
     }
     const reqId = v4();
-    const packet = { topic, data, reqId };
+    const packet = {topic, data, reqId};
     const packetJson = JSON.stringify(packet);
 
     try {
