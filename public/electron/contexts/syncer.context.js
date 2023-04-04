@@ -142,7 +142,9 @@ class SyncerContext {
         const socket = await this.websocketService.getUserWebsocketContext(
           this.userId
         );
-        await socket.requestLastRemoteBlock();
+        if (socket.connected()) {
+          await socket.requestLastRemoteBlock();
+        }
       } catch (err) {
         console.error(`Waiting block number error`, err);
       }
