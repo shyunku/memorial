@@ -87,7 +87,7 @@ const TodoItem = ({
   }, [todo.dueDate]);
 
   const repeatTimeText = useMemo(() => {
-    console.log(todo.repeatStartAt);
+    // console.log(todo.repeatStartAt);
     if (!todo.repeatStartAt) return "";
     if (todo.repeatPeriod == "day")
       return `매일 ${moment(todo.repeatStartAt).format("A h시 mm분")}`;

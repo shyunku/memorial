@@ -1,6 +1,10 @@
+import PackageJson from "../../package.json";
+
 export const composeReqUrl = (endpoint, path) => {
   if (typeof endpoint !== "string") {
-    throw Error(`Given endpoint should be string, given: ` + JSON.stringify(endpoint));
+    throw Error(
+      `Given endpoint should be string, given: ` + JSON.stringify(endpoint)
+    );
   }
   if (endpoint.length === 0) {
     throw Error(`Given endpoint should be specified, empty string given.`);
@@ -21,4 +25,10 @@ export const composeReqUrl = (endpoint, path) => {
   }
 
   return endpoint + path;
+};
+
+export const getAppServerEndpoint = () => {
+  return PackageJson.debug
+    ? PackageJson.config.local_app_server_endpoint
+    : PackageJson.config.app_server_endpoint;
 };

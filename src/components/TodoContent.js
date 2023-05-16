@@ -54,8 +54,8 @@ const TASK_VIEW_MODE = {
 };
 
 const SORT_MODE = {
-  IMPORTANT: "중요도",
   DUE_DATE: "기한",
+  IMPORTANT: "중요도",
   REMAIN_DATE: "남은 기한",
   CREATED_DATE: "생성일",
 };
@@ -71,7 +71,7 @@ const TodoContent = (callback, deps) => {
 
   const { taskMap, categories } = states;
 
-  const [currentSortMode, setCurrentSortMode] = useState(SORT_MODE.IMPORTANT);
+  const [currentSortMode, setCurrentSortMode] = useState(SORT_MODE.DUE_DATE);
   const [timer, setTimer] = useState(0);
   const [lastTxUpdateTime, setLastTxUpdateTime] = useState(null);
   const lastUpdateTimeText = useMemo(() => {
@@ -516,6 +516,18 @@ const TodoContent = (callback, deps) => {
       clearInterval(timerThread);
     };
   }, [addPromise, taskMap, categories]);
+
+  // useEffect(() => {
+  //   console.log("addPromise");
+  // }, [addPromise]);
+  //
+  // useEffect(() => {
+  //   console.log("taskMap");
+  // }, [taskMap]);
+  //
+  // useEffect(() => {
+  //   console.log("categories");
+  // }, [categories]);
 
   return (
     <div className="todo-content">

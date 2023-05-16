@@ -1,17 +1,19 @@
 {
   "name": "memorial",
-  "version": "0.2.0-beta.3",
+  "version": "0.2.1",
   "description": "cross-platform desktop application for memorial service",
   "main": "public/electron/core/main.js",
   "homepage": "./",
   "private": true,
+  "debug": true,
   "allowMultipleExecution": false,
   "config": {
     "react_port": 9300,
     "scheme_version": 1,
     "root_scheme_version": 1,
     "app_server_endpoint": "https://memorial.im:4033",
-    "app_server_api_version": "v1"
+    "app_server_api_version": "v1",
+    "local_app_server_endpoint": "http://localhost:4033"
   },
   "dependencies": {
     "@electron/remote": "2.0.9",
