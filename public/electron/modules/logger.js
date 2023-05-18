@@ -5,7 +5,9 @@ const fse = require("fs-extra");
 const FileSystem = require("./filesystem");
 
 function initialize(isBuildMode, appDataPath) {
-  const loggerDirPath = isBuildMode ? path.resolve(appDataPath, "..", "logs") : path.resolve(appDataPath, "logs");
+  const loggerDirPath = isBuildMode
+    ? path.resolve(appDataPath, "..")
+    : path.resolve(appDataPath, "logs");
 
   console.log(`Logger Directory Path: ${loggerDirPath}`);
 
@@ -14,8 +16,13 @@ function initialize(isBuildMode, appDataPath) {
   const loggerFilePath = path.resolve(loggerDirPath, logFilename);
 
   if (!FileSystem.isDir(loggerDirPath)) {
-    fse.mkdirSync(loggerDirPath);
-    console.log(`Make directory for logger`);
+    try {
+      fse.mkdirSync(loggerDirPath);
+      console.log(`Make directory for logger`);
+    } catch (err) {
+      console.error(err);
+      process.exit(-3);
+    }
   }
 
   console.log(`Final Logger Path: ${loggerFilePath}`);

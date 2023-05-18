@@ -3,7 +3,7 @@ const dotenv = require("dotenv");
 const path = require("path");
 const PackageJson = require("../../../package.json");
 
-dotenv.config({ path: path.resolve(__dirname, "../config/.env") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 module.exports = async function _notarize(context) {
   const { electronPlatformName, appOutDir } = context;
@@ -19,5 +19,6 @@ module.exports = async function _notarize(context) {
     appPath: `${appOutDir}/${appName}.app`,
     appleId: process.env.APPLE_ID,
     appleIdPassword: process.env.APPLE_PW,
+    ascProvider: process.env.APPLE_TEAM_ID,
   });
 };

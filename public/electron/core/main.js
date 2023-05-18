@@ -9,6 +9,8 @@ const { app } = require("electron");
 const isBuildMode = !process.env.ELECTRON_START_URL;
 const appDataPath = app.getAppPath();
 
+console.log(`This is ${isBuildMode ? "build" : "dev"} mode`);
+
 require("../modules/preload").all(isBuildMode, appDataPath);
 // const Updater = require("../modules/updater");
 const ArchCategory = require("../constants/ArchCategory.constants");

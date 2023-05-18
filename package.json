@@ -1,5 +1,9 @@
 {
   "name": "memorial",
+  "author": {
+    "name": "shyunku",
+    "email": "whdudgns7321@gmail.com"
+  },
   "version": "0.2.0-beta.3",
   "description": "cross-platform desktop application for memorial service",
   "main": "public/electron/core/main.js",
@@ -60,7 +64,7 @@
     "win-all": "concurrently \"npm run win-react\" \"npm run win-electron\"",
     "mac-all": "concurrently \"npm run mac-react\" \"npm run mac-electron\"",
     "win-pack": "npm run build && electron-builder build -c.extraMetadata.main=build/electron/core/main.js",
-    "mac-pack": "npm run build && electron-builder build"
+    "mac-pack": "npm run build && electron-builder build -c.extraMetadata.main=build/electron/core/main.js"
   },
   "eslintConfig": {
     "extends": [
@@ -99,8 +103,9 @@
       }
     ],
     "files": [
-      "build/**/*",
-      "electron/core/main.js"
+      "./build/**/*",
+      "./public/electron/core/main.js",
+      "package.json"
     ],
     "win": {
       "target": [
@@ -117,6 +122,7 @@
       "hardenedRuntime": true,
       "entitlements": "./build/entitlements.mac.plist",
       "extendInfo": {},
+      "identity": "YoungHoon Jo (PW6C6D62RX)",
       "target": [
         {
           "target": "default",
@@ -125,7 +131,7 @@
           ]
         }
       ],
-      "icon": "./public/favicon512.ico"
+      "icon": "./public/logo512.png"
     },
     "nsis": {
       "oneClick": true,
