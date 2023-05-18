@@ -5,18 +5,17 @@ import "./Login.scss";
 import JsxUtil from "utils/JsxUtil";
 import { useEffect, useRef, useState } from "react";
 import IpcSender from "utils/IpcSender";
-import axios from "axios";
 import { unwrapResult } from "@reduxjs/toolkit";
 import { useDispatch } from "react-redux";
 import { pingTest } from "thunks/AuthThunk";
 import Toast from "molecules/Toast";
-import Loading from "molecules/Loading";
 import Prompt from "molecules/Prompt";
 import { useNavigate } from "react-router-dom";
 import { setAccount, setAuth } from "store/accountSlice";
 import Input from "molecules/Input";
 import sha256 from "sha256";
 import PackageJson from "../../package.json";
+import { getAppServerEndpoint } from "../thunks/ThunkUtil";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -185,7 +184,7 @@ const Login = () => {
       return;
     }
 
-    let domain = PackageJson.config.app_server_endpoint;
+    let domain = getAppServerEndpoint();
     let apiVersion = PackageJson.config.app_server_api_version;
 
     let child = window.open(
@@ -371,6 +370,7 @@ const Login = () => {
     }
 
     IpcSender.req.auth.login(loginRequest, async ({ success, data }) => {
+      let remoteAuthFailed = false;
       if (success) {
         try {
           const { user, auth } = data;
@@ -391,6 +391,7 @@ const Login = () => {
               break;
             case 401:
               Toast.error("아이디 또는 비밀번호가 일치하지 않습니다.");
+              remoteAuthFailed = true;
               break;
             default:
               console.log(data);
@@ -406,7 +407,7 @@ const Login = () => {
 
         const canExtractUserData = data?.localUser != null;
 
-        if (canLoginWithLocal && canExtractUserData) {
+        if (canLoginWithLocal && canExtractUserData && !remoteAuthFailed) {
           const userData = data.localUser;
 
           setTimeout(() => {

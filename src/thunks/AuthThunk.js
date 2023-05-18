@@ -1,9 +1,8 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
-import PackageJson from "../../package.json";
-import { composeReqUrl } from "./ThunkUtil";
+import { composeReqUrl, getAppServerEndpoint } from "./ThunkUtil";
 
-const APP_SERVER_ENDPOINT = PackageJson.config.app_server_endpoint;
+const APP_SERVER_ENDPOINT = getAppServerEndpoint();
 
 export const pingTest = createAsyncThunk("ping", async () => {
   const url = composeReqUrl(APP_SERVER_ENDPOINT, "/ping");

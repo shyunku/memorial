@@ -8,7 +8,9 @@ const PackageJson = require("../../../package.json");
  * @returns {string}
  */
 function getServerFinalEndpoint() {
-  const appServerEndpoint = PackageJson?.config?.app_server_endpoint;
+  const appServerEndpoint = PackageJson.debug
+    ? PackageJson.config.local_app_server_endpoint
+    : PackageJson?.config?.app_server_endpoint;
   if (!appServerEndpoint)
     throw new Error("App server endpoint is not defined in package.json");
   const appServerApiVersion = PackageJson?.config?.app_server_api_version;
@@ -53,7 +55,7 @@ function registerSocketLogger(socket, color = console.RESET) {
 
         if (data_) {
           if (data_.code) {
-            let { code, data } = data_;
+            let {code, data} = data_;
             let arrow =
               code === Request.ok
                 ? console.wrap("<--", console.GREEN)

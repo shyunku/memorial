@@ -83,7 +83,7 @@ const RootLayout = () => {
     setPromises((ps) => {
       const copied = { ...ps };
       delete copied[poppedPromiseKey];
-      // console.log(`<-- deleted promise ${poppedPromiseKey}`);
+      console.log(`<-- deleted promise ${poppedPromiseKey}`);
       return copied;
     });
 
@@ -104,10 +104,14 @@ const RootLayout = () => {
       console.error(err);
     }
     setExecuting(false);
-  }, [promises, executing, states]);
+  }, [promises, executing, states, emptyState]);
 
+  // TODO :: fix infinite loop (when promises appended while executing,
+  //       it will be executed again and again with old states)
   useEffect(() => {
-    executePromises();
+    if (Object.keys(promises).length > 0 && !executing) {
+      executePromises();
+    }
   }, [promises, executing, states, executePromises]);
 
   const goBackToLoginPage = () => {
