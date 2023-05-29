@@ -96,6 +96,7 @@ $std-text-color: rgb(128, 146, 184);
 
           &:hover {
             background-color: rgb(52, 66, 92);
+
             & > .delete-btn {
               opacity: 1;
             }
@@ -180,9 +181,9 @@ $std-text-color: rgb(128, 146, 184);
         align-items: center;
 
         $highlight-colors: (
-          "synchronizing": rgb(209, 172, 61),
-          "synchronized": rgb(87, 182, 255),
-          "offline": rgb(255, 105, 105),
+                "synchronizing": rgb(209, 172, 61),
+                "synchronized": rgb(87, 182, 255),
+                "offline": rgb(152, 152, 152),
         );
 
         @each $status, $color in $highlight-colors {

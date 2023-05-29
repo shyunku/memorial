@@ -8,10 +8,10 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { TODO_MENU_TYPE } from "components/LeftSidebar";
+import {TODO_MENU_TYPE} from "components/LeftSidebar";
 import Task from "objects/Task";
 import TodoItemAddSection from "./TodoItemAddSection";
-import { useOutletContext } from "react-router-dom";
+import {useOutletContext} from "react-router-dom";
 import TaskListView from "views/TaskListView";
 import JsxUtil from "utils/JsxUtil";
 import IpcSender from "utils/IpcSender";
@@ -26,8 +26,8 @@ import {
   printf,
   toRelativeTime,
 } from "utils/Common";
-import { useSelector } from "react-redux";
-import { accountAuthSlice, accountInfoSlice } from "store/accountSlice";
+import {useSelector} from "react-redux";
+import {accountAuthSlice, accountInfoSlice} from "store/accountSlice";
 import {
   applyAddTask,
   applyAddTaskCategory,
@@ -69,7 +69,7 @@ const TodoContent = (callback, deps) => {
     states,
   } = props;
 
-  const { taskMap, categories } = states;
+  const {taskMap, categories} = states;
 
   const [currentSortMode, setCurrentSortMode] = useState(SORT_MODE.DUE_DATE);
   const [timer, setTimer] = useState(0);
@@ -79,7 +79,7 @@ const TodoContent = (callback, deps) => {
     const now = Date.now();
     const diff = now - lastTxUpdateTime;
     return (
-      fromRelativeTime(diff, { showLayerCount: 1 }) + (diff > 0 ? " 전" : " 후")
+      fromRelativeTime(diff, {showLayerCount: 1}) + (diff > 0 ? " 전" : " 후")
     );
   }, [lastTxUpdateTime, timer]);
 
@@ -150,6 +150,14 @@ const TodoContent = (callback, deps) => {
     return filtered;
   }, [taskMap, finalStandaloneFilter]);
 
+  const filteredUndoneTaskCount = useMemo(() => {
+    let length = 0;
+    for (let task of Object.values(filteredTaskMap)) {
+      if (task.done === false) length++;
+    }
+    return length;
+  }, [filteredTaskMap]);
+
   /* ------------------------------ Sorters ------------------------------ */
   const sorter = useMemo(() => {
     switch (currentSortMode) {
@@ -180,7 +188,7 @@ const TodoContent = (callback, deps) => {
 
   const getCategoryListSync = useCallback(() => {
     return new Promise((resolve, reject) => {
-      IpcSender.req.category.getCategoryList(({ success, data }) => {
+      IpcSender.req.category.getCategoryList(({success, data}) => {
         if (success) {
           const newCategories = {};
           data.forEach((category) => {
@@ -188,7 +196,7 @@ const TodoContent = (callback, deps) => {
             c.default = false;
             newCategories[category.cid] = c;
           });
-          resolve({ categories: newCategories });
+          resolve({categories: newCategories});
         } else {
           Toast.error("Failed to fetch data category list");
           console.error(`Failed to get category list`);
@@ -200,7 +208,7 @@ const TodoContent = (callback, deps) => {
 
   const getTaskListSync = useCallback((transition) => {
     return new Promise((resolve, reject) => {
-      IpcSender.req.task.getTaskList(({ success, data }) => {
+      IpcSender.req.task.getTaskList(({success, data}) => {
         if (success) {
           // covert to Task objects
           const newTaskMap = {};
@@ -219,7 +227,7 @@ const TodoContent = (callback, deps) => {
             if (curTask) curTask.next = nextTask;
             if (nextTask) nextTask.prev = curTask;
           }
-          resolve({ ...transition, taskMap: { ...taskMap, ...newTaskMap } });
+          resolve({...transition, taskMap: {...taskMap, ...newTaskMap}});
         } else {
           console.error("failed to get task list");
           reject();
@@ -231,8 +239,8 @@ const TodoContent = (callback, deps) => {
   const getSubTaskListSync = useCallback((transition) => {
     // fetch all subtasks
     return new Promise((resolve, reject) => {
-      const { taskMap } = transition;
-      IpcSender.req.task.getSubtaskList(({ success, data }) => {
+      const {taskMap} = transition;
+      IpcSender.req.task.getSubtaskList(({success, data}) => {
         if (success) {
           for (let i = 0; i < data.length; i++) {
             const subtaskEntity = data[i];
@@ -242,7 +250,7 @@ const TodoContent = (callback, deps) => {
               taskMap[taskId].addSubtask(subtask);
             }
           }
-          resolve({ ...transition, taskMap: { ...taskMap } });
+          resolve({...transition, taskMap: {...taskMap}});
         } else {
           console.error("failed to get subtask list");
           reject();
@@ -253,9 +261,9 @@ const TodoContent = (callback, deps) => {
 
   const getTasksCategoriesListSync = useCallback((transition) => {
     return new Promise((resolve, reject) => {
-      const { taskMap, categories } = transition;
+      const {taskMap, categories} = transition;
       IpcSender.req.tasks_categories.getTasksCategoriesList(
-        ({ success, data }) => {
+        ({success, data}) => {
           if (success) {
             for (let i = 0; i < data.length; i++) {
               const taskCategoryEntity = data[i];
@@ -266,7 +274,7 @@ const TodoContent = (callback, deps) => {
                 taskMap[taskId].addCategory(category);
               }
             }
-            resolve({ ...transition, taskMap: { ...taskMap } });
+            resolve({...transition, taskMap: {...taskMap}});
           } else {
             console.error("failed to get task list");
             reject();
@@ -322,7 +330,7 @@ const TodoContent = (callback, deps) => {
   };
 
   const onTaskDragEndHandler = (result) => {
-    const { targetId, currentId, afterTarget } = result;
+    const {targetId, currentId, afterTarget} = result;
     let targetTaskId = document
       .getElementById(targetId)
       ?.getAttribute("todo-id");
@@ -418,37 +426,37 @@ const TodoContent = (callback, deps) => {
   useEffect(() => {
     // get last update time
     IpcSender.req.system.getLastTxUpdateTime(null);
-    IpcSender.onAll("system/lastTxUpdateTime", ({ success, data }) => {
+    IpcSender.onAll("system/lastTxUpdateTime", ({success, data}) => {
       setLastTxUpdateTime(data);
     });
 
-    IpcSender.onAll("task/addTask", ({ success, data }) => {
-      applyAddTask({ addPromise, success, data });
+    IpcSender.onAll("task/addTask", ({success, data}) => {
+      applyAddTask({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/deleteTask", ({ success, data }) => {
-      applyDeleteTask({ addPromise, success, data });
+    IpcSender.onAll("task/deleteTask", ({success, data}) => {
+      applyDeleteTask({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/updateTaskOrder", ({ success, data }) => {
-      applyUpdateTaskOrder({ addPromise, success, data });
+    IpcSender.onAll("task/updateTaskOrder", ({success, data}) => {
+      applyUpdateTaskOrder({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/updateTaskTitle", ({ success, data }) => {
-      applyUpdateTaskTitle({ addPromise, success, data });
+    IpcSender.onAll("task/updateTaskTitle", ({success, data}) => {
+      applyUpdateTaskTitle({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/updateTaskDueDate", ({ success, data }) => {
-      applyUpdateTaskDueDate({ addPromise, success, data });
+    IpcSender.onAll("task/updateTaskDueDate", ({success, data}) => {
+      applyUpdateTaskDueDate({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/updateTaskMemo", ({ success, data }) => {
-      applyUpdateTaskMemo({ addPromise, success, data });
+    IpcSender.onAll("task/updateTaskMemo", ({success, data}) => {
+      applyUpdateTaskMemo({addPromise, success, data});
     });
 
     IpcSender.onAll(
       "task/updateTaskDone",
-      ({ success, data }, isRepeated, newDueDate) => {
+      ({success, data}, isRepeated, newDueDate) => {
         applyUpdateTaskDone({
           addPromise,
           success,
@@ -459,36 +467,36 @@ const TodoContent = (callback, deps) => {
       }
     );
 
-    IpcSender.onAll("task/updateTaskRepeatPeriod", ({ success, data }) => {
-      applyUpdateTaskRepeatPeriod({ addPromise, success, data });
+    IpcSender.onAll("task/updateTaskRepeatPeriod", ({success, data}) => {
+      applyUpdateTaskRepeatPeriod({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/createSubtask", ({ success, data }) => {
-      applyCreateSubtask({ addPromise, success, data });
+    IpcSender.onAll("task/createSubtask", ({success, data}) => {
+      applyCreateSubtask({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/deleteSubtask", ({ success, data }) => {
-      applyDeleteSubtask({ addPromise, success, data });
+    IpcSender.onAll("task/deleteSubtask", ({success, data}) => {
+      applyDeleteSubtask({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/updateSubtaskTitle", ({ success, data }) => {
-      applyUpdateSubtaskTitle({ addPromise, success, data });
+    IpcSender.onAll("task/updateSubtaskTitle", ({success, data}) => {
+      applyUpdateSubtaskTitle({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/updateSubtaskDueDate", ({ success, data }) => {
-      applyUpdateSubtaskDueDate({ addPromise, success, data });
+    IpcSender.onAll("task/updateSubtaskDueDate", ({success, data}) => {
+      applyUpdateSubtaskDueDate({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/updateSubtaskDone", ({ success, data }) => {
-      applyUpdateSubtaskDone({ addPromise, success, data });
+    IpcSender.onAll("task/updateSubtaskDone", ({success, data}) => {
+      applyUpdateSubtaskDone({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/addTaskCategory", ({ success, data }) => {
-      applyAddTaskCategory({ addPromise, success, data });
+    IpcSender.onAll("task/addTaskCategory", ({success, data}) => {
+      applyAddTaskCategory({addPromise, success, data});
     });
 
-    IpcSender.onAll("task/deleteTaskCategory", ({ success, data }) => {
-      applyDeleteTaskCategory({ addPromise, success, data });
+    IpcSender.onAll("task/deleteTaskCategory", ({success, data}) => {
+      applyDeleteTaskCategory({addPromise, success, data});
     });
 
     let timerThread = fastInterval(() => {
@@ -533,7 +541,7 @@ const TodoContent = (callback, deps) => {
     <div className="todo-content">
       <div className="header">
         <div className="title">
-          {category?.title ?? "-"} ({Object.keys(filteredTaskMap).length})
+          {category?.title ?? "-"} ({filteredUndoneTaskCount})
         </div>
         <div className="metadata">
           <div className="last-modified">
@@ -615,11 +623,11 @@ const TodoContent = (callback, deps) => {
             />
           ),
           [TASK_VIEW_MODE.CALENDAR]: (
-            <TaskCalendarView filteredTaskMap={filteredTaskMap} />
+            <TaskCalendarView filteredTaskMap={filteredTaskMap}/>
           ),
         }[taskViewMode] ?? <div>Currently not supported</div>}
       </div>
-      <TodoItemAddSection onTaskAdd={onTaskAdd} category={category} />
+      <TodoItemAddSection onTaskAdd={onTaskAdd} category={category}/>
     </div>
   );
 };
