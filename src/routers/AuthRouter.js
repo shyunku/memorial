@@ -4,7 +4,11 @@ import Login from "pages/Login";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { accountAuthSlice, accountInfoSlice, setAuth } from "store/accountSlice";
+import {
+  accountAuthSlice,
+  accountInfoSlice,
+  setAuth,
+} from "store/accountSlice";
 import IpcSender from "utils/IpcSender";
 
 const AuthRouter = () => {
@@ -15,6 +19,7 @@ const AuthRouter = () => {
 
   const accountAuth = useSelector(accountAuthSlice);
   const accountInfo = useSelector(accountInfoSlice);
+  console.log(accountAuth);
   const accessToken = useMemo(() => {
     return accountAuth.accessToken;
   }, [accountAuth]);

@@ -1,7 +1,8 @@
 const Transaction = require("../objects/Transaction");
-const { initializeState } = require("../executors/initializeState.exec");
+const {initializeState} = require("../executors/initializeState.exec");
 const TransactionRequest = require("../objects/TransactionRequest");
-const { fastInterval } = require("../util/CommonUtil");
+const {fastInterval} = require("../util/CommonUtil");
+const {jsonUnmarshal} = require("../util/TxUtil");
 
 class SyncerContext {
   /**
@@ -113,7 +114,7 @@ class SyncerContext {
       }
       if (this.handlingEvents) return;
       this.handlingEvents = true;
-      const copied = { ...this.eventQueue };
+      const copied = {...this.eventQueue};
       this.eventQueue = {};
       this.remainEvents = 0;
 
@@ -177,13 +178,62 @@ class SyncerContext {
     }
   }
 
+  /**
+   * @param startBlockNumber {number}
+   * @param endBlockNumber {number}
+   * @returns {Promise<void>}
+   */
+  async commitTransactions(startBlockNumber, endBlockNumber) {
+    if (endBlockNumber === -1 && startBlockNumber > endBlockNumber) {
+      console.warn(`Invalid range for tx commits: ${startBlockNumber} ~ ${endBlockNumber}`);
+      return;
+    }
+
+    let txs;
+    if (endBlockNumber === -1) {
+      txs = await this.db.all(
+        `SELECT * FROM transactions WHERE block_number >= ?;`,
+        [startBlockNumber]
+      );
+    } else {
+      txs = await this.db.all(
+        `SELECT * FROM transactions WHERE block_number >= ? AND block_number <= ?;`,
+        [startBlockNumber, endBlockNumber]
+      );
+    }
+
+    if (txs.length === 0) {
+      console.warn(`No transactions to commit`);
+      return;
+    }
+
+    let txRequests = txs.map((tx) => {
+      const parsedContent = jsonUnmarshal(tx.content);
+      return new TransactionRequest(
+        tx.version,
+        tx.type,
+        tx.timestamp,
+        parsedContent,
+        tx.block_number,
+        tx.block_hash
+      );
+    });
+
+    try {
+      await this.socket.sendSync("commitTransactions", txRequests);
+    } catch (err) {
+      console.warn(`Error occurred while committing transactions`);
+      console.error(err);
+    }
+  }
+
   async saveBlockAndExecute(block) {
     return new Promise(async (res, rej) => {
       this.addEventQueue(
         () =>
           new Promise(async (resolve, reject) => {
             try {
-              let { tx: rawTx, number, hash: blockHash } = block;
+              let {tx: rawTx, number, hash: blockHash} = block;
               const tx = new Transaction(
                 rawTx.version,
                 rawTx.type,
@@ -204,6 +254,12 @@ class SyncerContext {
     });
   }
 
+  /**
+   * snapSync operates sync after snapshot
+   * @param startBlockNumber {number}
+   * @param endBlockNumber {number}
+   * @returns {Promise<void>}
+   */
   async snapSync(startBlockNumber, endBlockNumber) {
     try {
       // get snapshot
@@ -295,7 +351,7 @@ class SyncerContext {
 
     // save last tx in local db
     if (blockNumber > 0) {
-      let { tx: rawTx, number, hash: blockHash } = block;
+      let {tx: rawTx, number, hash: blockHash} = block;
       const tx = new Transaction(
         rawTx.version,
         rawTx.type,
@@ -350,6 +406,22 @@ class SyncerContext {
 
   async getRemoteBlockHash(blockNumber) {
     return await this.socket.sendSync("blockHashByBlockNumber", {
+      blockNumber: blockNumber,
+    });
+  }
+
+  async getLocalBlock(blockNumber) {
+    const db = await this.databaseService.getUserDatabaseContext(this.userId);
+    let [rawTx] = await db.all(
+      `SELECT * FROM transactions WHERE block_number = ?;`,
+      [blockNumber]
+    );
+    if (rawTx == null) return null;
+    return rawTx;
+  }
+
+  async getRemoteBlock(blockNumber) {
+    return await this.socket.sendSync("blockByBlockNumber", {
       blockNumber: blockNumber,
     });
   }
@@ -439,6 +511,36 @@ class SyncerContext {
       leftMost
     );
     return leftSideMismatch ?? rightMost;
+  }
+
+  /**
+   * @param remoteLastBlockNumber {number}
+   * @returns {Promise<void>}
+   */
+  async overwriteLocalStateWithRemote(remoteLastBlockNumber) {
+    // purge local state and download snapshot from server
+    await this.applySnapshot(remoteLastBlockNumber);
+  }
+
+  /**
+   * @param mismatchStartBlockNumber {number}
+   * @param localLastBlockNumber {number}
+   * @returns {Promise<void>}
+   */
+  async overwriteRemoteStateWithLocal(
+    mismatchStartBlockNumber,
+    localLastBlockNumber
+  ) {
+    // purge remote state as interval and upload snapshot to server
+    try {
+      await this.socket.sendSync("deleteMismatchBlocks", {
+        startBlockNumber: mismatchStartBlockNumber,
+        endBlockNumber: -1,
+      });
+      await this.commitTransactions(mismatchStartBlockNumber, localLastBlockNumber);
+    } catch (err) {
+      throw err;
+    }
   }
 }
 

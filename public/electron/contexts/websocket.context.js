@@ -1,4 +1,4 @@
-const {v4} = require("uuid");
+const { v4 } = require("uuid");
 const {
   reqIdTag,
   getWebsocketFinalEndpoint,
@@ -6,10 +6,10 @@ const {
 } = require("../modules/util");
 const WebSocket = require("ws");
 const Request = require("../core/request");
-const {getCommonCloseReasonByCode} = require("../util/WebsocketUtil");
+const { getCommonCloseReasonByCode } = require("../util/WebsocketUtil");
 const Block = require("../objects/Block");
 const TransactionRequest = require("../objects/TransactionRequest");
-const {jsonUnmarshal} = require("../util/TxUtil");
+const { jsonUnmarshal } = require("../util/TxUtil");
 
 const color = console.RGB(190, 75, 255);
 const coloredSocket = console.wrap("Websock", color);
@@ -39,7 +39,7 @@ class WebsocketContext {
     this.reconnectTimeout = 500;
 
     for (const reqId in this.queue) {
-      const {timeoutHandler} = this.queue[reqId];
+      const { timeoutHandler } = this.queue[reqId];
       clearTimeout(timeoutHandler);
     }
   }
@@ -176,7 +176,7 @@ class WebsocketContext {
     this.on("close", (code) => {
       const commonReason = getCommonCloseReasonByCode(code);
       console.warn(`Disconnect with socket (${code}), reason: ${commonReason}`);
-      this.ipcService.emiter("socket/disconnected", null, {code});
+      this.ipcService.emiter("socket/disconnected", null, { code });
 
       // reconnect
       console.info(`Reconnecting socket in ${this.reconnectTimeout}ms...`);
@@ -185,30 +185,26 @@ class WebsocketContext {
       }, this.reconnectTimeout);
     });
 
-    this.onMessage("test", ({data}) => {
+    this.onMessage("test", ({ data }) => {
       console.debug(data);
     });
 
-    this.onMessage("broadcast_transaction", ({data: block}) => {
+    this.onMessage("broadcast_transaction", ({ data: block }) => {
       syncer.saveBlockAndExecute(block);
     });
 
-    this.onMessage("last_block_number", ({data: lastRemoteBlockNumber}) => {
+    this.onMessage("last_block_number", ({ data: lastRemoteBlockNumber }) => {
       syncer.setRemoteLastBlockNumber(lastRemoteBlockNumber);
     });
 
-    this.onMessage("delete_transaction_after", ({data: blockNumber}) => {
+    this.onMessage("delete_transaction_after", ({ data: blockNumber }) => {
       syncer.handleDeleteTransactionsAfter(blockNumber);
     });
   }
 
   async requestLastRemoteBlock() {
     try {
-      let lastRemoteBlock = await this.sendSync(
-        "lastRemoteBlock",
-        null,
-        10000
-      );
+      let lastRemoteBlock = await this.sendSync("lastRemoteBlock", null, 10000);
       await this.handleLastRemoteBlock(lastRemoteBlock);
     } catch (err) {
       console.error(`Waiting block number error`, err);
@@ -280,6 +276,10 @@ class WebsocketContext {
         refreshToken_ !== ""
       ) {
         try {
+          console.info(
+            `Trying to refresh access/refresh token with recent refresh token...`,
+            refreshToken_
+          );
           let result = await Request.post(
             appServerFinalEndpoint,
             "/auth/refreshToken",
@@ -292,7 +292,7 @@ class WebsocketContext {
               withCredentials: true,
             }
           );
-          let {access_token, refresh_token} = result;
+          let { access_token, refresh_token } = result;
 
           accessToken_ = access_token.token;
           refreshToken_ = refresh_token.token;
@@ -331,7 +331,7 @@ class WebsocketContext {
   }
 
   async handleLastRemoteBlock(lastRemoteBlock) {
-    const {number: remoteLastBlockNumber} = lastRemoteBlock;
+    const { number: remoteLastBlockNumber } = lastRemoteBlock;
 
     const syncer = await this.syncerService.getUserSyncerContext(this.userId);
     const db = await this.databaseService.getUserDatabaseContext(this.userId);
@@ -369,89 +369,146 @@ class WebsocketContext {
         commonBlockNumber
       );
 
-      // check mismatch of blockchain
+      // Mismatched occurred :: check mismatch of blockchain
       if (lastCommonLocalBlockHash !== lastCommonRemoteBlockHash) {
-        console.warn(
-          `Mismatch block hash detected at ${commonBlockNumber},` +
-          ` local: ${lastCommonLocalBlockHash}, remote: ${lastCommonRemoteBlockHash}`
-        );
-        // last common mismatch, need to find un-dirty block
-        let oldestLocalBlockNumber = await syncer.getOldestLocalBlockNumber();
-        if (oldestLocalBlockNumber == null) {
-          throw new Error("Cannot find oldest local block number");
-        }
+        // fuzzy state :: don't check mismatch, just sync with latest (v0.2.2)
+        const justSync = true;
 
-        console.info(
-          `finding mismatch start block number in (${oldestLocalBlockNumber} ~ ${commonBlockNumber})`
-        );
-        const mismatchStartBlockNumber =
-          await syncer.findBlockHashMismatchStartNumber(
-            oldestLocalBlockNumber,
-            commonBlockNumber
+        if (justSync) {
+          console.warn(
+            `Mismatch block hash detected at ${commonBlockNumber},` +
+              ` local: ${lastCommonLocalBlockHash}, remote: ${lastCommonRemoteBlockHash}`
           );
-        if (mismatchStartBlockNumber == null) {
-          throw new Error("Cannot find mismatch start block number");
-        }
+          // last common mismatch, need to find un-dirty block
+          let oldestLocalBlockNumber = await syncer.getOldestLocalBlockNumber();
+          if (oldestLocalBlockNumber == null) {
+            throw new Error("Cannot find oldest local block number");
+          }
 
-        // recover mismatch blocks
-        this.ipcService.sender("system/mismatchTxHashFound", null, true, {
-          mismatchStartBlockNumber,
-          mismatchEndBlockNumber: commonBlockNumber,
-          lossAfterAcceptTheirs:
-            localLastBlockNumber >= mismatchStartBlockNumber
-              ? localLastBlockNumber - mismatchStartBlockNumber + 1
-              : 0,
-          lossAfterAcceptMine:
-            remoteLastBlockNumber >= mismatchStartBlockNumber
-              ? remoteLastBlockNumber - mismatchStartBlockNumber + 1
-              : 0,
-        });
-        throw new Error(
-          `Mismatch block hash found at block number ${mismatchStartBlockNumber}~${commonBlockNumber}`
-        );
+          console.info(
+            `finding mismatch start block number in (${oldestLocalBlockNumber} ~ ${commonBlockNumber})`
+          );
+          const mismatchStartBlockNumber =
+            await syncer.findBlockHashMismatchStartNumber(
+              oldestLocalBlockNumber,
+              commonBlockNumber
+            );
+          if (mismatchStartBlockNumber == null) {
+            throw new Error("Cannot find mismatch start block number");
+          }
+
+          // my latest block
+          const localLastBlock = await syncer.getLocalBlock(
+            localLastBlockNumber
+          );
+          const remoteLastBlock = await syncer.getRemoteBlock(
+            remoteLastBlockNumber
+          );
+
+          const localLastBlockTime = localLastBlock.timestamp;
+          const remoteLastBlockTime = remoteLastBlock.tx.timestamp;
+
+          if (localLastBlockTime > remoteLastBlockTime) {
+            console.warn(
+              `Local block is newer than remote, so choose local blocks to upload`
+            );
+            // overwrite server with local blocks
+            await syncer.overwriteRemoteStateWithLocal(
+              mismatchStartBlockNumber,
+              localLastBlockNumber
+            );
+          } else if (localLastBlockTime < remoteLastBlockTime) {
+            console.warn(
+              `Remote block is newer than local, so choose remote blocks to upload`
+            );
+            // overwrite local with remote blocks
+            await syncer.overwriteLocalStateWithRemote(remoteLastBlockNumber);
+          } else {
+            // blocks uploaded at same time, choose longer one
+            if (localLastBlockNumber > remoteLastBlockNumber) {
+              console.warn(
+                `Local chain is longer than remote, so choose local blocks to upload`
+              );
+              // overwrite server with local blocks
+              await syncer.overwriteRemoteStateWithLocal(
+                mismatchStartBlockNumber,
+                localLastBlockNumber
+              );
+            } else {
+              console.warn(
+                `Remote chain is longer or same as local, so choose remote blocks to upload`
+              );
+              // overwrite local with remote blocks
+              await syncer.overwriteLocalStateWithRemote(remoteLastBlockNumber);
+            }
+          }
+        } else {
+          console.warn(
+            `Mismatch block hash detected at ${commonBlockNumber},` +
+              ` local: ${lastCommonLocalBlockHash}, remote: ${lastCommonRemoteBlockHash}`
+          );
+          // last common mismatch, need to find un-dirty block
+          let oldestLocalBlockNumber = await syncer.getOldestLocalBlockNumber();
+          if (oldestLocalBlockNumber == null) {
+            throw new Error("Cannot find oldest local block number");
+          }
+
+          console.info(
+            `finding mismatch start block number in (${oldestLocalBlockNumber} ~ ${commonBlockNumber})`
+          );
+          const mismatchStartBlockNumber =
+            await syncer.findBlockHashMismatchStartNumber(
+              oldestLocalBlockNumber,
+              commonBlockNumber
+            );
+          if (mismatchStartBlockNumber == null) {
+            throw new Error("Cannot find mismatch start block number");
+          }
+
+          // recover mismatch blocks
+          this.ipcService.sender("system/mismatchTxHashFound", null, true, {
+            mismatchStartBlockNumber,
+            mismatchEndBlockNumber: commonBlockNumber,
+            lossAfterAcceptTheirs:
+              localLastBlockNumber >= mismatchStartBlockNumber
+                ? localLastBlockNumber - mismatchStartBlockNumber + 1
+                : 0,
+            lossAfterAcceptMine:
+              remoteLastBlockNumber >= mismatchStartBlockNumber
+                ? remoteLastBlockNumber - mismatchStartBlockNumber + 1
+                : 0,
+          });
+          throw new Error(
+            `Mismatch block hash found at block number ${mismatchStartBlockNumber}~${commonBlockNumber}`
+          );
+        }
       }
     }
 
     if (localLastBlockNumber < remoteLastBlockNumber) {
-      // sync blocks needed (behind)
+      // sync blocks needed (local is behind)
       console.info(`Local block number is behind remote, syncing...`);
       let txCountToSync = remoteLastBlockNumber - localLastBlockNumber;
-      if (txCountToSync > 20) {
+      const snapSyncTolerance = 0; // originally 20, but disabled (for a while)
+      if (txCountToSync > snapSyncTolerance) {
         // snap sync
         console.debug(
           `Too many (${txCountToSync}) blocks to sync, so try Snap-Sync.`
         );
-        await syncer.snapSync(localLastBlockNumber + 1, remoteLastBlockNumber);
+        // await syncer.snapSync(remoteLastBlockNumber);
+        await syncer.applySnapshot(remoteLastBlockNumber); // this is fastest (maybe?)
       } else {
         // full sync
         console.debug(`Syncing ${txCountToSync} blocks with Full-Sync.`);
         await syncer.fullSync(localLastBlockNumber + 1, remoteLastBlockNumber);
       }
     } else if (localLastBlockNumber > remoteLastBlockNumber) {
-      // commit blocks needed (ahead)
+      // commit blocks needed (local is ahead)
       console.info(`Local block number is ahead remote, waiting...`);
-      let txs = await db.all(
-        `SELECT * FROM transactions WHERE block_number > ? AND block_number <= ?;`,
-        [remoteLastBlockNumber, localLastBlockNumber]
+      await syncer.commitTransactions(
+        remoteLastBlockNumber + 1,
+        localLastBlockNumber
       );
-      let txRequests = txs.map((tx) => {
-        const parsedContent = jsonUnmarshal(tx.content);
-        return new TransactionRequest(
-          tx.version,
-          tx.type,
-          tx.timestamp,
-          parsedContent,
-          tx.block_number,
-          tx.block_hash
-        );
-      });
-
-      try {
-        await this.sendSync("commitTransactions", txRequests);
-      } catch (err) {
-        console.warn(`Error occurred while committing transactions`);
-        console.error(err);
-      }
     } else {
       // no sync needed (already synced)
       console.info(
@@ -470,7 +527,7 @@ class WebsocketContext {
   async sendSync(topic, data = null, timeout = 3000) {
     return new Promise((resolve, reject) => {
       const reqId = v4();
-      const packet = {topic, data, reqId};
+      const packet = { topic, data, reqId };
       const callback = (data) => {
         let dataStr = JSON.stringify(data);
         if (dataStr.length > 5000) {
@@ -507,7 +564,7 @@ class WebsocketContext {
         reject(`Request timeout`);
       }, timeout);
 
-      this.queue[reqId] = {callback, errorHandler, timeoutHandler};
+      this.queue[reqId] = { callback, errorHandler, timeoutHandler };
 
       const packetJson = JSON.stringify(packet);
 
@@ -534,7 +591,7 @@ class WebsocketContext {
       return;
     }
     const reqId = v4();
-    const packet = {topic, data, reqId};
+    const packet = { topic, data, reqId };
     const packetJson = JSON.stringify(packet);
 
     try {

@@ -308,7 +308,7 @@ module.exports = function (s) {
       // get remote last block number
       const remoteLastBlockNumber = await syncerCtx.getRemoteLastBlockNumber();
       // sync to remote last block number
-      await syncerCtx.fullSync(1, remoteLastBlockNumber);
+      await syncerCtx.applySnapshot(remoteLastBlockNumber);
       s.sender("system/initializeState", reqId, true);
     } catch (err) {
       s.sender("system/initializeState", reqId, false);

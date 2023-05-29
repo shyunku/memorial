@@ -9,7 +9,6 @@ import IpcSender from "utils/IpcSender";
 
 const Home = () => {
   useEffect(() => {
-    console.log(window.env);
     IpcSender.req.system.setAsHomeWindow(({ success }) => {
       if (!success) {
         Toast.warn(
