@@ -19,7 +19,7 @@ const AuthRouter = () => {
 
   const accountAuth = useSelector(accountAuthSlice);
   const accountInfo = useSelector(accountInfoSlice);
-  console.log(accountAuth);
+  // console.log(accountAuth);
   const accessToken = useMemo(() => {
     return accountAuth.accessToken;
   }, [accountAuth]);
