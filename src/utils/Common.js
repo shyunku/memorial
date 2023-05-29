@@ -69,6 +69,7 @@ const defaultOptions = {
   showLayerCount: 4,
   showMillisec: false,
 };
+
 export function fromRelativeTime(milli, rawOptions = defaultOptions) {
   if (milli == null) return "-";
   let inversed = milli < 0;
@@ -108,7 +109,8 @@ export function fromRelativeTime(milli, rawOptions = defaultOptions) {
     const { value, unit } = segments[i];
     if (options?.showMillisec === false && unit === "밀리초") continue;
     if (value > 0 || flag) {
-      let valText = unit === "밀리초" ? value.toString().padStart(3, "0") : value;
+      let valText =
+        unit === "밀리초" ? value.toString().padStart(3, "0") : value;
       texts.push(`${valText}${unit}`);
       j++;
       flag = true;
@@ -165,5 +167,10 @@ export function clone(obj) {
 
   return recurse(obj);
 }
+
+export const isDevMode = () => {
+  return window.env.NODE_ENV !== "production";
+};
+
 
 export default {};

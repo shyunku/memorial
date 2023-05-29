@@ -5,6 +5,7 @@ const electronRemote = require("@electron/remote/main");
 const AlertPopupConstants = require("../constants/AlertPopup.constants");
 const url = require("url");
 const path = require("path");
+const lodash = require("lodash");
 
 const urlPrefix =
   process.env.ELECTRON_START_URL ||
@@ -73,7 +74,7 @@ class WindowService {
       .height(960)
       .backgroundThrottling(false)
       .build();
-    windowProperty = { ...windowProperty, ...overlapWindowProperty };
+    windowProperty = lodash.merge({}, windowProperty, overlapWindowProperty);
     let mainWindow = this.invokeWindow("/", windowProperty);
     electronRemote.enable(mainWindow.webContents);
     return mainWindow;

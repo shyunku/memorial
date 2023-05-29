@@ -8,7 +8,8 @@ const PackageJson = require("../../../package.json");
  * @returns {string}
  */
 function getServerFinalEndpoint() {
-  const appServerEndpoint = PackageJson.debug
+  const debugMode = process.env.NODE_ENV !== "production";
+  const appServerEndpoint = debugMode
     ? PackageJson.config.local_app_server_endpoint
     : PackageJson?.config?.app_server_endpoint;
   if (!appServerEndpoint)
@@ -55,7 +56,7 @@ function registerSocketLogger(socket, color = console.RESET) {
 
         if (data_) {
           if (data_.code) {
-            let {code, data} = data_;
+            let { code, data } = data_;
             let arrow =
               code === Request.ok
                 ? console.wrap("<--", console.GREEN)

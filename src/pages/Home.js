@@ -9,9 +9,12 @@ import IpcSender from "utils/IpcSender";
 
 const Home = () => {
   useEffect(() => {
+    console.log(window.env);
     IpcSender.req.system.setAsHomeWindow(({ success }) => {
       if (!success) {
-        Toast.warn("메인 윈도우 설정에 실패했습니다. 창의 크기가 변경 불가능할 수도 있습니다.");
+        Toast.warn(
+          "메인 윈도우 설정에 실패했습니다. 창의 크기가 변경 불가능할 수도 있습니다."
+        );
       }
     });
   }, []);

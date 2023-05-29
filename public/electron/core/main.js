@@ -11,7 +11,7 @@ const appDataPath = app.getAppPath();
 
 console.log(`This is ${isBuildMode ? "build" : "dev"} mode`);
 
-require("../modules/preload").all(isBuildMode, appDataPath);
+require("../modules/initializer").all(isBuildMode, appDataPath);
 // const Updater = require("../modules/updater");
 const ArchCategory = require("../constants/ArchCategory.constants");
 const Util = require("../modules/util");

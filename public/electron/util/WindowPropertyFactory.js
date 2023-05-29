@@ -93,6 +93,10 @@ class WindowPropertyFactory {
     return this.setProperty("partition", partition);
   };
 
+  preload = (preload) => {
+    return this.setProperty("preload", preload);
+  };
+
   windowType = (modalType) => {
     switch (modalType) {
       case WindowType.Modal:

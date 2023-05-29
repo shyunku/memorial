@@ -1,4 +1,5 @@
 import PackageJson from "../../package.json";
+import { isDevMode } from "../utils/Common";
 
 export const composeReqUrl = (endpoint, path) => {
   if (typeof endpoint !== "string") {
@@ -28,7 +29,7 @@ export const composeReqUrl = (endpoint, path) => {
 };
 
 export const getAppServerEndpoint = () => {
-  return PackageJson.debug
+  return isDevMode()
     ? PackageJson.config.local_app_server_endpoint
     : PackageJson.config.app_server_endpoint;
 };
