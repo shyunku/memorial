@@ -427,3 +427,20 @@ export const applyDeleteCategory = ({ addPromise, success, data }) => {
       })
   );
 };
+
+export const applyUpdateCategoryColor = ({ addPromise, success, data }) => {
+  addPromise(
+    (states) =>
+      new Promise((resolve, reject) => {
+        if (success) {
+          const { categories } = states;
+          const category = categories[data.cid];
+          category.color = data.color;
+          resolve({ categories: { ...categories, [data.cid]: category } });
+        } else {
+          Toast.error("카테고리 색상 변경에 실패했습니다.");
+        }
+        resolve();
+      })
+  );
+};

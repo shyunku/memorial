@@ -55,6 +55,9 @@ const {
 const { DeleteCategoryTxContent } = require("../executors/deleteCategory.exec");
 const { getServerFinalEndpoint } = require("../modules/util");
 const TX_TYPE = require("../constants/TxType.constants");
+const {
+  UpdateCategoryColorTxContent,
+} = require("../executors/updateCategoryColor.exec");
 
 /**
  * @param s {IpcService}
@@ -1255,6 +1258,27 @@ module.exports = function (s) {
       throw err;
     }
   });
+
+  s.register(
+    "category/updateCategoryColor",
+    async (event, reqId, categoryId, color) => {
+      try {
+        const txContent = new UpdateCategoryColorTxContent(categoryId, color);
+        const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
+        const tx = s.executorService.makeTransaction(
+          TX_TYPE.UPDATE_CATEGORY_COLOR,
+          txContent,
+          targetBlockNumber
+        );
+        await s.executorService.applyTransaction(reqId, tx);
+        const syncerCtx = await s.getUserSyncerContext();
+        await syncerCtx.sendTransaction(tx);
+      } catch (err) {
+        s.sender("category/updateCategoryColor", reqId, false);
+        throw err;
+      }
+    }
+  );
 
   s.register(
     "tasks_categories/getTasksCategoriesList",

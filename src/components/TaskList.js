@@ -3,12 +3,18 @@ import { useMemo, useRef } from "react";
 import { debounce } from "utils/Common";
 import TodoItem from "./TodoItem";
 
-const TaskList = ({ taskList = [], selectedId, selectTodoItemHandler = () => {}, ...rest }) => {
+const TaskList = ({
+  taskList = [],
+  selectedId,
+  selectTodoItemHandler = () => {},
+  ...rest
+}) => {
   const todoListRef = useRef();
 
   const onTaskDropPredict = (e, task) => {
     // find the closest todo item that center position is higher than the drop position
-    const todoItemWrappers = todoListRef.current.querySelectorAll(".todo-item-wrapper");
+    const todoItemWrappers =
+      todoListRef.current.querySelectorAll(".todo-item-wrapper");
 
     if (e.clientY === 0) return [];
 
@@ -24,20 +30,32 @@ const TaskList = ({ taskList = [], selectedId, selectTodoItemHandler = () => {},
       // console.log(todoItemWrappers[i].id, task.id);
       const todoItemWrapper = todoItemWrappers[i];
       const todoItemWrapperRect = todoItemWrapper.getBoundingClientRect();
-      const todoItemWrapperCenter = todoItemWrapperRect.top + todoItemWrapperRect.height / 2;
+      const todoItemWrapperCenter =
+        todoItemWrapperRect.top + todoItemWrapperRect.height / 2;
 
       if (todoItemWrapperCenter < dropPosition) {
-        if (closestPrevTodoItemCenter && closestPrevTodoItemCenter > todoItemWrapperCenter) continue;
+        if (
+          closestPrevTodoItemCenter &&
+          closestPrevTodoItemCenter > todoItemWrapperCenter
+        )
+          continue;
         closestPrevTodoItem = todoItemWrapper;
         closestPrevTodoItemCenter = todoItemWrapperCenter;
       } else {
-        if (closestNextTodoItemCenter && closestNextTodoItemCenter < todoItemWrapperCenter) continue;
+        if (
+          closestNextTodoItemCenter &&
+          closestNextTodoItemCenter < todoItemWrapperCenter
+        )
+          continue;
         closestNextTodoItem = todoItemWrapper;
         closestNextTodoItemCenter = todoItemWrapperCenter;
       }
     }
 
-    return [closestPrevTodoItem?.id ?? closestNextTodoItem?.id, closestPrevTodoItem?.id == null];
+    return [
+      closestPrevTodoItem?.id ?? closestNextTodoItem?.id,
+      closestPrevTodoItem?.id == null,
+    ];
   };
 
   return (

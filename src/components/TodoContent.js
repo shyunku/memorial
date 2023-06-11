@@ -35,6 +35,7 @@ import {
   applyDeleteSubtask,
   applyDeleteTask,
   applyDeleteTaskCategory,
+  applyUpdateCategoryColor,
   applyUpdateSubtaskDone,
   applyUpdateSubtaskDueDate,
   applyUpdateSubtaskTitle,
@@ -45,10 +46,15 @@ import {
   applyUpdateTaskRepeatPeriod,
   applyUpdateTaskTitle,
 } from "../hooks/UseTransaction";
+import TaskListCalendarView from "../views/TaskListCalendarView";
+import { VscSymbolColor } from "react-icons/vsc";
+import ColorPicker from "../molecules/ColorPicker";
+import AutoBlurDiv from "../molecules/AutoBlurDiv";
 
 const TASK_VIEW_MODE = {
   LIST: "리스트",
   CALENDAR: "캘린더",
+  LIST_CALENDAR: "리스트 | 캘린더",
   // TIMELINE: "타임라인",
   // DASHBOARD: "대시보드",
 };
@@ -74,6 +80,7 @@ const TodoContent = (callback, deps) => {
   const [currentSortMode, setCurrentSortMode] = useState(SORT_MODE.DUE_DATE);
   const [timer, setTimer] = useState(0);
   const [lastTxUpdateTime, setLastTxUpdateTime] = useState(null);
+  const [colorPickerVisible, setColorPickerVisible] = useState(false);
   const lastUpdateTimeText = useMemo(() => {
     if (lastTxUpdateTime == null) return null;
     const now = Date.now();
@@ -90,6 +97,10 @@ const TodoContent = (callback, deps) => {
   const category = useMemo(() => {
     return passedCategory ?? new Category(selectedTodoMenuType, false, true);
   }, [selectedTodoMenuType, passedCategory]);
+
+  const isTodayCategory = useMemo(() => {
+    return category.default && category.title === TODO_MENU_TYPE.TODAY;
+  }, [category]);
 
   /* ------------------------------ Filters ------------------------------ */
   const categoryFilter = useMemo(() => {
@@ -319,6 +330,12 @@ const TodoContent = (callback, deps) => {
     };
   }, [fetchAll]);
 
+  useEffect(() => {
+    if (isTodayCategory && taskViewMode === TASK_VIEW_MODE.CALENDAR) {
+      setTaskViewMode(TASK_VIEW_MODE.LIST);
+    }
+  }, [taskViewMode, isTodayCategory]);
+
   /* ------------------------------ Handlers ------------------------------ */
   const onTaskAdd = (task) => {
     if (!(task instanceof Task)) return;
@@ -421,6 +438,11 @@ const TodoContent = (callback, deps) => {
     IpcSender.req.task.updateSubtaskDone(tid, sid, done, now.getTime());
   };
 
+  const onCategoryColorChange = (cid, color) => {
+    console.log(cid, color);
+    IpcSender.req.category.updateCategoryColor(cid, color, null);
+  };
+
   // printf("taskMap", taskMap);
 
   useEffect(() => {
@@ -499,6 +521,10 @@ const TodoContent = (callback, deps) => {
       applyDeleteTaskCategory({ addPromise, success, data });
     });
 
+    IpcSender.onAll("category/updateCategoryColor", ({ success, data }) => {
+      applyUpdateCategoryColor({ addPromise, success, data });
+    });
+
     let timerThread = fastInterval(() => {
       setTimer((timer) => timer + 1);
     }, 1000);
@@ -520,22 +546,11 @@ const TodoContent = (callback, deps) => {
       IpcSender.offAll("task/updateSubtaskDone");
       IpcSender.offAll("task/addTaskCategory");
       IpcSender.offAll("task/deleteTaskCategory");
+      IpcSender.offAll("category/updateCategoryColor");
 
       clearInterval(timerThread);
     };
   }, [addPromise, taskMap, categories]);
-
-  // useEffect(() => {
-  //   console.log("addPromise");
-  // }, [addPromise]);
-  //
-  // useEffect(() => {
-  //   console.log("taskMap");
-  // }, [taskMap]);
-  //
-  // useEffect(() => {
-  //   console.log("categories");
-  // }, [categories]);
 
   return (
     <div className="todo-content">
@@ -547,11 +562,34 @@ const TodoContent = (callback, deps) => {
           <div className="last-modified">
             마지막 수정: {lastUpdateTimeText ?? "-"}
           </div>
+          <div className={"settings"}>
+            {category?.default === false && (
+              <AutoBlurDiv
+                className={"setting-item"}
+                onClick={(e) => setColorPickerVisible(true)}
+                blurHandler={(e) => setColorPickerVisible(false)}
+                focused={colorPickerVisible}
+                style={{ backgroundColor: category?.color }}
+              >
+                <VscSymbolColor />
+                <ColorPicker
+                  visible={colorPickerVisible}
+                  color={category?.color ?? "#fff"}
+                  setColor={(c) => onCategoryColorChange(category.id, c)}
+                />
+              </AutoBlurDiv>
+            )}
+          </div>
         </div>
         <div className="options">
           <div className="view-modes">
             {Object.keys(TASK_VIEW_MODE).map((mode) => {
               const curTaskViewMode = TASK_VIEW_MODE[mode];
+              if (
+                isTodayCategory &&
+                curTaskViewMode === TASK_VIEW_MODE.CALENDAR
+              )
+                return null;
               return (
                 <div
                   key={mode}
@@ -624,6 +662,31 @@ const TodoContent = (callback, deps) => {
           ),
           [TASK_VIEW_MODE.CALENDAR]: (
             <TaskCalendarView filteredTaskMap={filteredTaskMap} />
+          ),
+          [TASK_VIEW_MODE.LIST_CALENDAR]: (
+            <TaskListCalendarView
+              key={selectedTodoMenuType}
+              taskMap={taskMap}
+              filteredTaskMap={filteredTaskMap}
+              categories={categories}
+              sorter={sorter}
+              selectedId={selectedTodoItemId}
+              selectTodoItemHandler={setSelectedTodoItemId}
+              onTaskDragEndHandler={onTaskDragEndHandler}
+              onTaskDelete={onTaskDelete}
+              onTaskDone={onTaskDone}
+              onTaskTitleChange={onTaskTitleChange}
+              onTaskDueDateChange={onTaskDueDateChange}
+              onTaskMemoChange={onTaskMemoChange}
+              onTaskCategoryAdd={onTaskCategoryAdd}
+              onTaskCategoryDelete={onTaskCategoryDelete}
+              onTaskRepeatChange={onTaskRepeatChange}
+              onSubtaskAdded={onSubtaskAdded}
+              onSubtaskDelete={onSubtaskDelete}
+              onSubtaskTitleChange={onSubtaskTitleChange}
+              onSubtaskDueDateChange={onSubtaskDueDateChange}
+              onSubtaskDone={onSubtaskDone}
+            />
           ),
         }[taskViewMode] ?? <div>Currently not supported</div>}
       </div>

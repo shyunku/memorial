@@ -109,19 +109,42 @@ $std-text-color: rgb(128, 146, 184);
             & > .delete-btn {
               color: white;
             }
+
+            & > .content > .task-count {
+              color: white;
+            }
           }
 
-          & > .title {
-            // display: flex;
-            // align-items: center;
-            margin-left: 10px;
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            // font-size: 15px;
-            font-weight: 400;
+          & > .icon-wrapper {
+            display: flex;
+            align-items: center;
           }
+
+          & > .content {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            margin-left: 10px;
+
+            & > .title {
+              //display: flex;
+              //align-items: center;
+
+              //flex: 1;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              // font-size: 15px;
+              font-weight: 400;
+            }
+
+            & > .task-count {
+              margin-left: 5px;
+              font-size: 12px;
+              color: #536680;
+            }
+          }
+
 
           & > .delete-btn {
             color: rgb(255, 77, 77);

@@ -11,6 +11,7 @@
     @media screen and (max-width: 1300px) {
       .calendar-view-header {
         flex-direction: column;
+
         & > *:not(:last-child) {
           margin-bottom: 15px;
         }
@@ -152,7 +153,7 @@
         .day-cell {
           height: 170px;
           padding: 8px;
-          border: 1px solid rgb(31, 33, 37);
+          border: 1px solid rgb(24, 25, 28);
 
           &:not(.current-month) {
             background-color: rgb(24, 26, 29);
@@ -228,7 +229,7 @@
             .task {
               display: flex;
               align-items: center;
-              padding: 5px 8px;
+              padding: 5px 8px 5px 12px;
               white-space: nowrap;
               border-radius: 3px;
               font-size: 13px;
@@ -237,6 +238,8 @@
               box-sizing: border-box;
               cursor: pointer;
               transition: 0.2s ease;
+              position: relative;
+              overflow: hidden;
 
               background-color: rgb(37, 38, 42);
               color: rgb(148, 160, 173);
@@ -245,9 +248,18 @@
                 margin-bottom: 6px;
               }
 
-              &:hover {
+              &:hover, &.hovered {
                 background-color: rgb(60, 67, 80);
                 color: white;
+              }
+
+              & > .color-label {
+                width: 5px;
+                height: 100%;
+                position: absolute;
+                top: 0;
+                left: 0;
+                background: rgba(45, 51, 61, 0.58);
               }
 
               &.done {

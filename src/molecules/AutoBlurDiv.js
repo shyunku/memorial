@@ -8,14 +8,21 @@ import { useEffect, useRef } from "react";
  * if not provided, the blur event will be ignored
  * @returns {JSX}
  */
-const AutoBlurDiv = ({ reference, children, blurHandler = () => {}, focused = false, ...rest }) => {
+const AutoBlurDiv = ({
+  reference,
+  children,
+  blurHandler = () => {},
+  focused = false,
+  ...rest
+}) => {
   const ref = useRef();
 
   useEffect(() => {
     if (!focused) return;
 
     const onOutsideClick = (e) => {
-      if (reference?.current != null && reference?.current.contains(e.target)) return;
+      if (reference?.current != null && reference?.current.contains(e.target))
+        return;
       if (ref.current != null && ref.current.contains(e.target)) return;
       blurHandler?.();
     };

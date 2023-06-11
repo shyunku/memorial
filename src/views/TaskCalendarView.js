@@ -5,7 +5,12 @@ import { fastInterval, fromRelativeTime } from "utils/Common";
 import JsxUtil from "utils/JsxUtil";
 import "./TaskCalendarView.scss";
 
-const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
+const TaskCalendarView = ({
+  taskMap,
+  filteredTaskMap,
+  setHoveredTaskId,
+  hoveredTaskId,
+}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [watchingMonth, setWatchingMonth] = useState(new Date());
   const [hoveredDate, setHoveredDate] = useState(null);
@@ -13,7 +18,9 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
   const dateTaskMap = useMemo(() => {
     const dateMap = {};
     for (let tid in filteredTaskMap) {
-      const dayDateKey = moment(filteredTaskMap[tid].dueDate).format("YYYY-M-D");
+      const dayDateKey = moment(filteredTaskMap[tid].dueDate).format(
+        "YYYY-M-D"
+      );
       if (dateMap[dayDateKey] == null) dateMap[dayDateKey] = [];
       dateMap[dayDateKey].push(filteredTaskMap[tid]);
     }
@@ -31,10 +38,18 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
     return new Date(watchingMonth.getFullYear(), watchingMonth.getMonth(), 0);
   }, [watchingMonth]);
   const curMonthFirstDay = useMemo(() => {
-    return new Date(watchingMonth.getFullYear(), watchingMonth.getMonth(), 1).getDay();
+    return new Date(
+      watchingMonth.getFullYear(),
+      watchingMonth.getMonth(),
+      1
+    ).getDay();
   }, [watchingMonth]);
   const curMonthLastDate = useMemo(() => {
-    return new Date(watchingMonth.getFullYear(), watchingMonth.getMonth() + 1, 0);
+    return new Date(
+      watchingMonth.getFullYear(),
+      watchingMonth.getMonth() + 1,
+      0
+    );
   }, [watchingMonth]);
 
   useEffect(() => {
@@ -44,11 +59,15 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
   }, []);
 
   const onPrevYear = () => {
-    setWatchingMonth(new Date(watchingMonth.getFullYear() - 1, watchingMonth.getMonth(), 1));
+    setWatchingMonth(
+      new Date(watchingMonth.getFullYear() - 1, watchingMonth.getMonth(), 1)
+    );
   };
 
   const onPrevMonth = () => {
-    setWatchingMonth(new Date(watchingMonth.getFullYear(), watchingMonth.getMonth() - 1, 1));
+    setWatchingMonth(
+      new Date(watchingMonth.getFullYear(), watchingMonth.getMonth() - 1, 1)
+    );
   };
 
   const onCurrentMonth = () => {
@@ -56,18 +75,24 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
   };
 
   const onNextMonth = () => {
-    setWatchingMonth(new Date(watchingMonth.getFullYear(), watchingMonth.getMonth() + 1, 1));
+    setWatchingMonth(
+      new Date(watchingMonth.getFullYear(), watchingMonth.getMonth() + 1, 1)
+    );
   };
 
   const onNextYear = () => {
-    setWatchingMonth(new Date(watchingMonth.getFullYear() + 1, watchingMonth.getMonth(), 1));
+    setWatchingMonth(
+      new Date(watchingMonth.getFullYear() + 1, watchingMonth.getMonth(), 1)
+    );
   };
 
   return (
     <div className="task-view calendar">
       <div className="calendar-view">
         <div className="calendar-view-header">
-          <div className="current-year-month">{watchingMoment.format("YYYY년 M월")}</div>
+          <div className="current-year-month">
+            {watchingMoment.format("YYYY년 M월")}
+          </div>
           <div className="options">
             <div className="option ltr" onClick={onPrevYear}>
               <div className="icon-wrapper">
@@ -107,7 +132,10 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
                   <div
                     className={
                       "week-cell cell" +
-                      JsxUtil.classByCondition(hoveredDate?.getDay() == index, "focused") +
+                      JsxUtil.classByCondition(
+                        hoveredDate?.getDay() == index,
+                        "focused"
+                      ) +
                       JsxUtil.classByCondition(index == 0, "sunday") +
                       JsxUtil.classByCondition(index == 6, "saturday")
                     }
@@ -126,9 +154,16 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
                   key={index}
                   year={watchingMoment.year()}
                   month={watchingMoment.month() - 1}
-                  day={moment(prevMonthLastDate).date() - curMonthFirstDay + index + 1}
+                  day={
+                    moment(prevMonthLastDate).date() -
+                    curMonthFirstDay +
+                    index +
+                    1
+                  }
                   currentMoment={currentMoment}
                   dateTaskMap={dateTaskMap}
+                  setHoveredTaskId={setHoveredTaskId}
+                  hoveredTaskId={hoveredTaskId}
                 />
               ))}
             {Array(curMonthLastDate.getDate())
@@ -142,6 +177,8 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
                   currentMoment={currentMoment}
                   dateTaskMap={dateTaskMap}
                   currentMonth={true}
+                  setHoveredTaskId={setHoveredTaskId}
+                  hoveredTaskId={hoveredTaskId}
                 />
               ))}
             {curMonthLastDate.getDay() < 6 &&
@@ -155,6 +192,8 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
                     day={index + 1}
                     currentMoment={currentMoment}
                     dateTaskMap={dateTaskMap}
+                    setHoveredTaskId={setHoveredTaskId}
+                    hoveredTaskId={hoveredTaskId}
                   />
                 ))}
           </div>
@@ -164,7 +203,17 @@ const TaskCalendarView = ({ taskMap, filteredTaskMap }) => {
   );
 };
 
-const DayCell = ({ currentMoment, year, month, day, dateTaskMap, currentMonth = false, ...rest }) => {
+const DayCell = ({
+  currentMoment,
+  year,
+  month,
+  day,
+  dateTaskMap,
+  currentMonth = false,
+  setHoveredTaskId,
+  hoveredTaskId,
+  ...rest
+}) => {
   const cellDate = useMemo(() => {
     return moment(new Date(year, month, day));
   }, [year, month, day]);
@@ -172,10 +221,10 @@ const DayCell = ({ currentMoment, year, month, day, dateTaskMap, currentMonth = 
     return cellDate.isSame(currentMoment, "day");
   }, [cellDate]);
   const isSunday = useMemo(() => {
-    return cellDate.day() == 0;
+    return cellDate.day() === 0;
   }, [cellDate]);
   const isSaturday = useMemo(() => {
-    return cellDate.day() == 6;
+    return cellDate.day() === 6;
   }, [cellDate]);
 
   const dateKey = `${year}-${month + 1}-${day}`;
@@ -210,14 +259,21 @@ const DayCell = ({ currentMoment, year, month, day, dateTaskMap, currentMonth = 
       </div>
       <div className="tasks">
         {sortedTasks.map((task) => {
-          return <TaskCell task={task} key={task.id} />;
+          return (
+            <TaskCell
+              task={task}
+              key={task.id}
+              setHoveredTaskId={setHoveredTaskId}
+              hoveredTaskId={hoveredTaskId}
+            />
+          );
         })}
       </div>
     </div>
   );
 };
 
-const TaskCell = ({ task }) => {
+const TaskCell = ({ task, setHoveredTaskId, hoveredTaskId }) => {
   const [counter, setCounter] = useState(0);
 
   const dueDate = useMemo(() => {
@@ -241,10 +297,22 @@ const TaskCell = ({ task }) => {
     if (dueDate == null) {
       return "미정";
     }
-    return fromRelativeTime(remainMilliSeconds < 0 ? -remainMilliSeconds : remainMilliSeconds, {
-      showLayerCount: 1,
-    });
+    return fromRelativeTime(
+      remainMilliSeconds < 0 ? -remainMilliSeconds : remainMilliSeconds,
+      {
+        showLayerCount: 1,
+      }
+    );
   }, [dueDate, counter]);
+
+  const categoryColor = useMemo(() => {
+    for (let category of Object.values(task.categories)) {
+      if (category.color != null) {
+        return category.color;
+      }
+    }
+    return null;
+  }, [task.categories]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -254,7 +322,20 @@ const TaskCell = ({ task }) => {
   }, []);
 
   return (
-    <div className={"task" + JsxUtil.classByCondition(task.done, "done")} key={task.id}>
+    <div
+      className={
+        "task" +
+        JsxUtil.classByCondition(task.done, "done") +
+        JsxUtil.classByEqual(hoveredTaskId, task.id, "hovered")
+      }
+      key={task.id}
+      onMouseEnter={() => setHoveredTaskId?.(task.id)}
+      onMouseLeave={() => setHoveredTaskId?.(null)}
+    >
+      <div
+        className={"color-label"}
+        style={{ backgroundColor: categoryColor }}
+      ></div>
       <div className="title">{task.title}</div>
       {subtasks.length > 0 && (
         <div className="subtasks">

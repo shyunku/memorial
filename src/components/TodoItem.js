@@ -39,6 +39,8 @@ const TodoItem = ({
   onSubtaskDone,
   onSubtaskDelete,
   onSubtaskDueDateChange,
+  setHoveredTaskId,
+  hoveredTaskId,
   ...rest
 }) => {
   const expandableRef = useRef();
@@ -239,12 +241,15 @@ const TodoItem = ({
         className +
         JsxUtil.classByCondition(selected, "selected") +
         JsxUtil.classByCondition(todo.done, "done") +
-        JsxUtil.classByCondition(isOverDue, "overdue")
+        JsxUtil.classByCondition(isOverDue, "overdue") +
+        JsxUtil.classByEqual(hoveredTaskId, todo.id, "hovered")
       }
       dropPredictHandler={(e) => onTaskDropPredict(e, todo)}
       dragEndHandler={onTaskDragEndHandler}
       todo-id={todo.id}
       draggable={draggable}
+      onMouseEnter={(e) => setHoveredTaskId?.(todo.id)}
+      onMouseLeave={(e) => setHoveredTaskId?.(null)}
     >
       <AutoBlurDiv
         blurHandler={blurHandler}

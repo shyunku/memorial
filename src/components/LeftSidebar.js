@@ -45,7 +45,7 @@ export const TODO_MENU_TYPE_TO_ICON = {
 const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
   const context = useOutletContext();
   const { localNonce, remoteNonce, addPromise, states } = context;
-  const { categories } = states;
+  const { categories, taskMap } = states;
 
   const accountInfo = useSelector(accountInfoSlice);
   const offlineMode = accountInfo?.offlineMode ?? false;
@@ -75,6 +75,36 @@ const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
       return aCreatedAt - bCreatedAt;
     });
   }, [categories]);
+
+  const undoneTaskCountMap = useMemo(() => {
+    const cntMap = {};
+    let totalUndone = 0,
+      todayUndone = 0;
+    for (const category of sortedCategories) {
+      cntMap[category.id] = 0;
+    }
+    for (const tid in taskMap) {
+      const task = taskMap[tid];
+      if (!task.done) {
+        for (const cid in task.categories) {
+          if (cntMap[cid] == null) {
+            cntMap[cid] = 0;
+            console.warn(`Task ${tid} has invalid category ${cid}`);
+          }
+          cntMap[cid] += 1;
+        }
+        totalUndone++;
+        if (
+          task.dueDate != null &&
+          moment(task.dueDate).isSame(moment(), "day")
+        )
+          todayUndone++;
+      }
+    }
+    cntMap[TODO_MENU_TYPE.ALL] = totalUndone;
+    cntMap[TODO_MENU_TYPE.TODAY] = todayUndone;
+    return cntMap;
+  }, [sortedCategories, taskMap]);
 
   const createCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
   const addSecretCategoryCxt = useContextMenu({ clearInputsOnBlur: true });
@@ -165,6 +195,8 @@ const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
     };
   }, [states]);
 
+  console.log(undoneTaskCountMap);
+
   return (
     <div className="component left-sidebar">
       <div className="todo-menu-groups">
@@ -185,7 +217,14 @@ const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
                 <div className="icon-wrapper">
                   {TODO_MENU_TYPE_TO_ICON[menuType]}
                 </div>
-                <div className="title">{menuType}</div>
+                <div className={"content"}>
+                  {/*undoneTaskCountMap*/}
+                  <div className="title">{menuType}</div>
+                  <div className={"task-count"}>
+                    {" "}
+                    ({undoneTaskCountMap?.[menuType] ?? "?"})
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -250,10 +289,16 @@ const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
                 key={category.id}
                 onClick={(e) => onCustomCategorySelect(e, category.id)}
               >
-                <div className="icon-wrapper">
+                <div className="icon-wrapper" style={{ color: category.color }}>
                   {category.secret ? <IoKeySharp /> : <IoReader />}
                 </div>
-                <div className="title">{category.title}</div>
+                <div className={"content"}>
+                  {/*undoneTaskCountMap*/}
+                  <div className="title">{category.title}</div>
+                  <div className={"task-count"}>
+                    ({undoneTaskCountMap?.[category.id] ?? "?"})
+                  </div>
+                </div>
                 <div
                   className="delete-btn"
                   onClick={(e) => tryDeleteCategory(e, category.id)}

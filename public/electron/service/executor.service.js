@@ -25,6 +25,9 @@ const TX_TYPE = require("../constants/TxType.constants");
 const Transaction = require("../objects/Transaction");
 const Block = require("../objects/Block");
 const { sortFields, jsonMarshal, isFieldsSorted } = require("../util/TxUtil");
+const {
+  updateCategoryColor,
+} = require("../executors/updateCategoryColor.exec");
 
 class ExecutorService {
   constructor() {
@@ -194,6 +197,9 @@ class ExecutorService {
           break;
         case TX_TYPE.UPDATE_SUBTASK_DONE:
           await updateSubtaskDone(reqId, this.serviceGroup, copiedTxContent);
+          break;
+        case TX_TYPE.UPDATE_CATEGORY_COLOR:
+          await updateCategoryColor(reqId, this.serviceGroup, copiedTxContent);
           break;
         default:
           throw new Error("Transaction type is not supported");

@@ -313,6 +313,9 @@ const IpcSender = {
       getCategoryTasks: (categoryId, callback) => {
         sender("category/getCategoryTasks", callback, categoryId);
       },
+      updateCategoryColor: (categoryId, color, callback) => {
+        sender("category/updateCategoryColor", callback, categoryId, color);
+      },
     },
     tasks_categories: {
       getTasksCategoriesList: (callback) => {

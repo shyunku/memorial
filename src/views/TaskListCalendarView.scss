@@ -1,0 +1,13 @@
+.task-list-calendar-view {
+  display: flex;
+
+  .view-segment {
+    flex: 1;
+  }
+
+  .split-line {
+    width: 1px;
+    margin: 0 20px;
+    background-color: #2a333d;
+  }
+}

@@ -1,0 +1,30 @@
+import TaskCalendarView from "./TaskCalendarView";
+import TaskListView from "./TaskListView";
+import "./TaskListCalendarView.scss";
+import { useState } from "react";
+
+const TaskListCalendarView = (props) => {
+  const [hoveredTaskId, setHoveredTaskId] = useState(null);
+
+  return (
+    <div className={`task-list-calendar-view`}>
+      <div className={"view-segment"}>
+        <TaskListView
+          {...props}
+          setHoveredTaskId={setHoveredTaskId}
+          hoveredTaskId={hoveredTaskId}
+        />
+      </div>
+      <div className={"split-line"}></div>
+      <div className={"view-segment"}>
+        <TaskCalendarView
+          filteredTaskMap={props?.filteredTaskMap}
+          setHoveredTaskId={setHoveredTaskId}
+          hoveredTaskId={hoveredTaskId}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default TaskListCalendarView;
