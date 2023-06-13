@@ -12,10 +12,10 @@ const appDataPath = app.getAppPath();
 console.log(`This is ${isBuildMode ? "build" : "dev"} mode`);
 
 require("../modules/initializer").all(isBuildMode, appDataPath);
-// const Updater = require("../modules/updater");
+const Updater = require("../modules/updater");
 const ArchCategory = require("../constants/ArchCategory.constants");
 const Util = require("../modules/util");
-// const UpdaterFlag = Updater.UPDATER_RESULT_FLAG;
+const UpdaterFlag = Updater.UPDATER_RESULT_FLAG;
 const FileSystem = require("../modules/filesystem");
 const ServiceGroup = require("./serviceGroup");
 const { getBuildLevel } = require("../util/SystemUtil");
@@ -66,30 +66,39 @@ app.on("ready", async () => {
     serviceGroup.configure();
 
     if (isProdMode && checkUpdate) {
-      // TODO :: implement this
-      // const window = await Window.createUpdaterWindow(true);
-      // const { result: checkUpdateResult, data } = await Updater.checkForUpdates(osCategory);
-      // switch (checkUpdateResult) {
-      //   case UpdaterFlag.ALREADY_LATEST:
-      //     // do nothing
-      //     break;
-      //   case UpdaterFlag.NEW_VERSION_FOUND:
-      //     const { version, isBeta } = data;
-      //     const destInstallerPath = await Updater.updateToNewVersion(osCategory, userDataPath, version);
-      //     const shouldRelaunch = await Updater.installNewVersion(osCategory, userDataPath, destInstallerPath);
-      //     if (shouldRelaunch) {
-      //       console.system(`Relaunching app...`);
-      //       app.relaunch();
-      //     }
-      //     app.exit();
-      //     return;
-      //   case UpdaterFlag.UPDATE_CHECK_FAIL:
-      //     console.error(`Couldn't check update. Exiting program...`);
-      //     app.exit();
-      //     return;
-      // }
-      // await Util.sleep(1000);
-      // window.close();
+      const window = await Window.createUpdaterWindow(true);
+      const { result: checkUpdateResult, data } = await Updater.checkForUpdates(
+        osCategory
+      );
+      switch (checkUpdateResult) {
+        case UpdaterFlag.ALREADY_LATEST:
+          // do nothing
+          break;
+        case UpdaterFlag.NEW_VERSION_FOUND:
+          const { version, isBeta } = data;
+          const destInstallerPath = await Updater.updateToNewVersion(
+            osCategory,
+            userDataPath,
+            version
+          );
+          const shouldRelaunch = await Updater.installNewVersion(
+            osCategory,
+            userDataPath,
+            destInstallerPath
+          );
+          if (shouldRelaunch) {
+            console.system(`Relaunching app...`);
+            app.relaunch();
+          }
+          app.exit();
+          return;
+        case UpdaterFlag.UPDATE_CHECK_FAIL:
+          console.error(`Couldn't check update. Exiting program...`);
+          app.exit();
+          return;
+      }
+      await Util.sleep(1000);
+      window.close();
     }
 
     // TODO :: check utility of this command

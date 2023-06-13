@@ -10,9 +10,10 @@ const VersionComparator = require("compare-versions");
 const ArchCategory = require("../constants/ArchCategory.constants");
 const ChildProcess = require("child_process");
 const ArchCategoryConstants = require("../constants/ArchCategory.constants");
+const { getServerFinalEndpoint } = require("./util");
 
 let Ipc;
-const serverHost = process.env.REACT_APP_SERVER_HOST;
+const serverHost = getServerFinalEndpoint();
 
 const UPDATER_RESULT_FLAG = {
   NEW_VERSION_FOUND: 0,
