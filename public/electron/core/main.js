@@ -12,10 +12,8 @@ const appDataPath = app.getAppPath();
 console.log(`This is ${isBuildMode ? "build" : "dev"} mode`);
 
 require("../modules/initializer").all(isBuildMode, appDataPath);
-const Updater = require("../modules/updater");
 const ArchCategory = require("../constants/ArchCategory.constants");
 const Util = require("../modules/util");
-const UpdaterFlag = Updater.UPDATER_RESULT_FLAG;
 const FileSystem = require("../modules/filesystem");
 const ServiceGroup = require("./serviceGroup");
 const { getBuildLevel } = require("../util/SystemUtil");
@@ -43,8 +41,6 @@ const isWindowsOS = osCategory === ArchCategory.Windows;
 const isMacOS = osCategory === ArchCategory.MacOS;
 const userDataPath = FileSystem.getUserDataPath();
 
-const checkUpdate = true;
-
 /* ---------------------------------------- Pre-execute statements ---------------------------------------- */
 if (!isWindowsOS && !isMacOS) {
   console.error(`[Platform/OS] ${osLabel} (${osCategory}) is not supported`);
@@ -63,43 +59,12 @@ app.on("ready", async () => {
   try {
     // initialize & configure all services
     serviceGroup.injectReferences();
-    serviceGroup.configure();
 
-    if (isProdMode && checkUpdate) {
-      const window = await Window.createUpdaterWindow(true);
-      const { result: checkUpdateResult, data } = await Updater.checkForUpdates(
-        osCategory
-      );
-      switch (checkUpdateResult) {
-        case UpdaterFlag.ALREADY_LATEST:
-          // do nothing
-          break;
-        case UpdaterFlag.NEW_VERSION_FOUND:
-          const { version, isBeta } = data;
-          const destInstallerPath = await Updater.updateToNewVersion(
-            osCategory,
-            userDataPath,
-            version
-          );
-          const shouldRelaunch = await Updater.installNewVersion(
-            osCategory,
-            userDataPath,
-            destInstallerPath
-          );
-          if (shouldRelaunch) {
-            console.system(`Relaunching app...`);
-            app.relaunch();
-          }
-          app.exit();
-          return;
-        case UpdaterFlag.UPDATE_CHECK_FAIL:
-          console.error(`Couldn't check update. Exiting program...`);
-          app.exit();
-          return;
-      }
-      await Util.sleep(1000);
-      window.close();
-    }
+    // check update
+    await serviceGroup.updaterService.invokeUpdateChecker();
+
+    // run all services
+    serviceGroup.configureAndRun();
 
     // TODO :: check utility of this command
     // powerSaveBlocker.start('prevent-app-suspension');

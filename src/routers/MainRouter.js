@@ -2,8 +2,9 @@ import HomeLayout from "layouts/Home.layout";
 import RootLayout from "layouts/Root.layout";
 import Home from "pages/Home";
 import Login from "pages/Login";
-import { BrowserRouter, HashRouter, Route, Routes } from "react-router-dom";
+import { HashRouter, Route, Routes } from "react-router-dom";
 import AuthRouter from "./AuthRouter";
+import UpdateChecker from "../pages/UpdateChecker";
 
 const MainRouter = () => {
   return (
@@ -17,6 +18,7 @@ const MainRouter = () => {
           </Route>
         </Route>
         <Route path="/login" element={<Login />} />
+        <Route path="/update-checker" component={<UpdateChecker />} />
         <Route path="*" element={<div>404 Page</div>} />
       </Routes>
     </HashRouter>

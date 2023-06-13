@@ -7,6 +7,7 @@ const WebsocketService = require("../service/websocket.service");
 const DatabaseService = require("../service/database.service");
 const SyncerService = require("../service/syncer.service");
 const ExecutorService = require("../service/executor.service");
+const UpdaterService = require("../service/updater.service");
 
 const WindowConfigure = require("../configures/window.config");
 const SessionConfigure = require("../configures/session.config");
@@ -23,6 +24,7 @@ class ServiceGroup {
     this.databaseService = new DatabaseService();
     this.syncerService = new SyncerService();
     this.executorService = new ExecutorService();
+    this.updaterService = new UpdaterService();
   }
 
   injectReferences() {
@@ -35,9 +37,10 @@ class ServiceGroup {
     this.databaseService.inject(this);
     this.syncerService.inject(this);
     this.executorService.inject(this);
+    this.updaterService.inject(this);
   }
 
-  configure() {
+  configureAndRun() {
     WindowConfigure(this.windowService);
     SessionConfigure(this.sessionService);
     IpcConfigure(this.ipcService);

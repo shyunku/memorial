@@ -55,7 +55,7 @@ const Request = {
         `Axios/get ${console.wrap(
           "-->",
           console.CYAN
-        )} ${SERVER_WRAPPED} ${console.wrap(urlPostfix, console.MAGENTA)}`
+        )} ${SERVER_WRAPPED} ${console.wrap(url, console.MAGENTA)}`
       );
 
       axios
