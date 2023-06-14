@@ -63,7 +63,7 @@ const TodoItem = ({
       if (!todo.categories[cid]) filtered.push(categories[cid]);
     }
     return filtered;
-  }, [categories, todo.categories]);
+  }, [categories, JSON.stringify(todo.categories)]);
 
   const dueDateText = useMemo(() => {
     if (!todo.dueDate) return "기한 없음";
@@ -121,10 +121,20 @@ const TodoItem = ({
   const categoryTags = useMemo(() => {
     return Object.values(todo.categories);
   }, [JSON.stringify(todo.categories)]);
+
   const isOverDue = useMemo(() => {
     if (!todo.dueDate) return false;
     return moment(todo.dueDate).isBefore(moment());
   }, [JSON.stringify(todo.dueDate), timeCounter]);
+
+  const categoryColor = useMemo(() => {
+    for (let category of Object.values(todo.categories)) {
+      if (category.color != null) {
+        return category.color;
+      }
+    }
+    return null;
+  }, [JSON.stringify(todo.categories)]);
 
   const todoCtx = Task.fromObject(todo);
   const subtaskMap = useMemo(() => {
@@ -263,6 +273,10 @@ const TodoItem = ({
         <DraggableZone className="todo-item">
           {/* {linkedListTestJsx} */}
           <div className="left-side">
+            <div
+              className={"color-label"}
+              style={{ backgroundColor: categoryColor }}
+            ></div>
             <div className="title">{todo.title}</div>
             {todo.dueDate != null && (
               <div

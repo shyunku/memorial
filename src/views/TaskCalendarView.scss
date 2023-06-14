@@ -262,6 +262,15 @@
                 background: rgba(45, 51, 61, 0.58);
               }
 
+              &:not(.done).overdue {
+                background-color: rgb(52, 25, 25);
+                color: #b04f4f;
+
+                & > .remain-time {
+                  color: #d57676;
+                }
+              }
+
               &.done {
                 opacity: 0.3;
               }

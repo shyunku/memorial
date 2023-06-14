@@ -139,11 +139,25 @@
         align-items: center;
         flex: 1;
 
+
+        & > .color-label {
+          position: absolute;
+          top: 50%;
+          left: 16px;
+          width: 4px;
+          height: 60%;
+          border-radius: 5px;
+          transform: translate(-50%, -50%);
+          background-color: rgba(255, 255, 255, 0.08);
+          opacity: 0.6;
+        }
+
         & > .title {
           color: $task-title-color;
           font-size: 16px;
           font-weight: 300;
           white-space: nowrap;
+          margin-left: 5px;
         }
 
         & > .due-date {
