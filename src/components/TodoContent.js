@@ -117,10 +117,11 @@ const TodoContent = (callback, deps) => {
 
   const secretFilter = useMemo(() => {
     return (task) => {
-      const categories = Object.values(task.categories);
-      for (let c of categories) {
+      const cidList = Object.keys(task.categories);
+      for (let cid of cidList) {
         // not current category & it's secret >> hidden
-        if (c.id != category?.id && c.secret) {
+        const taskCategory = categories[cid];
+        if (cid !== category?.id && taskCategory.secret) {
           return false;
         }
       }
