@@ -57,7 +57,7 @@ class Task extends Mutatable {
       console.log(this);
       return;
     }
-    this.categories[category.id] = category;
+    this.categories[category.id] = true;
   }
 
   deleteCategory(cid) {

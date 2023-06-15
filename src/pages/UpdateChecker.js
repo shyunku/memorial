@@ -57,7 +57,7 @@ const UpdateChecker = () => {
   return (
     <div className="updater">
       <div className="content-wrapper">
-        <div className="hyperlink">Memorial</div>
+        <div className="name">Memorial</div>
         <div className="loading">
           <FlippingSquare />
         </div>

@@ -16,11 +16,12 @@ const TaskListCalendarView = (props) => {
         />
       </div>
       <div className={"split-line"}></div>
-      <div className={"view-segment"}>
+      <div className={"view-segment calendar"}>
         <TaskCalendarView
           filteredTaskMap={props?.filteredTaskMap}
           setHoveredTaskId={setHoveredTaskId}
           hoveredTaskId={hoveredTaskId}
+          categories={props?.categories}
         />
       </div>
     </div>

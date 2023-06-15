@@ -1,16 +1,17 @@
 import moment from "moment";
-import {useEffect, useMemo, useState} from "react";
-import {IoPlay, IoPlayBack, IoPlayForward} from "react-icons/io5";
-import {fastInterval, fromRelativeTime} from "utils/Common";
+import { useEffect, useMemo, useState } from "react";
+import { IoPlay, IoPlayBack, IoPlayForward } from "react-icons/io5";
+import { fastInterval, fromRelativeTime } from "utils/Common";
 import JsxUtil from "utils/JsxUtil";
 import "./TaskCalendarView.scss";
 
 const TaskCalendarView = ({
-                            taskMap,
-                            filteredTaskMap,
-                            setHoveredTaskId,
-                            hoveredTaskId,
-                          }) => {
+  taskMap,
+  filteredTaskMap,
+  setHoveredTaskId,
+  hoveredTaskId,
+  categories,
+}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [watchingMonth, setWatchingMonth] = useState(new Date());
   const [hoveredDate, setHoveredDate] = useState(null);
@@ -96,13 +97,13 @@ const TaskCalendarView = ({
           <div className="options">
             <div className="option ltr" onClick={onPrevYear}>
               <div className="icon-wrapper">
-                <IoPlayBack/>
+                <IoPlayBack />
               </div>
               <div className="label">지난 해</div>
             </div>
             <div className="option ltr" onClick={onPrevMonth}>
               <div className="icon-wrapper">
-                <IoPlay style={{transform: `rotate(180deg)`}}/>
+                <IoPlay style={{ transform: `rotate(180deg)` }} />
               </div>
               <div className="label">지난 달</div>
             </div>
@@ -112,13 +113,13 @@ const TaskCalendarView = ({
             <div className="option rtl" onClick={onNextMonth}>
               <div className="label">다음 달</div>
               <div className="icon-wrapper">
-                <IoPlay/>
+                <IoPlay />
               </div>
             </div>
             <div className="option rtl" onClick={onNextYear}>
               <div className="label">다음 해</div>
               <div className="icon-wrapper">
-                <IoPlayForward/>
+                <IoPlayForward />
               </div>
             </div>
           </div>
@@ -164,6 +165,7 @@ const TaskCalendarView = ({
                   dateTaskMap={dateTaskMap}
                   setHoveredTaskId={setHoveredTaskId}
                   hoveredTaskId={hoveredTaskId}
+                  categories={categories}
                 />
               ))}
             {Array(curMonthLastDate.getDate())
@@ -179,6 +181,7 @@ const TaskCalendarView = ({
                   currentMonth={true}
                   setHoveredTaskId={setHoveredTaskId}
                   hoveredTaskId={hoveredTaskId}
+                  categories={categories}
                 />
               ))}
             {curMonthLastDate.getDay() < 6 &&
@@ -194,6 +197,7 @@ const TaskCalendarView = ({
                     dateTaskMap={dateTaskMap}
                     setHoveredTaskId={setHoveredTaskId}
                     hoveredTaskId={hoveredTaskId}
+                    categories={categories}
                   />
                 ))}
           </div>
@@ -204,16 +208,17 @@ const TaskCalendarView = ({
 };
 
 const DayCell = ({
-                   currentMoment,
-                   year,
-                   month,
-                   day,
-                   dateTaskMap,
-                   currentMonth = false,
-                   setHoveredTaskId,
-                   hoveredTaskId,
-                   ...rest
-                 }) => {
+  currentMoment,
+  year,
+  month,
+  day,
+  dateTaskMap,
+  currentMonth = false,
+  setHoveredTaskId,
+  hoveredTaskId,
+  categories,
+  ...rest
+}) => {
   const cellDate = useMemo(() => {
     return moment(new Date(year, month, day));
   }, [year, month, day]);
@@ -265,6 +270,7 @@ const DayCell = ({
               key={task.id}
               setHoveredTaskId={setHoveredTaskId}
               hoveredTaskId={hoveredTaskId}
+              categories={categories}
             />
           );
         })}
@@ -273,7 +279,7 @@ const DayCell = ({
   );
 };
 
-const TaskCell = ({task, setHoveredTaskId, hoveredTaskId}) => {
+const TaskCell = ({ task, setHoveredTaskId, hoveredTaskId, categories }) => {
   const [counter, setCounter] = useState(0);
 
   const dueDate = useMemo(() => {
@@ -311,13 +317,16 @@ const TaskCell = ({task, setHoveredTaskId, hoveredTaskId}) => {
   }, [dueDate, counter]);
 
   const categoryColor = useMemo(() => {
-    for (let category of Object.values(task.categories)) {
-      if (category.color != null) {
-        return category.color;
+    for (let cid in categories) {
+      if (task.categories.hasOwnProperty(cid)) {
+        const category = categories[cid];
+        if (category.color != null) {
+          return category.color;
+        }
       }
     }
     return null;
-  }, [JSON.stringify(task.categories)]);
+  }, [categories]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -340,7 +349,7 @@ const TaskCell = ({task, setHoveredTaskId, hoveredTaskId}) => {
     >
       <div
         className={"color-label"}
-        style={{backgroundColor: categoryColor}}
+        style={{ backgroundColor: categoryColor }}
       ></div>
       <div className="title">{task.title}</div>
       {subtasks.length > 0 && (

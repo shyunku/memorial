@@ -269,6 +269,11 @@
                 & > .remain-time {
                   color: #d57676;
                 }
+
+                &:hover, &.hovered {
+                  background-color: rgb(79, 39, 39);
+                  color: #ff9292;
+                }
               }
 
               &.done {

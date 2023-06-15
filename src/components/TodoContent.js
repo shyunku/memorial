@@ -68,12 +68,7 @@ const SORT_MODE = {
 
 const TodoContent = (callback, deps) => {
   const props = useOutletContext();
-  const {
-    selectedTodoMenuType,
-    category: passedCategory,
-    addPromise,
-    states,
-  } = props;
+  const { selectedTodoMenuType, category, addPromise, states } = props;
 
   const { taskMap, categories } = states;
 
@@ -94,12 +89,8 @@ const TodoContent = (callback, deps) => {
   const [selectedTodoItemId, setSelectedTodoItemId] = useState(null);
   const [taskViewMode, setTaskViewMode] = useState(TASK_VIEW_MODE.LIST);
 
-  const category = useMemo(() => {
-    return passedCategory ?? new Category(selectedTodoMenuType, false, true);
-  }, [selectedTodoMenuType, passedCategory]);
-
   const isTodayCategory = useMemo(() => {
-    return category.default && category.title === TODO_MENU_TYPE.TODAY;
+    return category?.default && category?.title === TODO_MENU_TYPE.TODAY;
   }, [category]);
 
   /* ------------------------------ Filters ------------------------------ */
@@ -114,8 +105,8 @@ const TodoContent = (callback, deps) => {
         return (task) => {
           if (
             category != null &&
-            category.default === false &&
-            task.categories[category.id] == null
+            category?.default === false &&
+            task.categories[category?.id] == null
           ) {
             return false;
           }
@@ -129,7 +120,7 @@ const TodoContent = (callback, deps) => {
       const categories = Object.values(task.categories);
       for (let c of categories) {
         // not current category & it's secret >> hidden
-        if (c.id != category.id && c.secret) {
+        if (c.id != category?.id && c.secret) {
           return false;
         }
       }
@@ -661,7 +652,10 @@ const TodoContent = (callback, deps) => {
             />
           ),
           [TASK_VIEW_MODE.CALENDAR]: (
-            <TaskCalendarView filteredTaskMap={filteredTaskMap} />
+            <TaskCalendarView
+              filteredTaskMap={filteredTaskMap}
+              categories={categories}
+            />
           ),
           [TASK_VIEW_MODE.LIST_CALENDAR]: (
             <TaskListCalendarView

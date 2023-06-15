@@ -57,12 +57,15 @@ const TodoItem = ({
   const addCategoryBtnCtx = useContextMenu({
     horizontal: false,
   });
-  const filteredCategories = useMemo(() => {
-    let filtered = [];
+
+  // 태스크에 추가할 수 있는 카테고리들
+  const [taggedCategories, taggableCategories] = useMemo(() => {
+    let tagged = [],
+      taggable = [];
     for (let cid in categories) {
-      if (!todo.categories[cid]) filtered.push(categories[cid]);
+      (todo.categories[cid] != null ? tagged : taggable).push(categories[cid]);
     }
-    return filtered;
+    return [tagged, taggable];
   }, [categories, JSON.stringify(todo.categories)]);
 
   const dueDateText = useMemo(() => {
@@ -119,8 +122,8 @@ const TodoItem = ({
   }, [remainTimeMilli]);
 
   const categoryTags = useMemo(() => {
-    return Object.values(todo.categories);
-  }, [JSON.stringify(todo.categories)]);
+    return Object.keys(todo.categories).map((cid) => categories[cid]);
+  }, [JSON.stringify(todo.categories), taggableCategories]);
 
   const isOverDue = useMemo(() => {
     if (!todo.dueDate) return false;
@@ -128,13 +131,13 @@ const TodoItem = ({
   }, [JSON.stringify(todo.dueDate), timeCounter]);
 
   const categoryColor = useMemo(() => {
-    for (let category of Object.values(todo.categories)) {
+    for (let category of taggedCategories) {
       if (category.color != null) {
         return category.color;
       }
     }
     return null;
-  }, [JSON.stringify(todo.categories)]);
+  }, [taggedCategories]);
 
   const todoCtx = Task.fromObject(todo);
   const subtaskMap = useMemo(() => {
@@ -364,7 +367,7 @@ const TodoItem = ({
                   className={
                     "category-adder-wrapper" +
                     JsxUtil.classByCondition(
-                      filteredCategories.length === 0,
+                      taggableCategories.length === 0,
                       "hide"
                     )
                   }
@@ -385,7 +388,7 @@ const TodoItem = ({
                     defaultStyle={true}
                     sticky={true}
                   >
-                    {filteredCategories.map((category) => {
+                    {taggableCategories.map((category) => {
                       return (
                         <div
                           className="category-option"

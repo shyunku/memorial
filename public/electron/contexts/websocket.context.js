@@ -63,18 +63,30 @@ class WebsocketContext {
     if (reconnect) {
       this.reconnectTimeout = this.reconnectTimeout * 2;
       if (this.reconnectTimeout > 10000) this.reconnectTimeout = 10000;
+      console.debug(`Reconnect timeout ramp-up to ${this.reconnectTimeout}`);
     } else {
       this.reconnectTimeout = 500;
+      console.debug(`Reconnect timeout reset to ${this.reconnectTimeout}`);
     }
 
     if (reconnect === false && this.alreadyAuthorized === true) {
       this.alreadyAuthorized = false;
     }
 
-    const updatedAccessToken = await this.testAuthTokenAndRefresh(
-      accessToken,
-      refreshToken
-    );
+    let updatedAccessToken;
+
+    try {
+      updatedAccessToken = await this.testAuthTokenAndRefresh(
+        accessToken,
+        refreshToken
+      );
+    } catch (err) {
+      console.error(err);
+      this.reconnectTimeoutThread = setTimeout(() => {
+        this.connect(accessToken, refreshToken, true);
+      }, this.reconnectTimeout);
+      return;
+    }
 
     // set self-signed certificate false
     console.system(
@@ -247,13 +259,11 @@ class WebsocketContext {
     const rootDB = await this.databaseService.getRootDatabaseContext();
 
     try {
-      if (!this.alreadyAuthorized) {
-        await Request.post(appServerFinalEndpoint, "/token/test", null, {
-          headers: {
-            Authorization: `Bearer ${accessToken_}`,
-          },
-        });
-      }
+      await Request.post(appServerFinalEndpoint, "/token/test", null, {
+        headers: {
+          Authorization: `Bearer ${accessToken_}`,
+        },
+      });
     } catch (err) {
       try {
         let [user] = await rootDB.all(
@@ -269,7 +279,9 @@ class WebsocketContext {
       }
 
       // if error is 401, then try refresh token
-      console.debug(err?.response?.status, err?.response?.data, refreshToken_);
+      console.debug(
+        `status=${err?.response?.status}, data=${err?.response?.data}, refresh=${refreshToken_}`
+      );
       if (
         err?.response?.status === 401 &&
         refreshToken_ != null &&
@@ -316,14 +328,7 @@ class WebsocketContext {
           throw new Error(401);
         }
       } else {
-        console.debug(err?.response?.data);
-        if (err?.response?.data == null) {
-          console.error(err);
-        }
-        if (err?.response?.status == null) {
-          console.error(err);
-        }
-        throw new Error(err?.response?.status ?? "unknown error");
+        throw new Error(err?.response?.status ?? err?.message);
       }
     }
     this.alreadyAuthorized = true;

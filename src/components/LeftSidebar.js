@@ -195,8 +195,6 @@ const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
     };
   }, [states]);
 
-  console.log(undoneTaskCountMap);
-
   return (
     <div className="component left-sidebar">
       <div className="todo-menu-groups">

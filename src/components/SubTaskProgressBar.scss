@@ -1,12 +1,15 @@
 .subtask-progress-bar-wrapper {
   display: flex;
   align-items: center;
+  height: 100%;
 
   $fill-color: rgb(22, 24, 26);
   $fulfilled-color: rgb(49, 104, 193);
   $cancel-fulfill-color: rgb(255, 104, 104);
   $overdue-color: rgb(183, 66, 66);
   $overdue-text-color: rgb(239, 88, 88);
+
+  overflow: hidden;
 
   &.overdue:not(.done) {
     .subtask-circle.fulfilled {
@@ -37,7 +40,92 @@
     padding: 5px 0;
     box-sizing: border-box;
     border-radius: 3px;
+    margin-right: 10px;
   }
+
+  .standalone-completion {
+    display: flex;
+    justify-content: center;
+    width: 60px;
+    position: relative;
+
+    & > .subtask-circle {
+      display: flex;
+      width: 13px;
+      height: 13px;
+      background-color: $fill-color;
+      border-radius: 5px;
+      transform-origin: center;
+      transition: 0.5s background-color, 0.15s width, 0.15s height;
+      border: 3px solid transparent;
+      box-sizing: border-box;
+      cursor: pointer;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+
+      &:hover {
+        width: 18px;
+        height: 18px;
+        border: 3px solid rgb(63, 143, 255);
+      }
+
+      &.final {
+        display: flex;
+        //width: 18px;
+        //height: 18px;
+        overflow: hidden;
+        font-size: 12px;
+        align-items: center;
+        justify-content: center;
+        //transition: 0.5s background-color, 0.3s width, 0.3s height;
+        width: 50px;
+        height: 30px;
+        border: 3px solid rgba(0, 0, 0, 0.25);
+        color: #676767;
+        transition: 0.3s ease;
+        opacity: 0.4;
+
+        &.fulfilled:hover {
+          background-color: $fill-color;
+          color: $cancel-fulfill-color;
+          border: 3px solid $cancel-fulfill-color;
+        }
+
+        &.fulfilled {
+          color: #ffffff;
+          border: 3px solid $fulfilled-color;
+          opacity: 1;
+        }
+
+        & > .complete {
+          display: flex;
+          width: 100%;
+          justify-content: center;
+          align-content: center;
+          opacity: 1;
+
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+        }
+
+        &:hover {
+          width: 50px;
+          height: 30px;
+          border: 3px solid rgb(56, 206, 146);
+          color: rgb(56, 206, 146);
+          opacity: 1;
+        }
+      }
+
+      &.fulfilled {
+        background-color: $fulfilled-color;
+      }
+    }
+  }
+
 
   & > .subtask-progress-bar {
     display: flex;
@@ -69,71 +157,7 @@
       position: absolute;
       // position: relative;
 
-      & > .subtask-circle {
-        width: 13px;
-        height: 13px;
-        background-color: $fill-color;
-        border-radius: 50px;
-        position: absolute;
-        top: 50%;
-        transform-origin: center;
-        transform: translate(-50%, -50%);
-        transition: 0.5s background-color, 0.15s width, 0.15s height;
-        border: 3px solid transparent;
-        box-sizing: border-box;
-        cursor: pointer;
 
-        &:hover {
-          width: 18px;
-          height: 18px;
-          border: 3px solid rgb(63, 143, 255);
-        }
-
-        &.final {
-          display: flex;
-          width: 18px;
-          height: 18px;
-          overflow: hidden;
-          color: rgb(56, 206, 146);
-          font-size: 12px;
-          align-items: center;
-          justify-content: center;
-          transition: 0.5s background-color, 0.3s width, 0.3s height;
-
-          &.fulfilled:hover {
-            background-color: $fill-color;
-            color: $cancel-fulfill-color;
-            border: 3px solid $cancel-fulfill-color;
-          }
-
-          & > .complete {
-            display: flex;
-            width: 100%;
-            justify-content: center;
-            align-content: center;
-            opacity: 0;
-            transition: 0.5s ease;
-
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            overflow: hidden;
-          }
-
-          &:hover {
-            width: 50px;
-            height: 30px;
-            border: 3px solid rgb(56, 206, 146);
-
-            & > .complete {
-              opacity: 1;
-            }
-          }
-        }
-
-        &.fulfilled {
-          background-color: $fulfilled-color;
-        }
-      }
     }
   }
 }

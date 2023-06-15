@@ -1,5 +1,14 @@
 .task-list-calendar-view {
   display: flex;
+  flex: 1;
+  overflow: hidden;
+
+  @media screen and (max-width: 2000px) {
+    flex-direction: column-reverse;
+    .view-segment.calendar {
+      margin-bottom: 30px;
+    }
+  }
 
   .view-segment {
     flex: 1;
