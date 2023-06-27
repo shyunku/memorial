@@ -30,16 +30,7 @@ class CreateTaskTxContent extends TxContent {
     this.repeatStartAt = repeatStartAt;
     this.categories = {};
     for (let cid in categories) {
-      let lc = categories[cid];
-      let c = {
-        cid: cid,
-        title: lc.title,
-        secret: !!lc.secret,
-        locked: !!lc.locked,
-        color: lc.color,
-        createdAt: lc.createdAt ? moment(lc.createdAt).valueOf() : 0,
-      };
-      this.categories[cid] = c;
+      this.categories[cid] = true;
     }
 
     this.prevTaskId = prevTaskId;

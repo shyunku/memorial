@@ -14,6 +14,7 @@ $std-text-color: rgb(128, 146, 184);
     display: flex;
     flex-direction: column;
     flex: 1;
+    overflow: hidden;
 
     & > .todo-menu-group {
       display: flex;
@@ -23,6 +24,17 @@ $std-text-color: rgb(128, 146, 184);
 
       &:not(:last-child) {
         margin-bottom: 15px;
+      }
+
+      &.custom {
+        //overflow-y: overlay;
+        overflow: hidden;
+
+        & > .todo-menus {
+          overflow-y: overlay;
+          overflow-x: hidden;
+          height: 100%;
+        }
       }
 
       & > .header {

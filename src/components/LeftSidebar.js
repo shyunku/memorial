@@ -291,7 +291,6 @@ const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
                   {category.secret ? <IoKeySharp /> : <IoReader />}
                 </div>
                 <div className={"content"}>
-                  {/*undoneTaskCountMap*/}
                   <div className="title">{category.title}</div>
                   <div className={"task-count"}>
                     ({undoneTaskCountMap?.[category.id] ?? "?"})

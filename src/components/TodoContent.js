@@ -579,7 +579,8 @@ const TodoContent = (callback, deps) => {
               const curTaskViewMode = TASK_VIEW_MODE[mode];
               if (
                 isTodayCategory &&
-                curTaskViewMode === TASK_VIEW_MODE.CALENDAR
+                (curTaskViewMode === TASK_VIEW_MODE.CALENDAR ||
+                  curTaskViewMode === TASK_VIEW_MODE.LIST_CALENDAR)
               )
                 return null;
               return (

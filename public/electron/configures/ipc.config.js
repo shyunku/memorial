@@ -218,6 +218,9 @@ module.exports = function (s) {
       let transactions = await db.all("SELECT * FROM transactions;");
       let localClear = transactions.length === 0;
       if (!localClear) {
+        console.debug(
+          `Local transactions are not clear: ${transactions.length} remaining`
+        );
         s.sender("system/isDatabaseClear", reqId, true, false);
         return;
       }
@@ -233,24 +236,20 @@ module.exports = function (s) {
 
   s.register("system/isLegacyMigrationAvailable", async (event, reqId) => {
     try {
-      let legacyDatabaseExists = s.databaseService.doesLegacyDatabaseExists();
-      s.sender(
-        "system/isLegacyMigrationAvailable",
-        reqId,
-        true,
-        legacyDatabaseExists
-      );
+      const userId = s.userService.getCurrent();
+      let dbLevel = s.databaseService.doesLegacyDatabaseExists(userId);
+      s.sender("system/isLegacyMigrationAvailable", reqId, true, dbLevel);
     } catch (err) {
       s.sender("system/isLegacyMigrationAvailable", reqId, false);
       throw err;
     }
   });
 
-  s.register("system/migrateLegacyDatabase", async (event, reqId) => {
+  s.register("system/migrateLegacyDatabase", async (event, reqId, version) => {
     try {
       const userId = s.userService.getCurrent();
       let db = await s.databaseService.getUserDatabaseContext(userId);
-      await db.migrateLegacyDatabase();
+      await db.migrateLegacyDatabase(version);
       s.sender("system/migrateLegacyDatabase", reqId, true);
     } catch (err) {
       s.sender("system/migrateLegacyDatabase", reqId, false);
@@ -258,12 +257,24 @@ module.exports = function (s) {
     }
   });
 
-  s.register("system/truncateLegacyDatabase", async (event, reqId) => {
+  s.register("system/truncateLegacyDatabase", async (event, reqId, version) => {
     try {
-      await s.databaseService.truncateLegacyDatabase();
+      const userId = s.userService.getCurrent();
+      await s.databaseService.truncateLegacyDatabase(userId, version);
       s.sender("system/truncateLegacyDatabase", reqId, true);
     } catch (err) {
       s.sender("system/truncateLegacyDatabase", reqId, false);
+      throw err;
+    }
+  });
+
+  s.register("system/migrateCheckDoneSignal", async (event, reqId) => {
+    try {
+      const userId = s.userService.getCurrent();
+      const syncer = await s.syncerService.getUserSyncerContext(userId);
+      await syncer.setEventLock(false);
+    } catch (err) {
+      s.sender("system/migrateCheckDoneSignal", reqId, false);
       throw err;
     }
   });
@@ -815,6 +826,8 @@ module.exports = function (s) {
     }
   });
 
+  /* ------------------------------ Transactions ------------------------------ */
+
   // 3 -> 5 (add 4)
   // 3.next = 4
   s.register("task/addTask", async (event, reqId, task) => {
@@ -840,7 +853,6 @@ module.exports = function (s) {
         txContent,
         targetBlockNumber
       );
-      await s.executorService.applyTransaction(reqId, tx);
       const syncerCtx = await s.getUserSyncerContext();
       await syncerCtx.sendTransaction(tx);
     } catch (err) {
@@ -854,15 +866,13 @@ module.exports = function (s) {
   s.register("task/deleteTask", async (event, reqId, taskId) => {
     try {
       const db = await s.getUserDatabaseContext();
-      let preResult = await deleteTaskPre(db, taskId);
-      const txContent = new DeleteTaskTxContent(taskId, preResult.prevTaskId);
+      const txContent = new DeleteTaskTxContent(taskId);
       const targetBlockNumber = (await s.getUserLastLocalBlockNumber()) + 1;
       const tx = s.executorService.makeTransaction(
         TX_TYPE.DELETE_TASK,
         txContent,
         targetBlockNumber
       );
-      await s.executorService.applyTransaction(reqId, tx);
       const syncerCtx = await s.getUserSyncerContext();
       await syncerCtx.sendTransaction(tx);
     } catch (err) {
@@ -897,7 +907,6 @@ module.exports = function (s) {
           txContent,
           targetBlockNumber
         );
-        await s.executorService.applyTransaction(reqId, tx);
         const syncerCtx = await s.getUserSyncerContext();
         await syncerCtx.sendTransaction(tx);
       } catch (err) {
@@ -916,7 +925,6 @@ module.exports = function (s) {
         txContent,
         targetBlockNumber
       );
-      await s.executorService.applyTransaction(reqId, tx);
       const syncerCtx = await s.getUserSyncerContext();
       await syncerCtx.sendTransaction(tx);
     } catch (err) {
@@ -936,7 +944,6 @@ module.exports = function (s) {
           txContent,
           targetBlockNumber
         );
-        await s.executorService.applyTransaction(reqId, tx);
         const syncerCtx = await s.getUserSyncerContext();
         await syncerCtx.sendTransaction(tx);
       } catch (err) {
@@ -955,7 +962,6 @@ module.exports = function (s) {
         txContent,
         targetBlockNumber
       );
-      await s.executorService.applyTransaction(reqId, tx);
       const syncerCtx = await s.getUserSyncerContext();
       await syncerCtx.sendTransaction(tx);
     } catch (err) {
@@ -975,7 +981,6 @@ module.exports = function (s) {
           txContent,
           targetBlockNumber
         );
-        await s.executorService.applyTransaction(reqId, tx);
         const syncerCtx = await s.getUserSyncerContext();
         await syncerCtx.sendTransaction(tx);
       } catch (err) {
@@ -996,7 +1001,6 @@ module.exports = function (s) {
           txContent,
           targetBlockNumber
         );
-        await s.executorService.applyTransaction(reqId, tx);
         const syncerCtx = await s.getUserSyncerContext();
         await syncerCtx.sendTransaction(tx);
       } catch (err) {
@@ -1017,7 +1021,6 @@ module.exports = function (s) {
           txContent,
           targetBlockNumber
         );
-        await s.executorService.applyTransaction(reqId, tx);
         const syncerCtx = await s.getUserSyncerContext();
         await syncerCtx.sendTransaction(tx);
       } catch (err) {
@@ -1041,7 +1044,6 @@ module.exports = function (s) {
           txContent,
           targetBlockNumber
         );
-        await s.executorService.applyTransaction(reqId, tx);
         const syncerCtx = await s.getUserSyncerContext();
         await syncerCtx.sendTransaction(tx);
       } catch (err) {
@@ -1069,7 +1071,6 @@ module.exports = function (s) {
         txContent,
         targetBlockNumber
       );
-      await s.executorService.applyTransaction(reqId, tx);
       const syncerCtx = await s.getUserSyncerContext();
       await syncerCtx.sendTransaction(tx);
     } catch (err) {
@@ -1087,7 +1088,6 @@ module.exports = function (s) {
         txContent,
         targetBlockNumber
       );
-      await s.executorService.applyTransaction(reqId, tx);
       const syncerCtx = await s.getUserSyncerContext();
       await syncerCtx.sendTransaction(tx);
     } catch (err) {
@@ -1111,7 +1111,6 @@ module.exports = function (s) {
           txContent,
           targetBlockNumber
         );
-        await s.executorService.applyTransaction(reqId, tx);
         const syncerCtx = await s.getUserSyncerContext();
         await syncerCtx.sendTransaction(tx);
       } catch (err) {
@@ -1136,7 +1135,6 @@ module.exports = function (s) {
           txContent,
           targetBlockNumber
         );
-        await s.executorService.applyTransaction(reqId, tx);
         const syncerCtx = await s.getUserSyncerContext();
         await syncerCtx.sendTransaction(tx);
       } catch (err) {
@@ -1162,7 +1160,6 @@ module.exports = function (s) {
           txContent,
           targetBlockNumber
         );
-        await s.executorService.applyTransaction(reqId, tx);
         const syncerCtx = await s.getUserSyncerContext();
         await syncerCtx.sendTransaction(tx);
       } catch (err) {
@@ -1200,7 +1197,6 @@ module.exports = function (s) {
         txContent,
         targetBlockNumber
       );
-      await s.executorService.applyTransaction(reqId, tx);
       const syncerCtx = await s.getUserSyncerContext();
       await syncerCtx.sendTransaction(tx);
     } catch (err) {
@@ -1218,7 +1214,6 @@ module.exports = function (s) {
         txContent,
         targetBlockNumber
       );
-      await s.executorService.applyTransaction(reqId, tx);
       const syncerCtx = await s.getUserSyncerContext();
       await syncerCtx.sendTransaction(tx);
     } catch (err) {
@@ -1270,7 +1265,6 @@ module.exports = function (s) {
           txContent,
           targetBlockNumber
         );
-        await s.executorService.applyTransaction(reqId, tx);
         const syncerCtx = await s.getUserSyncerContext();
         await syncerCtx.sendTransaction(tx);
       } catch (err) {

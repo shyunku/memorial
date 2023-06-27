@@ -47,6 +47,9 @@ $shaking-box-transparent: 0 0 8px 1px transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
+    max-height: 400px;
+    overflow-y: overlay;
+    overflow-x: hidden;
 
     border: 1px solid rgb(51, 60, 73);
     background-color: rgba(18, 19, 21, 0.752);

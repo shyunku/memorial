@@ -15,6 +15,7 @@ import IpcSender from "utils/IpcSender";
 import "./Root.layout.scss";
 import * as uuid from "uuid";
 import { colorize } from "../utils/Common";
+import { applyTransitions } from "../hooks/UseTransition";
 
 const RootLayout = () => {
   const context = useOutletContext();
@@ -158,15 +159,13 @@ const RootLayout = () => {
           break;
         default:
           console.log(err);
-          Toast.warn(
-            "서버가 연결되지 않았습니다. 오프라인에서 작업할 수 있습니다."
-          );
+          Toast.warn("서버가 연결되지 않았습니다. 편집이 불가능합니다.");
           break;
       }
     }
   };
 
-  const promptMigration = async () => {
+  const promptMigration = async (version) => {
     return new Promise((resolve, reject) => {
       IpcSender.req.system.isDatabaseClear(async ({ success, data }) => {
         if (success) {
@@ -180,6 +179,7 @@ const RootLayout = () => {
                 cancelText: "무시",
                 onConfirm: () => {
                   IpcSender.req.system.migrateLegacyDatabase(
+                    version,
                     ({ success, data }) => {
                       if (success) {
                         Prompt.float(
@@ -214,6 +214,7 @@ const RootLayout = () => {
                     },
                     onClick: () => {
                       IpcSender.req.system.truncateLegacyDatabase(
+                        version,
                         ({ success, data }) => {
                           if (success) {
                             Toast.success(
@@ -311,10 +312,12 @@ const RootLayout = () => {
       IpcSender.req.system.getRemoteLastBlockNumber();
 
       IpcSender.req.system.isLegacyMigrationAvailable(
-        async ({ success, data: migratable }) => {
+        async ({ success, data: migratableVersion }) => {
+          const migratable = migratableVersion > 0;
           if (success && migratable) {
-            await promptMigration();
+            await promptMigration(migratableVersion);
           }
+          IpcSender.req.system.migrateCheckDoneSignal();
         }
       );
     });
@@ -421,6 +424,12 @@ const RootLayout = () => {
       );
     });
 
+    IpcSender.onAll("system/snapshotApplied", ({ success, data }) => {
+      if (success) {
+        window.location.reload();
+      }
+    });
+
     IpcSender.onAll("system/stateRollback", ({ success, data }) => {
       if (!success) {
         Toast.error(
@@ -464,6 +473,12 @@ const RootLayout = () => {
       console.error(err);
     });
 
+    IpcSender.onAll("state/transitions", ({ success, data }) => {
+      if (success) {
+        applyTransitions(addPromise, data);
+      }
+    });
+
     return () => {
       IpcSender.offAll("socket/disconnected");
       IpcSender.offAll("socket/connected");
@@ -471,8 +486,10 @@ const RootLayout = () => {
       IpcSender.offAll("system/localLastBlockNumber");
       IpcSender.offAll("system/remoteLastBlockNumber");
       IpcSender.offAll("system/mismatchTxHashFound");
+      IpcSender.offAll("system/snapshotApplied");
       IpcSender.offAll("system/stateRollback");
       IpcSender.offAll("system/socketError");
+      IpcSender.offAll("state/transitions");
     };
   }, []);
 

@@ -25,15 +25,24 @@ body,
   overflow: hidden;
 }
 
-*::-webkit-scrollbar {
-  width: 5px;
+* {
+  &::-webkit-scrollbar {
+    width: 5px;
 
-  &-thumb {
-    background-color: rgba(96, 160, 255, 0.197);
-    border-radius: 10px;
+    &::-webkit-scrollbar-thumb {
+      background-color: transparent;
+      border-radius: 10px;
+      transition: 0.5s background-color linear;
+    }
+  }
 
-    &:hover {
-      background-color: rgb(44, 101, 188);
+  &:hover {
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(96, 160, 255, 0.197);
+
+      &:hover {
+        background-color: rgb(44, 101, 188);
+      }
     }
   }
 }
@@ -44,6 +53,7 @@ input {
   font-family: inherit;
   background: inherit;
   color: inherit;
+
   &::placeholder {
     color: rgba(161, 182, 227, 0.344);
   }

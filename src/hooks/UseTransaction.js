@@ -399,9 +399,7 @@ export const applyCreateCategory = ({ addPromise, success, data }) => {
           category.secret = data.secret;
           category.locked = data.locked;
           category.color = data.color;
-          category.createdAt = data.createdAt
-            ? new Date(data.created_at)
-            : null;
+          category.createdAt = data.createdAt ? new Date(data.createdAt) : null;
           resolve({ categories: { ...categories, [data.cid]: category } });
         } else {
           Toast.error("카테고리 생성에 실패했습니다.");

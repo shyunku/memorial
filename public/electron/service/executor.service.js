@@ -100,12 +100,15 @@ class ExecutorService {
   }
 
   /**
+   * @deprecated since version 0.3.0-beta.5
    * @param reqId {?string}
    * @param tx {Transaction}
    * @param blockHash {?string}
    * @returns {Promise<void>}
    */
   async applyTransaction(reqId, tx, blockHash = null) {
+    throw new Error("Deprecated method");
+
     if (tx == null) throw new Error("Transaction is null");
     if (!(tx instanceof Transaction))
       throw new Error("tx is not instance of Transaction");

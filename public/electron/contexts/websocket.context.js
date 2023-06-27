@@ -385,22 +385,22 @@ class WebsocketContext {
               ` local: ${lastCommonLocalBlockHash}, remote: ${lastCommonRemoteBlockHash}`
           );
           // last common mismatch, need to find un-dirty block
-          let oldestLocalBlockNumber = await syncer.getOldestLocalBlockNumber();
-          if (oldestLocalBlockNumber == null) {
-            throw new Error("Cannot find oldest local block number");
-          }
-
-          console.info(
-            `finding mismatch start block number in (${oldestLocalBlockNumber} ~ ${commonBlockNumber})`
-          );
-          const mismatchStartBlockNumber =
-            await syncer.findBlockHashMismatchStartNumber(
-              oldestLocalBlockNumber,
-              commonBlockNumber
-            );
-          if (mismatchStartBlockNumber == null) {
-            throw new Error("Cannot find mismatch start block number");
-          }
+          // let oldestLocalBlockNumber = await syncer.getOldestLocalBlockNumber();
+          // if (oldestLocalBlockNumber == null) {
+          //   throw new Error("Cannot find oldest local block number");
+          // }
+          //
+          // console.info(
+          //   `finding mismatch start block number in (${oldestLocalBlockNumber} ~ ${commonBlockNumber})`
+          // );
+          // const mismatchStartBlockNumber =
+          //   await syncer.findBlockHashMismatchStartNumber(
+          //     oldestLocalBlockNumber,
+          //     commonBlockNumber
+          //   );
+          // if (mismatchStartBlockNumber == null) {
+          //   throw new Error("Cannot find mismatch start block number");
+          // }
 
           // my latest block
           const localLastBlock = await syncer.getLocalBlock(

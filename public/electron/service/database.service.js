@@ -84,33 +84,43 @@ class DatabaseService {
     }
   }
 
-  doesLegacyDatabaseExists() {
+  /**
+   * @param userId {string}
+   * @returns {Number}
+   */
+  doesLegacyDatabaseExists(userId) {
     const rootSchemeVersion = "v" + packageJson.config["root_scheme_version"];
+    const latestSchemeVersionPostfix = packageJson.config["scheme_version"];
     const userDataPath = FileSystem.getUserDataPath();
-    let datafileDirPath = path.join(userDataPath, "datafiles");
+    const datafileDirPath = path.join(userDataPath, "datafiles");
 
     if (rootSchemeVersion !== "v1") {
       console.warn(
         `Elder version of database scheme doesn't support migration. (current: ${rootSchemeVersion}, target: v1)`
       );
-      return false;
+      return 0;
     }
 
-    let legacyDatabaseFilePath = path.join(
-      datafileDirPath,
-      "v1",
-      "database.sqlite3"
-    );
-    if (fs.existsSync(legacyDatabaseFilePath)) {
-      console.info(`Legacy Database file exists: ${legacyDatabaseFilePath}`);
-      return true;
+    // find most latest legacy database
+    for (let i = latestSchemeVersionPostfix - 1; i >= 1; i--) {
+      const schemeVersion = "v" + i;
+      let legacyDatabaseFilePath = path.join(
+        datafileDirPath,
+        schemeVersion,
+        `user-${userId}.sqlite3`
+      );
+
+      if (fs.existsSync(legacyDatabaseFilePath)) {
+        return i;
+      }
     }
 
-    return false;
+    return 0;
   }
 
-  async truncateLegacyDatabase() {
+  async truncateLegacyDatabase(userId, version) {
     const rootSchemeVersion = "v" + packageJson.config["root_scheme_version"];
+    const schemeVersion = "v" + version;
     const userDataPath = FileSystem.getUserDataPath();
     let datafileDirPath = path.join(userDataPath, "datafiles");
 
@@ -125,8 +135,8 @@ class DatabaseService {
 
     let legacyDatabaseFilePath = path.join(
       datafileDirPath,
-      "v1",
-      "database.sqlite3"
+      schemeVersion,
+      `user-${userId}.sqlite3`
     );
 
     if (fs.existsSync(legacyDatabaseFilePath)) {

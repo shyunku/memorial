@@ -141,13 +141,22 @@ class DatabaseContext {
     return true;
   }
 
-  async migrateLegacyDatabase() {
+  /**
+   * @param versionPostfix {number}
+   * @returns {Promise<unknown>}
+   */
+  async migrateLegacyDatabase(versionPostfix) {
+    const version = "v" + versionPostfix;
     const socket = await this.websocketService.getUserWebsocketContext(
       this.userId
     );
     const userDataPath = FileSystem.getUserDataPath();
     const rootSchemeVersion = "v" + packageJson.config["root_scheme_version"];
     let datafileDirPath = path.join(userDataPath, "datafiles");
+
+    if (!socket.connected()) {
+      throw new Error("User is not connected to server.");
+    }
 
     if (rootSchemeVersion !== "v1") {
       throw new Error(
@@ -157,8 +166,8 @@ class DatabaseContext {
 
     let legacyDatabaseFilePath = path.join(
       datafileDirPath,
-      "v1",
-      "database.sqlite3"
+      version,
+      `user-${this.userId}.sqlite3`
     );
     if (!fs.existsSync(legacyDatabaseFilePath)) {
       throw new Error("Migratable Database file doesn't exists.");
@@ -288,7 +297,7 @@ class DatabaseContext {
               secret: oldCategory.secret == true,
               locked: oldCategory.secret == true,
               color: oldCategory.color,
-              createdAt: 0,
+              createdAt: oldCategory.created_at,
             };
             categories[newId] = category;
           }
@@ -328,7 +337,6 @@ class DatabaseContext {
               txContent,
               1
             );
-            await this.executorService.applyTransaction(null, tx);
             const syncerCtx = await this.syncerService.getUserSyncerContext(
               this.userId
             );

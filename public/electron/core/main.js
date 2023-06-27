@@ -17,6 +17,7 @@ const Util = require("../modules/util");
 const FileSystem = require("../modules/filesystem");
 const ServiceGroup = require("./serviceGroup");
 const { getBuildLevel } = require("../util/SystemUtil");
+const packageJson = require("../../../package.json");
 /* ---------------------------------------- Declaration ---------------------------------------- */
 /* -------------------- General -------------------- */
 // Manage service packages as a group
@@ -60,6 +61,8 @@ app.on("ready", async () => {
     // initialize & configure all services
     serviceGroup.injectReferences();
 
+    checkDuplicateInvoke();
+
     // check update
     await serviceGroup.updaterService.invokeUpdateChecker();
 
@@ -84,3 +87,28 @@ app.on("browser-window-created", (e, window) => {
   window.webContents.session.clearCache(() => {});
   // window.webContents.openDevTools();
 });
+
+function checkDuplicateInvoke() {
+  if (!packageJson.allowMultipleExecution) {
+    let getInstanceLock = app.requestSingleInstanceLock();
+
+    if (!getInstanceLock) {
+      console.log(
+        "Instance is locked by single instance lock (already running). exiting app..."
+      );
+      app.quit();
+    } else {
+      const s = serviceGroup.windowService;
+      app.on("second-instance", (event, commandLine, workingDirectory) => {
+        if (s.mainWindow) {
+          if (s.mainWindow.isMinimized()) {
+            s.mainWindow.restore();
+          }
+          s.mainWindow.focus();
+        }
+
+        console.log("Something trying to open already opened-program.");
+      });
+    }
+  }
+}

@@ -133,11 +133,14 @@ const IpcSender = {
       isLegacyMigrationAvailable: (callback) => {
         sender("system/isLegacyMigrationAvailable", callback);
       },
-      migrateLegacyDatabase: (callback) => {
-        sender("system/migrateLegacyDatabase", callback);
+      migrateLegacyDatabase: (version, callback) => {
+        sender("system/migrateLegacyDatabase", callback, version);
       },
-      truncateLegacyDatabase: (callback) => {
-        sender("system/truncateLegacyDatabase", callback);
+      truncateLegacyDatabase: (version, callback) => {
+        sender("system/truncateLegacyDatabase", callback, version);
+      },
+      migrateCheckDoneSignal: (callback) => {
+        sender("system/migrateCheckDoneSignal", callback);
       },
       mismatchTxAcceptTheirs: (start, end, callback) => {
         sender("system/mismatchTxAcceptTheirs", callback, start, end);

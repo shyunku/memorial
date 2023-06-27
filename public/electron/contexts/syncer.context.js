@@ -1,8 +1,8 @@
 const Transaction = require("../objects/Transaction");
-const {initializeState} = require("../executors/initializeState.exec");
+const { initializeState } = require("../executors/initializeState.exec");
 const TransactionRequest = require("../objects/TransactionRequest");
-const {fastInterval} = require("../util/CommonUtil");
-const {jsonUnmarshal} = require("../util/TxUtil");
+const { fastInterval } = require("../util/CommonUtil");
+const { jsonUnmarshal } = require("../util/TxUtil");
 
 class SyncerContext {
   /**
@@ -25,6 +25,9 @@ class SyncerContext {
     /** @type {ExecutorService} */
     this.executorService = serviceGroup.executorService;
 
+    /** @type {TransitionService} */
+    this.transitionService = serviceGroup.transitionService;
+
     this.localLastBlockNumber = null;
     this.remoteLastBlockNumber = null;
 
@@ -32,6 +35,8 @@ class SyncerContext {
     this.db = null;
     /** @type {WebsocketContext} */
     this.socket = null;
+    /** @type {TransitionContext} */
+    this.trs = null;
 
     this.listenReady = false;
 
@@ -44,6 +49,7 @@ class SyncerContext {
     // loop handler
     this.eventLoopInterval = null;
     this.startEventLoop();
+    this.eventLoopLock = true;
   }
 
   async initialize() {
@@ -53,6 +59,18 @@ class SyncerContext {
       this.userId
     );
     if (this.socket == null) throw new Error("Socket is null");
+    this.trs = await this.transitionService.getUserTransitionContext(
+      this.userId
+    );
+    if (this.trs == null) throw new Error("Transition is null");
+  }
+
+  /**
+   * @param lock {boolean}
+   * @returns {Promise<void>}
+   */
+  async setEventLock(lock) {
+    this.eventLoopLock = lock;
   }
 
   async getLocalLastBlockNumberFromDatabase() {
@@ -108,23 +126,32 @@ class SyncerContext {
   }
 
   startEventLoop() {
+    if (this.eventLoopInterval != null) return;
     this.eventLoopInterval = fastInterval(async () => {
+      if (this.eventLoopLock) return;
       if (this.remainEvents === 0) {
         clearInterval(this.eventLoopInterval);
+        this.eventLoopInterval = null;
+        return;
       }
       if (this.handlingEvents) return;
       this.handlingEvents = true;
-      const copied = {...this.eventQueue};
+      const copied = { ...this.eventQueue };
       this.eventQueue = {};
-      this.remainEvents = 0;
 
-      for (const key in copied) {
-        const promise = copied[key];
-        await promise();
-        console.debug(`handled event ${key}`);
+      try {
+        for (const key in copied) {
+          const promise = copied[key];
+          await promise();
+          console.debug(`handled event ${key}`);
+          this.remainEvents--;
+        }
+      } catch (err) {
+        console.error(`Event handling error`, err);
+      } finally {
+        this.handlingEvents = false;
       }
-      this.handlingEvents = false;
-    }, 0);
+    }, 100);
   }
 
   addEventQueue(promise) {
@@ -185,7 +212,9 @@ class SyncerContext {
    */
   async commitTransactions(startBlockNumber, endBlockNumber) {
     if (endBlockNumber === -1 && startBlockNumber > endBlockNumber) {
-      console.warn(`Invalid range for tx commits: ${startBlockNumber} ~ ${endBlockNumber}`);
+      console.warn(
+        `Invalid range for tx commits: ${startBlockNumber} ~ ${endBlockNumber}`
+      );
       return;
     }
 
@@ -233,7 +262,8 @@ class SyncerContext {
         () =>
           new Promise(async (resolve, reject) => {
             try {
-              let {tx: rawTx, number, hash: blockHash} = block;
+              let { number, hash: blockHash, updates } = block;
+              const { srcTx: rawTx, transitions } = updates;
               const tx = new Transaction(
                 rawTx.version,
                 rawTx.type,
@@ -241,7 +271,10 @@ class SyncerContext {
                 rawTx.content,
                 number
               );
-              await this.executorService.applyTransaction(null, tx, blockHash);
+              console.info(`Applying ${transitions.length} transitions...`);
+              console.debug(transitions);
+              await this.trs.applyTransitions(transitions);
+              // await this.executorService.applyTransaction(null, tx, blockHash);
               res();
             } catch (err) {
               rej(err);
@@ -321,64 +354,79 @@ class SyncerContext {
    * @returns {Promise<void>}
    */
   async applySnapshot(blockNumber) {
-    // get state from remote
-    let state = await this.socket.sendSync("stateByBlockNumber", {
-      blockNumber,
+    return new Promise(async (res, rej) => {
+      this.addEventQueue(() => {
+        return new Promise(async (resolve, reject) => {
+          try {
+            // get state from remote
+            let state = await this.socket.sendSync("stateByBlockNumber", {
+              blockNumber,
+            });
+
+            let block = await this.socket.sendSync("blockByBlockNumber", {
+              blockNumber,
+            });
+
+            try {
+              // try to delete all rows in all tables
+              await this.db.clear();
+            } catch (err) {
+              try {
+                // delete user database
+                await this.db.close();
+                await this.databaseService.deleteUserDatabase(this.userId);
+                await this.databaseService.initializeUserDatabase(this.userId);
+              } catch (cErr) {
+                console.error(cErr);
+                throw err;
+              } finally {
+                this.db = await this.databaseService.getUserDatabaseContext(
+                  this.userId
+                );
+              }
+            }
+
+            // save last tx in local db
+            if (blockNumber > 0) {
+              let { updates, number, hash: blockHash } = block;
+              let { srcTx: rawTx } = updates;
+              const tx = new Transaction(
+                rawTx.version,
+                rawTx.type,
+                rawTx.timestamp,
+                rawTx.content,
+                number
+              );
+              const rawContent = tx.content;
+              const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
+              await this.db.run(
+                `INSERT INTO transactions (version, type, timestamp, content, hash, block_number, block_hash) VALUES (?, ?, ?, ?, ?, ?, ?);`,
+                [
+                  tx.version,
+                  tx.type,
+                  tx.timestamp,
+                  decodedBuffer,
+                  tx.hash,
+                  tx.blockNumber,
+                  blockHash,
+                ]
+              );
+
+              // insert state to local database
+              await initializeState(null, this.serviceGroup, state, 1);
+            }
+
+            this.setLocalLastBlockNumber(blockNumber);
+            this.ipcService.sender("system/snapshotApplied", null, true);
+            res();
+          } catch (err) {
+            rej(err);
+          } finally {
+            resolve();
+          }
+        });
+      });
     });
-
-    let block = await this.socket.sendSync("blockByBlockNumber", {
-      blockNumber,
-    });
-
-    try {
-      // try to delete all rows in all tables
-      await this.db.clear();
-    } catch (err) {
-      try {
-        // delete user database
-        await this.db.close();
-        await this.databaseService.deleteUserDatabase(this.userId);
-        await this.databaseService.initializeUserDatabase(this.userId);
-      } catch (cErr) {
-        console.error(cErr);
-        throw err;
-      } finally {
-        this.db = await this.databaseService.getUserDatabaseContext(
-          this.userId
-        );
-      }
-    }
-
-    // save last tx in local db
-    if (blockNumber > 0) {
-      let {tx: rawTx, number, hash: blockHash} = block;
-      const tx = new Transaction(
-        rawTx.version,
-        rawTx.type,
-        rawTx.timestamp,
-        rawTx.content,
-        number
-      );
-      const rawContent = tx.content;
-      const decodedBuffer = Buffer.from(JSON.stringify(rawContent));
-      await this.db.run(
-        `INSERT INTO transactions (version, type, timestamp, content, hash, block_number, block_hash) VALUES (?, ?, ?, ?, ?, ?, ?);`,
-        [
-          tx.version,
-          tx.type,
-          tx.timestamp,
-          decodedBuffer,
-          tx.hash,
-          tx.blockNumber,
-          blockHash,
-        ]
-      );
-
-      // insert state to local database
-      await initializeState(null, this.serviceGroup, state, 1);
-    }
-
-    this.setLocalLastBlockNumber(blockNumber);
   }
 
   // clear transactions & states
@@ -537,7 +585,10 @@ class SyncerContext {
         startBlockNumber: mismatchStartBlockNumber,
         endBlockNumber: -1,
       });
-      await this.commitTransactions(mismatchStartBlockNumber, localLastBlockNumber);
+      await this.commitTransactions(
+        mismatchStartBlockNumber,
+        localLastBlockNumber
+      );
     } catch (err) {
       throw err;
     }

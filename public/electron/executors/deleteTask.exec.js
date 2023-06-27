@@ -3,31 +3,12 @@ const assert = require("assert");
 const TxContent = require("../objects/TxContent");
 
 class DeleteTaskTxContent extends TxContent {
-  constructor(tid, prevTaskId) {
+  constructor(tid) {
     super();
 
     this.tid = tid;
-    this.prevTaskId = prevTaskId;
   }
 }
-
-const deleteTaskPre = async (db, taskId) => {
-  let prevTaskList = await db.all(
-    "SELECT * FROM tasks WHERE next = ?;",
-    taskId
-  );
-  if (prevTaskList.length > 1) {
-    throw new Error(
-      `tasks that ID is null is more than 1. (${prevTaskList.length})`
-    );
-  }
-
-  let [prevTask] = prevTaskList;
-
-  return {
-    prevTaskId: prevTask ? prevTask.tid : null,
-  };
-};
 
 /**
  * @param {string} reqId?
@@ -74,6 +55,5 @@ const deleteTask = async (reqId, serviceGroup, txReq) => {
 
 module.exports = {
   deleteTask,
-  deleteTaskPre,
   DeleteTaskTxContent,
 };
