@@ -1,5 +1,5 @@
 const TrsTypes = require("../constants/TransitionType.constants");
-const {jsonMarshal} = require("../util/TxUtil");
+const { jsonMarshal } = require("../util/TxUtil");
 
 class TransitionContext {
   /**
@@ -18,6 +18,9 @@ class TransitionContext {
 
     /** @type {ExecutorService} */
     this.executorService = serviceGroup.executorService;
+
+    /** @type {DatabaseContext} */
+    this.db = null;
   }
 
   async initialize() {
@@ -32,12 +35,13 @@ class TransitionContext {
    * @returns {Promise<void>}
    */
   async applyTransitions(tx, blockHash, transitions) {
+    await this.db.useCheckConstraint(false);
+    await this.db.useForeignKey(false);
     await this.db.begin();
-    await this.db.run("PRAGMA check_constraints = OFF;");
 
     try {
       for (const transition of transitions) {
-        const {operation: opcode, params} = transition;
+        const { operation: opcode, params } = transition;
         await this.applyTransition(opcode, params);
       }
 
@@ -70,13 +74,17 @@ class TransitionContext {
       }
       throw err;
     } finally {
-      await this.db.run("PRAGMA check_constraints = ON;");
+      await this.db.useCheckConstraint(true);
+      await this.db.useForeignKey(true);
     }
   }
 
   async applyTransition(opcode, params) {
     console.debug(`Applying transition: ${opcode}`, params);
     switch (opcode) {
+      case TrsTypes.OP_INITIALIZE:
+        await this.initializeAll(params);
+        break;
       case TrsTypes.OP_CREATE_TASK:
         await this.createTask(params);
         break;
@@ -145,6 +153,10 @@ class TransitionContext {
     }
   }
 
+  async initializeAll(params) {
+    await this.db.clear();
+  }
+
   async createTask(params) {
     const {
       tid,
@@ -183,23 +195,24 @@ class TransitionContext {
   }
 
   async deleteTask(params) {
-    let {tid} = params;
+    let { tid } = params;
+    await this.db.run("DELETE FROM tasks_categories WHERE tid = ?", tid);
     await this.db.run("DELETE FROM tasks WHERE tid = ?", tid);
   }
 
   async updateTaskNext(params) {
-    let {tid, next} = params;
+    let { tid, next } = params;
     next = next === "" ? null : next;
     await this.db.run("UPDATE tasks SET next = ? WHERE tid = ?", next, tid);
   }
 
   async updateTaskTitle(params) {
-    const {tid, title} = params;
+    const { tid, title } = params;
     await this.db.run("UPDATE tasks SET title = ? WHERE tid = ?", title, tid);
   }
 
   async updateTaskDueDate(params) {
-    const {tid, dueDate} = params;
+    const { tid, dueDate } = params;
     await this.db.run(
       "UPDATE tasks SET due_date = ? WHERE tid = ?",
       dueDate,
@@ -208,17 +221,17 @@ class TransitionContext {
   }
 
   async updateTaskMemo(params) {
-    const {tid, memo} = params;
+    const { tid, memo } = params;
     await this.db.run("UPDATE tasks SET memo = ? WHERE tid = ?", memo, tid);
   }
 
   async updateTaskDone(params) {
-    const {tid, done} = params;
+    const { tid, done } = params;
     await this.db.run("UPDATE tasks SET done = ? WHERE tid = ?", done, tid);
   }
 
   async updateTaskDoneAt(params) {
-    const {tid, doneAt} = params;
+    const { tid, doneAt } = params;
     await this.db.run(
       "UPDATE tasks SET done_at = ? WHERE tid = ?",
       doneAt,
@@ -227,7 +240,7 @@ class TransitionContext {
   }
 
   async updateTaskRepeatPeriod(params) {
-    const {tid, repeatPeriod} = params;
+    const { tid, repeatPeriod } = params;
     await this.db.run(
       "UPDATE tasks SET repeat_period = ? WHERE tid = ?",
       repeatPeriod,
@@ -236,7 +249,7 @@ class TransitionContext {
   }
 
   async updateTaskRepeatStartAt(params) {
-    const {tid, repeatStartAt} = params;
+    const { tid, repeatStartAt } = params;
     await this.db.run(
       "UPDATE tasks SET repeat_start_at = ? WHERE tid = ?",
       repeatStartAt,
@@ -245,7 +258,7 @@ class TransitionContext {
   }
 
   async createTaskCategory(params) {
-    const {tid, cid} = params;
+    const { tid, cid } = params;
     await this.db.run(
       `INSERT INTO tasks_categories (tid, cid) VALUES (?, ?);`,
       tid,
@@ -254,7 +267,7 @@ class TransitionContext {
   }
 
   async deleteTaskCategory(params) {
-    const {tid, cid} = params;
+    const { tid, cid } = params;
     await this.db.run(
       `DELETE FROM tasks_categories WHERE tid = ? AND cid = ?;`,
       tid,
@@ -263,7 +276,7 @@ class TransitionContext {
   }
 
   async createSubtask(params) {
-    const {tid, sid, title, done, doneAt, dueDate, createdAt} = params;
+    const { tid, sid, title, done, doneAt, dueDate, createdAt } = params;
     await this.db.run(
       `INSERT INTO subtasks (tid, sid, title, done, done_at, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?);`,
       tid,
@@ -277,7 +290,7 @@ class TransitionContext {
   }
 
   async deleteSubtask(params) {
-    const {tid, sid} = params;
+    const { tid, sid } = params;
     await this.db.run(
       `DELETE FROM subtasks WHERE tid = ? AND sid = ?;`,
       tid,
@@ -286,7 +299,7 @@ class TransitionContext {
   }
 
   async updateSubtaskTitle(params) {
-    const {tid, sid, title} = params;
+    const { tid, sid, title } = params;
     await this.db.run(
       `UPDATE subtasks SET title = ? WHERE tid = ? AND sid = ?;`,
       title,
@@ -296,7 +309,7 @@ class TransitionContext {
   }
 
   async updateSubtaskDueDate(params) {
-    const {tid, sid, dueDate} = params;
+    const { tid, sid, dueDate } = params;
     await this.db.run(
       `UPDATE subtasks SET due_date = ? WHERE tid = ? AND sid = ?;`,
       dueDate,
@@ -306,7 +319,7 @@ class TransitionContext {
   }
 
   async updateSubtaskDone(params) {
-    const {tid, sid, done} = params;
+    const { tid, sid, done } = params;
     await this.db.run(
       `UPDATE subtasks SET done = ? WHERE tid = ? AND sid = ?;`,
       done,
@@ -316,7 +329,7 @@ class TransitionContext {
   }
 
   async updateSubtaskDoneAt(params) {
-    const {tid, sid, doneAt} = params;
+    const { tid, sid, doneAt } = params;
     await this.db.run(
       `UPDATE subtasks SET done_at = ? WHERE tid = ? AND sid = ?;`,
       doneAt,
@@ -326,7 +339,7 @@ class TransitionContext {
   }
 
   async createCategory(params) {
-    const {cid, title, secret, locked, color, createdAt} = params;
+    const { cid, title, secret, locked, color, createdAt } = params;
     await this.db.run(
       `INSERT INTO categories (cid, title, secret, locked, color, created_at) VALUES (?, ?, ?, ?, ?, ?);`,
       cid,
@@ -339,12 +352,12 @@ class TransitionContext {
   }
 
   async deleteCategory(params) {
-    const {cid} = params;
+    const { cid } = params;
     await this.db.run(`DELETE FROM categories WHERE cid = ?;`, cid);
   }
 
   async updateCategoryColor(params) {
-    const {cid, color} = params;
+    const { cid, color } = params;
     await this.db.run(
       `UPDATE categories SET color = ? WHERE cid = ?;`,
       color,

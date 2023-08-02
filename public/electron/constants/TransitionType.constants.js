@@ -1,4 +1,5 @@
 module.exports = {
+  OP_INITIALIZE: 0,
   OP_CREATE_TASK: 100,
   OP_DELETE_TASK: 101,
   OP_UPDATE_TASK_NEXT: 102,

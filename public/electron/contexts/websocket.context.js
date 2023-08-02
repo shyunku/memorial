@@ -10,6 +10,8 @@ const { getCommonCloseReasonByCode } = require("../util/WebsocketUtil");
 const Block = require("../objects/Block");
 const TransactionRequest = require("../objects/TransactionRequest");
 const { jsonUnmarshal } = require("../util/TxUtil");
+const TX_TYPE = require("../constants/TxType.constants");
+const Transaction = require("../objects/Transaction");
 
 const color = console.RGB(190, 75, 255);
 const coloredSocket = console.wrap("Websock", color);
@@ -26,6 +28,7 @@ class WebsocketContext {
     this.databaseService = serviceGroup.databaseService;
     this.userService = serviceGroup.userService;
     this.syncerService = serviceGroup.syncerService;
+    this.executorService = serviceGroup.executorService;
 
     /** @type {WebSocket} */
     this.socket = null;
@@ -509,11 +512,18 @@ class WebsocketContext {
       }
     } else if (localLastBlockNumber > remoteLastBlockNumber) {
       // commit blocks needed (local is ahead)
-      console.info(`Local block number is ahead remote, waiting...`);
-      await syncer.commitTransactions(
-        remoteLastBlockNumber + 1,
+      console.info(
+        `Local block number (${localLastBlockNumber}) is ahead remote (${remoteLastBlockNumber}), waiting...`
+      );
+      // upload database snapshot to remote
+      const db = await this.databaseService.getUserDatabaseContext(this.userId);
+      const txContent = await db.getDatabaseSnapshot();
+      const tx = this.executorService.makeTransaction(
+        TX_TYPE.INITIALIZE,
+        txContent,
         localLastBlockNumber
       );
+      await syncer.sendTransaction(tx);
     } else {
       // no sync needed (already synced)
       console.info(

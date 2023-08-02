@@ -184,7 +184,7 @@ class SyncerContext {
    * @param timeout? {number}
    * @returns {Promise<any>}
    */
-  async sendTransaction(tx, timeout) {
+  async sendTransaction(tx, timeout = 5000) {
     try {
       if (this.socket == null) throw new Error("Socket is not connected");
       if (!(tx instanceof Transaction))
@@ -236,6 +236,17 @@ class SyncerContext {
       return;
     }
 
+    let minBlockNumber = txs[0].block_number;
+    let maxBlockNumber = txs[txs.length - 1].block_number;
+    if (minBlockNumber !== startBlockNumber) {
+      console.warn(`Min block number is not equal to start block number`);
+      return;
+    }
+    if (endBlockNumber !== -1 && maxBlockNumber !== endBlockNumber) {
+      console.warn(`Max block number is not equal to end block number`);
+      return;
+    }
+
     let txRequests = txs.map((tx) => {
       const parsedContent = jsonUnmarshal(tx.content);
       return new TransactionRequest(
@@ -271,6 +282,11 @@ class SyncerContext {
                 rawTx.content,
                 number
               );
+              const localBlockNumber = await this.getLocalLastBlockNumber();
+              if (localBlockNumber >= number) {
+                console.info(`Block ${number} is already saved`);
+                return;
+              }
               console.info(`Applying ${transitions.length} transitions...`);
               console.debug(transitions);
               await this.trs.applyTransitions(tx, blockHash, transitions);

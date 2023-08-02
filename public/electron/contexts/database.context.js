@@ -300,7 +300,7 @@ class DatabaseContext {
               secret: oldCategory.secret == true,
               locked: oldCategory.secret == true,
               color: oldCategory.color,
-              createdAt: oldCategory.created_at,
+              createdAt: 0,
             };
             categories[newId] = category;
           }
@@ -359,6 +359,107 @@ class DatabaseContext {
         }
       });
     });
+  }
+
+  /**
+   * @param db {sqlite3.Database}
+   * @returns {Promise<InitializeStateTxContent>}
+   */
+  async getDatabaseSnapshot(db = this.db) {
+    let tasks = {};
+    let categories = {};
+
+    let taskPromise = new Promise((res, rej) => {
+      db.all("SELECT * FROM tasks", (err, rows) => {
+        if (err) rej(err);
+        res(rows);
+      });
+    });
+    let subtasksPromise = new Promise((res, rej) => {
+      db.all("SELECT * FROM subtasks", (err, rows) => {
+        if (err) rej(err);
+        res(rows);
+      });
+    });
+    let categoriesPromise = new Promise((res, rej) => {
+      db.all("SELECT * FROM categories", (err, rows) => {
+        if (err) rej(err);
+        res(rows);
+      });
+    });
+    let taskCategoriesPromise = new Promise((res, rej) => {
+      db.all("SELECT * FROM tasks_categories", (err, rows) => {
+        if (err) rej(err);
+        res(rows);
+      });
+    });
+
+    let dbTasks = await taskPromise;
+    let dbSubtasks = await subtasksPromise;
+    let dbCategories = await categoriesPromise;
+    let dbTaskCategories = await taskCategoriesPromise;
+
+    for (let dbTask of dbTasks) {
+      let task = {
+        tid: dbTask.tid,
+        title: dbTask.title,
+        createdAt: dbTask.created_at,
+        doneAt: dbTask.done_at,
+        memo: dbTask.memo,
+        done: dbTask.done == true,
+        dueDate: dbTask.due_date,
+        dueTime: dbTask.due_time,
+        next: null,
+        repeatPeriod: dbTask.repeat_period,
+        repeatStartAt: dbTask.repeat_start_at,
+        subtasks: {},
+        categories: {},
+      };
+      tasks[dbTask.tid] = task;
+    }
+
+    // mapping next
+    for (let dbTask of dbTasks) {
+      let task = tasks[dbTask.tid];
+      if (dbTask.next != null) {
+        task.next = tasks[dbTask.next].tid;
+      }
+    }
+
+    for (let dbSubtask of dbSubtasks) {
+      let subtask = {
+        sid: dbSubtask.sid,
+        title: dbSubtask.title,
+        createdAt: dbSubtask.created_at,
+        doneAt: dbSubtask.done_at,
+        dueDate: dbSubtask.due_date,
+        done: dbSubtask.done == true,
+      };
+      let parentTask = tasks[dbSubtask.tid];
+      if (parentTask == null) {
+        throw new Error(`Parent task of ${dbSubtask.tid} is not found`);
+      }
+      parentTask.subtasks[dbSubtask.tid] = subtask;
+    }
+
+    for (let dbCategory of dbCategories) {
+      let category = {
+        cid: dbCategory.cid,
+        title: dbCategory.title,
+        secret: dbCategory.secret == true,
+        locked: dbCategory.secret == true,
+        color: dbCategory.color,
+        createdAt: dbCategory.created_at,
+      };
+      categories[dbCategory.cid] = category;
+    }
+
+    for (let dbTaskCategory of dbTaskCategories) {
+      let task = tasks[dbTaskCategory.tid];
+      task.categories[dbTaskCategory.cid] = true;
+    }
+
+    return new InitializeStateTxContent(tasks, categories);
   }
 
   async clear() {
