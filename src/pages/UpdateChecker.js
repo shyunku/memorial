@@ -5,8 +5,8 @@ import { shortenSize } from "../utils/Common";
 import { FlippingSquare } from "react-cssfx-loading";
 
 const STATE_LABEL = {
-  initial: `Checking for update...`,
-  downloading: `Downloading updates...`,
+  initial: `업데이트 확인 중...`,
+  downloading: `업데이트 다운로드 중...`,
   done: `Download done`,
   skip: `Getting start...`,
   "initial-remove": `Removing old files...`,

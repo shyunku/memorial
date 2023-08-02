@@ -100,6 +100,14 @@ class Task extends Mutatable {
       .length;
   }
 
+  static fromEntity(entity) {
+    const ctx = super.fromEntity(entity);
+    if (ctx.repeatPeriod === "") {
+      ctx.repeatPeriod = null;
+    }
+    return ctx;
+  }
+
   static fromObject(obj) {
     const ctx = new Task();
     for (let key in obj) {

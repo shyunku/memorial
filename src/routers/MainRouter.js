@@ -18,7 +18,7 @@ const MainRouter = () => {
           </Route>
         </Route>
         <Route path="/login" element={<Login />} />
-        <Route path="/update-checker" component={<UpdateChecker />} />
+        <Route path="/update-checker" element={<UpdateChecker />} />
         <Route path="*" element={<div>404 Page</div>} />
       </Routes>
     </HashRouter>

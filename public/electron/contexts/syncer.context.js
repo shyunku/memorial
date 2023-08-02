@@ -2,7 +2,7 @@ const Transaction = require("../objects/Transaction");
 const { initializeState } = require("../executors/initializeState.exec");
 const TransactionRequest = require("../objects/TransactionRequest");
 const { fastInterval } = require("../util/CommonUtil");
-const { jsonUnmarshal } = require("../util/TxUtil");
+const { jsonUnmarshal, jsonMarshal } = require("../util/TxUtil");
 
 class SyncerContext {
   /**
@@ -273,7 +273,8 @@ class SyncerContext {
               );
               console.info(`Applying ${transitions.length} transitions...`);
               console.debug(transitions);
-              await this.trs.applyTransitions(transitions);
+              await this.trs.applyTransitions(tx, blockHash, transitions);
+              await this.setLocalLastBlockNumber(tx.blockNumber);
               // await this.executorService.applyTransaction(null, tx, blockHash);
               res();
             } catch (err) {

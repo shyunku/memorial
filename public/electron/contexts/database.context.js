@@ -90,7 +90,10 @@ class DatabaseContext {
     let databaseDirPath = path.join(datafileDirPath, schemeVersion);
     let databaseFileName = `user-${this.userId}.sqlite3`;
     let databaseFilePath = path.join(databaseDirPath, databaseFileName);
-    let databaseTemplatePath = path.join(appResourcePath, "template.sqlite3");
+    let databaseTemplatePath = path.join(
+      appResourcePath,
+      `${schemeVersion}-template.sqlite3`
+    );
 
     if (!fs.existsSync(datafileDirPath)) {
       console.warn(`Datafile directory doesn't exists, newly create.`);

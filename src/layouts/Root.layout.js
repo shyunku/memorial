@@ -84,7 +84,7 @@ const RootLayout = () => {
     setPromises((ps) => {
       const copied = { ...ps };
       delete copied[poppedPromiseKey];
-      console.log(`<-- deleted promise ${poppedPromiseKey}`);
+      // console.log(`<-- deleted promise ${poppedPromiseKey}`);
       return copied;
     });
 

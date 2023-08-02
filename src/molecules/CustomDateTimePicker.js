@@ -1,17 +1,35 @@
 import moment from "moment";
 import "moment/locale/ko";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { IoChevronBackOutline, IoChevronForwardOutline, IoPlaySkipBack, IoPlaySkipForward } from "react-icons/io5";
+import {
+  IoChevronBackOutline,
+  IoChevronForwardOutline,
+  IoPlaySkipBack,
+  IoPlaySkipForward,
+} from "react-icons/io5";
 import { VscDebugContinue, VscDebugReverseContinue } from "react-icons/vsc";
 import { fastInterval } from "utils/Common";
-import { floorMinutesByStep, circularDistance, hours12, hours12tohours24, ceilMinutesByStep } from "utils/DateTime";
+import {
+  floorMinutesByStep,
+  circularDistance,
+  hours12,
+  hours12tohours24,
+  ceilMinutesByStep,
+} from "utils/DateTime";
 import JsxUtil from "utils/JsxUtil";
 import { ContextMenu } from "./CustomContextMenu";
 import "./CustomDateTimePicker.scss";
 
 moment.locale("ko");
 
-const DateTimePicker = ({ onSelect = () => {}, closer, visible, date, datePickerRef, ...rest }) => {
+const DateTimePicker = ({
+  onSelect = () => {},
+  closer,
+  visible,
+  date,
+  datePickerRef,
+  ...rest
+}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [hoveredDate, setHoveredDate] = useState(null);
   const [attachEndMode, setAttachEndMode] = useState(false);
@@ -23,10 +41,18 @@ const DateTimePicker = ({ onSelect = () => {}, closer, visible, date, datePicker
     return new Date(watchingMonth.getFullYear(), watchingMonth.getMonth(), 0);
   }, [watchingMonth]);
   const curMonthFirstDay = useMemo(() => {
-    return new Date(watchingMonth.getFullYear(), watchingMonth.getMonth(), 1).getDay();
+    return new Date(
+      watchingMonth.getFullYear(),
+      watchingMonth.getMonth(),
+      1
+    ).getDay();
   }, [watchingMonth]);
   const curMonthLastDate = useMemo(() => {
-    return new Date(watchingMonth.getFullYear(), watchingMonth.getMonth() + 1, 0);
+    return new Date(
+      watchingMonth.getFullYear(),
+      watchingMonth.getMonth() + 1,
+      0
+    );
   }, [watchingMonth]);
 
   const currentMoment = useMemo(() => {
@@ -123,7 +149,9 @@ const DateTimePicker = ({ onSelect = () => {}, closer, visible, date, datePicker
 
   const onDaytimeSelect = (val) => {
     const newDate = new Date(selectedDate);
-    newDate.setHours(val === "오후" ? (newDate.getHours() % 12) + 12 : newDate.getHours() % 12);
+    newDate.setHours(
+      val === "오후" ? (newDate.getHours() % 12) + 12 : newDate.getHours() % 12
+    );
     newDate.setMinutes(floorMinutesByStep(newDate.getMinutes(), 5));
     setAttachEndMode(false);
     setSelectedDate(newDate);
@@ -251,7 +279,9 @@ const DatePicker = ({
         <div className="date-picker-controls" onClick={goToPrevMonth}>
           <IoChevronBackOutline />
         </div>
-        <div className="current-month">{moment(watchingMonth).format("YYYY년 MM월")}</div>
+        <div className="current-month">
+          {moment(watchingMonth).format("YYYY년 MM월")}
+        </div>
         <div className="date-picker-controls" onClick={goToNextMonth}>
           <IoChevronForwardOutline />
         </div>
@@ -264,7 +294,11 @@ const DatePicker = ({
               return (
                 <div
                   className={
-                    "date-picker-weekday" + JsxUtil.classByCondition(hoveredDate?.getDay() == index, "focused")
+                    "date-picker-weekday" +
+                    JsxUtil.classByCondition(
+                      hoveredDate?.getDay() == index,
+                      "focused"
+                    )
                   }
                   key={index}
                 >
@@ -278,7 +312,11 @@ const DatePicker = ({
             Array(curMonthFirstDay)
               .fill(0)
               .map((_, index) => {
-                const day = moment(prevMonthLastDate).date() - curMonthFirstDay + index + 1;
+                const day =
+                  moment(prevMonthLastDate).date() -
+                  curMonthFirstDay +
+                  index +
+                  1;
 
                 return (
                   <div
@@ -286,7 +324,11 @@ const DatePicker = ({
                     key={index}
                     onClick={selectPrevMonthDate.bind(null, day)}
                     onMouseEnter={(e) => {
-                      const date = new Date(watchingMonth.getFullYear(), watchingMonth.getMonth() - 1, day);
+                      const date = new Date(
+                        watchingMonth.getFullYear(),
+                        watchingMonth.getMonth() - 1,
+                        day
+                      );
                       setHoveredDate(date);
                     }}
                     onMouseLeave={(e) => {
@@ -320,7 +362,11 @@ const DatePicker = ({
                   key={index}
                   onClick={selectDate.bind(null, index + 1)}
                   onMouseEnter={(e) => {
-                    const date = new Date(watchingMonth.getFullYear(), watchingMonth.getMonth(), index + 1);
+                    const date = new Date(
+                      watchingMonth.getFullYear(),
+                      watchingMonth.getMonth(),
+                      index + 1
+                    );
                     setHoveredDate(date);
                   }}
                   onMouseLeave={(e) => {
@@ -341,7 +387,11 @@ const DatePicker = ({
                     key={index}
                     onClick={selectNextMonthDate.bind(null, index + 1)}
                     onMouseEnter={(e) => {
-                      const date = new Date(watchingMonth.getFullYear(), watchingMonth.getMonth() + 1, index + 1);
+                      const date = new Date(
+                        watchingMonth.getFullYear(),
+                        watchingMonth.getMonth() + 1,
+                        index + 1
+                      );
                       setHoveredDate(date);
                     }}
                     onMouseLeave={(e) => {
@@ -391,7 +441,9 @@ const TimePicker = ({
   const [attachEndHovered, setAttachEndHovered] = useState(false);
 
   return (
-    <div className={"time-picker" + JsxUtil.classByCondition(disabled, "disabled")}>
+    <div
+      className={"time-picker" + JsxUtil.classByCondition(disabled, "disabled")}
+    >
       <div className="picker-header">
         <div
           className="picker-btn"
@@ -418,7 +470,13 @@ const TimePicker = ({
           array={["오전", "오후"]}
           onSelect={onDaytimeSelect}
         />
-        <TimeRoller selectedValue={hour} minValue={1} maxValue={12} onSelect={onHourSelect} postfix="시" />
+        <TimeRoller
+          selectedValue={hour}
+          minValue={1}
+          maxValue={12}
+          onSelect={onHourSelect}
+          postfix="시"
+        />
         <TimeRoller
           selectedValue={minute}
           minValue={0}
@@ -434,7 +492,10 @@ const TimePicker = ({
         <div className="left"></div>
         <div className="right">
           <div
-            className={"picker-btn confirm" + JsxUtil.classByCondition(!hovered && !disabled, "show")}
+            className={
+              "picker-btn confirm" +
+              JsxUtil.classByCondition(!hovered && !disabled, "show")
+            }
             onClick={closer}
           >
             확인
@@ -457,7 +518,10 @@ const TimeRoller = ({
   postfix = "",
   onSelect,
 }) => {
-  const selectedIndex = useMemo(() => Math.floor((selectedValue - minValue) / step), [selectedValue, minValue]);
+  const selectedIndex = useMemo(
+    () => Math.floor((selectedValue - minValue) / step),
+    [selectedValue, minValue]
+  );
 
   // count increment min to max by step
   const count = useMemo(() => {
@@ -473,7 +537,9 @@ const TimeRoller = ({
 
   const onScroll = (e) => {
     const delta = e.deltaY;
-    let newValue = (lastMax == selectedValue ? maxValue : selectedValue) + (delta > 0 ? 1 : -1) * step;
+    let newValue =
+      (lastMax == selectedValue ? maxValue : selectedValue) +
+      (delta > 0 ? 1 : -1) * step;
     if (newValue < minValue) {
       if (!isCircular) return;
       newValue = maxValue;
@@ -489,11 +555,18 @@ const TimeRoller = ({
     let selectedVal = selectedValue === lastMax ? maxValue : selectedValue;
     let newIsBig = selectedVal > prevSelectedValue;
     const absDiff = Math.abs(selectedVal - prevSelectedValue);
-    const diff = circularDistance(prevSelectedValue, selectedVal, minValue, maxValue, step);
+    const diff = circularDistance(
+      prevSelectedValue,
+      selectedVal,
+      minValue,
+      maxValue,
+      step
+    );
     if (isCircular && diff < absDiff) {
       newIsBig = !newIsBig;
     }
-    const newRotateX = rotateX + (newIsBig ? 1 : -1) * angle * Math.floor(diff / step);
+    const newRotateX =
+      rotateX + (newIsBig ? 1 : -1) * angle * Math.floor(diff / step);
     setRotateX(newRotateX);
     setPrevSelectedValue(selectedVal);
   }, [selectedValue, lastMax]);
@@ -501,7 +574,10 @@ const TimeRoller = ({
   return (
     <div className="roller-frame" onWheel={onScroll}>
       <div className="roller-wrapper">
-        <div className="roller minute" style={{ transform: `rotateX(${rotateX}deg)` }}>
+        <div
+          className="roller minute"
+          style={{ transform: `rotateX(${rotateX}deg)` }}
+        >
           {Array(count)
             .fill(0)
             .map((_, index) => {
@@ -512,7 +588,14 @@ const TimeRoller = ({
                 value = lastMax;
               }
 
-              const dist = circularDistance(selectedValue, value, minValue, maxValue, step) / step;
+              const dist =
+                circularDistance(
+                  selectedValue,
+                  value,
+                  minValue,
+                  maxValue,
+                  step
+                ) / step;
               const hidden = dist > 4;
 
               return (
@@ -524,7 +607,11 @@ const TimeRoller = ({
                     JsxUtil.classByCondition(isLast, "last")
                   }
                   key={index}
-                  style={{ transform: `rotateX(${-index * angle}deg) translateZ(${far}px)` }}
+                  style={{
+                    transform: `rotateX(${
+                      -index * angle
+                    }deg) translateZ(${far}px)`,
+                  }}
                   onClick={onSelect?.bind(null, value)}
                 >
                   {value}
