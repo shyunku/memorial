@@ -84,6 +84,11 @@ class WebsocketContext {
         refreshToken
       );
     } catch (err) {
+      if (err.message === "Unauthorized") {
+        console.error(`All auth method failed. Must be re-login.`);
+        this.ipcService.sender("system/socketError", null, true, 401);
+        return;
+      }
       console.error(err);
       this.reconnectTimeoutThread = setTimeout(() => {
         this.connect(accessToken, refreshToken, true);
@@ -327,8 +332,8 @@ class WebsocketContext {
           console.error(err);
           console.log(err?.response?.data);
 
-          // refresh failed
-          throw new Error(401);
+          // refresh failed: must re-login
+          throw new Error("Unauthorized");
         }
       } else {
         throw new Error(err?.response?.status ?? err?.message);

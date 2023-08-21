@@ -3,6 +3,8 @@ import { useRef, useState } from "react";
 import Task from "objects/Task";
 import DueDateMenu from "molecules/DueDateMenu";
 import TaskRepeatMenu from "molecules/TaskRepeatMenu";
+import { TODO_MENU_TYPE } from "./LeftSidebar";
+import moment from "moment";
 
 const TodoItemAddSection = ({ onTaskAdd, category }) => {
   const [newTodoItemFocused, setNewTodoItemFocused] = useState(false);
@@ -14,8 +16,15 @@ const TodoItemAddSection = ({ onTaskAdd, category }) => {
     if (newTodoItemContent.length === 0) return;
     const newTask = new Task(newTodoItemContent, newTodoItemDate);
     newTask.repeatPeriod = newTodoRepeatPeriod;
-    if (category != null && category.default == false) {
-      newTask.addCategory(category);
+    if (category != null) {
+      if (category.default == false) {
+        newTask.addCategory(category);
+      } else if (
+        category.title === TODO_MENU_TYPE.TODAY &&
+        newTodoItemDate == null
+      ) {
+        newTask.dueDate = moment().endOf("day").toDate();
+      }
     }
     onTaskAdd(newTask);
     setNewTodoItemContent("");
