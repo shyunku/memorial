@@ -261,8 +261,11 @@ const DayCell = ({
     >
       <div className="day-cell-header">
         <div className="date">{day}</div>
+        {sortedTasks.length > 0 && (
+          <div className="task-count">{sortedTasks.length}개 항목</div>
+        )}
       </div>
-      <div className="tasks">
+      <div className="tasks scroll-visible">
         {sortedTasks.map((task) => {
           return (
             <TaskCell
@@ -311,7 +314,7 @@ const TaskCell = ({ task, setHoveredTaskId, hoveredTaskId, categories }) => {
     return fromRelativeTime(
       remainMilliSeconds < 0 ? -remainMilliSeconds : remainMilliSeconds,
       {
-        showLayerCount: 1,
+        showLayerCount: 2,
       }
     );
   }, [dueDate, counter]);
@@ -359,7 +362,8 @@ const TaskCell = ({ task, setHoveredTaskId, hoveredTaskId, categories }) => {
       )}
       {dueDate != null && !task.done && remainMilliSeconds != null && (
         <div className="remain-time">
-          {remainTimeText} {remainMilliSeconds < 0 ? "지남" : "남음"}
+          {remainTimeText}
+          {/*{" "}{remainMilliSeconds < 0 ? "지남" : "남음"}*/}
         </div>
       )}
     </div>

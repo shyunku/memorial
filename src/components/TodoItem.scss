@@ -138,7 +138,7 @@
         display: flex;
         align-items: center;
         flex: 1;
-
+        overflow: hidden;
 
         & > .color-label {
           position: absolute;
@@ -158,6 +158,8 @@
           font-weight: 300;
           white-space: nowrap;
           margin-left: 5px;
+          text-overflow: ellipsis;
+          overflow: hidden;
           //min-width: 100px;
         }
 

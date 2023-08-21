@@ -8,7 +8,7 @@ const TaskListCalendarView = (props) => {
 
   return (
     <div className={`task-list-calendar-view`}>
-      <div className={"view-segment"}>
+      <div className={"view-segment list"}>
         <TaskListView
           {...props}
           setHoveredTaskId={setHoveredTaskId}

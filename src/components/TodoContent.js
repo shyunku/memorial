@@ -323,7 +323,7 @@ const TodoContent = (callback, deps) => {
   }, [fetchAll]);
 
   useEffect(() => {
-    if (isTodayCategory && taskViewMode === TASK_VIEW_MODE.CALENDAR) {
+    if (isTodayCategory && taskViewMode !== TASK_VIEW_MODE.LIST) {
       setTaskViewMode(TASK_VIEW_MODE.LIST);
     }
   }, [taskViewMode, isTodayCategory]);
@@ -626,7 +626,16 @@ const TodoContent = (callback, deps) => {
         </div>
         <div className="spliter"></div>
       </div>
-      <div className="body">
+      <div
+        className={
+          "body" +
+          JsxUtil.classByEqual(
+            taskViewMode,
+            TASK_VIEW_MODE.LIST_CALENDAR,
+            "multiview"
+          )
+        }
+      >
         {{
           [TASK_VIEW_MODE.LIST]: (
             <TaskListView

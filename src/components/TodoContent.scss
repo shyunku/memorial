@@ -20,7 +20,7 @@
     background-color: $header-footer-color;
     backdrop-filter: blur(10px);
     position: sticky;
-    padding: 70px 90px 0px;
+    padding: $padding-vertical $padding-horizontal 0;
     top: 0;
     z-index: 5;
     min-width: 500px;
@@ -147,9 +147,13 @@
   & > .body {
     display: flex;
     flex-direction: column;
-    margin-top: 40px;
+    margin-top: 30px;
     flex: 1;
-    padding: 0 90px 150px;
+    padding: 0 $padding-horizontal 150px;
+
+    &.multiview {
+      overflow: hidden;
+    }
 
     & > .task-view {
       width: 100%;
@@ -175,7 +179,7 @@
     // left: 0;
     z-index: 5;
     width: calc(100% - $left-sidebar-width);
-    padding: 0 90px 70px;
+    padding: 0 $padding-horizontal $padding-vertical;
     box-sizing: border-box;
 
     background-color: $header-footer-color;

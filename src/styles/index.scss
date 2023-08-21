@@ -30,7 +30,10 @@ body,
     width: 5px;
 
     &::-webkit-scrollbar-thumb {
-      background-color: transparent;
+      &:not(.scroll-visible) {
+        background-color: transparent;
+      }
+
       border-radius: 10px;
       transition: 0.5s background-color linear;
     }

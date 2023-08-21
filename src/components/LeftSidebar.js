@@ -31,6 +31,7 @@ import {
   applyDeleteCategory,
 } from "../hooks/UseTransaction";
 import moment from "moment";
+import Clock from "./Clock";
 
 export const TODO_MENU_TYPE = {
   ALL: "모든 할일",
@@ -197,10 +198,11 @@ const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
 
   return (
     <div className="component left-sidebar">
+      <Clock />
       <div className="todo-menu-groups">
         <div className="todo-menu-group standard">
           <div className="header">
-            <div className="title">일반</div>
+            <div className="title">기본</div>
             <div className="buttons"></div>
           </div>
           <div className="todo-menus">
