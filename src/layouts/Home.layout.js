@@ -1,18 +1,19 @@
-import LeftSidebar, {TODO_MENU_TYPE} from "components/LeftSidebar";
-import React, {useEffect, useMemo, useState} from "react";
-import {Outlet, useOutletContext} from "react-router-dom";
+import LeftSidebar, { TODO_MENU_TYPE } from "components/LeftSidebar";
+import React, { useEffect, useMemo, useState } from "react";
+import { Outlet, useOutletContext } from "react-router-dom";
 
 import "./Home.layout.scss";
 import Category from "../objects/Category";
 
 const HomeLayout = () => {
   const props = useOutletContext();
+  const [hideLeftSidebar, setHideLeftSidebar] = useState(false);
   const [selectedTodoMenuType, setSelectedTodoMenuType] = useState(
     TODO_MENU_TYPE.ALL
   );
 
-  const {states} = props;
-  const {categories} = states;
+  const { states } = props;
+  const { categories } = states;
 
   const mergedCategories = useMemo(() => {
     const merged = {};
@@ -39,6 +40,7 @@ const HomeLayout = () => {
   return (
     <div className="home-layout">
       <LeftSidebar
+        hideLeftSidebar={hideLeftSidebar}
         setSelectedTodoMenuType={setSelectedTodoMenuType}
         selectedTodoMenuType={selectedTodoMenuType}
         categories={categories ?? {}}
@@ -46,6 +48,8 @@ const HomeLayout = () => {
       <Outlet
         context={{
           selectedTodoMenuType,
+          hideLeftSidebar,
+          setHideLeftSidebar,
           category: selectedCategory,
           ...props,
         }}

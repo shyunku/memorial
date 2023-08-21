@@ -1,3 +1,5 @@
+@import 'styles/constants.scss';
+
 .datetime-picker {
   display: flex;
   background-color: rgba(0, 0, 0, 0.453);
@@ -102,6 +104,14 @@
           &:hover {
             background-color: rgba($std-color, 0.5);
             color: white;
+          }
+
+          &.saturday {
+            color: $saturday-color;
+          }
+
+          &.sunday {
+            color: $sunday-color;
           }
 
           &.not-current {

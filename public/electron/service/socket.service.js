@@ -7,7 +7,7 @@ const CompareVersion = require("compare-versions");
 const PackageJson = require("../../../package.json");
 
 let Ipc;
-const connectUrl = process.env.REACT_APP_SERVER_URL;
+const connectUrl = process.env.SOCKET_SERVER_URL;
 
 // send authentication refresh signal
 /* ---------------------------------------- Pre-Execution ---------------------------------------- */

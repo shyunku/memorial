@@ -9,6 +9,18 @@ $std-text-color: rgb(128, 146, 184);
   width: $left-sidebar-width;
   background-color: $left-sidebar-color;
   overflow: hidden;
+  transition: 0.3s ease;
+
+  & > * {
+    overflow: hidden;
+    width: $left-sidebar-width;
+  }
+
+  &.hide {
+    width: 0;
+    min-width: 0;
+    opacity: 0;
+  }
 
   & > .todo-menu-groups {
     display: flex;

@@ -47,7 +47,7 @@ import {
   applyUpdateTaskTitle,
 } from "../hooks/UseTransaction";
 import TaskListCalendarView from "../views/TaskListCalendarView";
-import { VscSymbolColor } from "react-icons/vsc";
+import { VscFoldDown, VscSymbolColor } from "react-icons/vsc";
 import ColorPicker from "../molecules/ColorPicker";
 import AutoBlurDiv from "../molecules/AutoBlurDiv";
 
@@ -68,7 +68,14 @@ const SORT_MODE = {
 
 const TodoContent = (callback, deps) => {
   const props = useOutletContext();
-  const { selectedTodoMenuType, category, addPromise, states } = props;
+  const {
+    selectedTodoMenuType,
+    category,
+    addPromise,
+    states,
+    hideLeftSidebar,
+    setHideLeftSidebar,
+  } = props;
 
   const { taskMap, categories } = states;
 
@@ -546,6 +553,15 @@ const TodoContent = (callback, deps) => {
 
   return (
     <div className="todo-content">
+      <div
+        className={
+          "sidebar-flipper" +
+          JsxUtil.classByCondition(hideLeftSidebar, "flipped")
+        }
+        onClick={(e) => setHideLeftSidebar(!hideLeftSidebar)}
+      >
+        <VscFoldDown />
+      </div>
       <div className="header">
         <div className="title">
           {category?.title ?? "-"} ({filteredUndoneTaskCount})
@@ -695,7 +711,11 @@ const TodoContent = (callback, deps) => {
           ),
         }[taskViewMode] ?? <div>Currently not supported</div>}
       </div>
-      <TodoItemAddSection onTaskAdd={onTaskAdd} category={category} />
+      <TodoItemAddSection
+        onTaskAdd={onTaskAdd}
+        category={category}
+        expanded={hideLeftSidebar}
+      />
     </div>
   );
 };

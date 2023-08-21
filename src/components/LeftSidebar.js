@@ -43,7 +43,11 @@ export const TODO_MENU_TYPE_TO_ICON = {
   [TODO_MENU_TYPE.TODAY]: <IoToday />,
 };
 
-const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
+const LeftSidebar = ({
+  setSelectedTodoMenuType,
+  selectedTodoMenuType,
+  hideLeftSidebar,
+}) => {
   const context = useOutletContext();
   const { localNonce, remoteNonce, addPromise, states } = context;
   const { categories, taskMap } = states;
@@ -197,7 +201,12 @@ const LeftSidebar = ({ setSelectedTodoMenuType, selectedTodoMenuType }) => {
   }, [states]);
 
   return (
-    <div className="component left-sidebar">
+    <div
+      className={
+        "component left-sidebar" +
+        JsxUtil.classByCondition(hideLeftSidebar, "hide")
+      }
+    >
       <Clock />
       <div className="todo-menu-groups">
         <div className="todo-menu-group standard">

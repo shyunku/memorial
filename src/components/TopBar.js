@@ -30,6 +30,7 @@ const TopBar = ({ addPromise }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [maximized, setMaximized] = useState(false);
+  const isDevelopment = process.env.NODE_ENV === "development";
 
   const minimize = () => {
     IpcSender.system.minimizeWindow();
@@ -130,9 +131,15 @@ const TopBar = ({ addPromise }) => {
   }, []);
 
   return (
-    <div className="component top-bar">
+    <div
+      className={
+        "component top-bar" +
+        JsxUtil.classByCondition(isDevelopment, "dev-mode")
+      }
+    >
       <div className="drag-section"></div>
       <div className="title">Memorial - {PackageJson.version}v</div>
+      {isDevelopment && <div className="dev-mode-label">개발자 모드</div>}
       <div
         className={
           "server-status" + JsxUtil.classByCondition(offlineMode, "offline")

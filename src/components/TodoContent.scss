@@ -14,6 +14,32 @@
 
   position: relative;
 
+  & > .sidebar-flipper {
+    position: fixed;
+    top: calc($top-bar-height + 10px);
+    left: calc($left-sidebar-width + 10px);
+    z-index: 6;
+    transform: rotate(90deg);
+    padding: 5px;
+    cursor: pointer;
+    width: 15px;
+    height: 15px;
+    border-radius: 5px;
+    color: #5d96c4;
+    opacity: 0.4;
+    transition: 0.3s ease;
+
+    &:hover {
+      opacity: 1;
+      background-color: rgba(140, 195, 255, 0.18);
+    }
+
+    &.flipped {
+      transform: rotate(-90deg);
+      left: calc(10px);
+    }
+  }
+
   & > .header {
     display: flex;
     flex-direction: column;
@@ -174,16 +200,20 @@
   & > .todo-item-add-section {
     display: flex;
     position: fixed;
-    // left: 0;
+    right: 0;
     bottom: 0;
-    // left: 0;
     z-index: 5;
     width: calc(100% - $left-sidebar-width);
     padding: 0 $padding-horizontal $padding-vertical;
     box-sizing: border-box;
+    transition: 0.3s ease;
 
     background-color: $header-footer-color;
     backdrop-filter: blur(10px);
+
+    &.expand {
+      width: 100%;
+    }
 
     & > .input-wrapper {
       display: flex;

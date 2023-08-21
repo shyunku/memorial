@@ -6,7 +6,7 @@ import TaskRepeatMenu from "molecules/TaskRepeatMenu";
 import { TODO_MENU_TYPE } from "./LeftSidebar";
 import moment from "moment";
 
-const TodoItemAddSection = ({ onTaskAdd, category }) => {
+const TodoItemAddSection = ({ onTaskAdd, category, expanded }) => {
   const [newTodoItemFocused, setNewTodoItemFocused] = useState(false);
   const [newTodoItemContent, setNewTodoItemContent] = useState("");
   const [newTodoItemDate, setNewTodoItemDate] = useState(null);
@@ -33,7 +33,11 @@ const TodoItemAddSection = ({ onTaskAdd, category }) => {
   };
 
   return (
-    <div className="todo-item-add-section">
+    <div
+      className={
+        "todo-item-add-section" + JsxUtil.classByCondition(expanded, "expand")
+      }
+    >
       <div
         className={
           "input-wrapper" +

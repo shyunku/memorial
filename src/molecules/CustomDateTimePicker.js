@@ -320,7 +320,7 @@ const DatePicker = ({
 
                 return (
                   <div
-                    className="date-picker-day not-current"
+                    className={"date-picker-day not-current"}
                     key={index}
                     onClick={selectPrevMonthDate.bind(null, day)}
                     onMouseEnter={(e) => {
@@ -352,21 +352,25 @@ const DatePicker = ({
                 selectedDate.getDate() === index + 1 &&
                 selectedDate.getMonth() === watchingMoment.month() &&
                 selectedDate.getFullYear() === watchingMoment.year();
+
+              const date = new Date(
+                watchingMonth.getFullYear(),
+                watchingMonth.getMonth(),
+                index + 1
+              );
+
               return (
                 <div
                   className={
                     "date-picker-day" +
                     JsxUtil.classByCondition(isToday, "today") +
-                    JsxUtil.classByCondition(selected, "selected")
+                    JsxUtil.classByCondition(selected, "selected") +
+                    JsxUtil.classByCondition(date.getDay() === 6, "saturday") +
+                    JsxUtil.classByCondition(date.getDay() === 0, "sunday")
                   }
                   key={index}
                   onClick={selectDate.bind(null, index + 1)}
                   onMouseEnter={(e) => {
-                    const date = new Date(
-                      watchingMonth.getFullYear(),
-                      watchingMonth.getMonth(),
-                      index + 1
-                    );
                     setHoveredDate(date);
                   }}
                   onMouseLeave={(e) => {

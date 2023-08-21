@@ -4,13 +4,23 @@
   display: flex;
   position: relative;
   width: 100%;
-  min-height: 30px;
-  height: 30px;
+  min-height: $top-bar-height;
+  height: $top-bar-height;
   align-items: center;
   background: $main-theme-color;
   font-size: 12px;
   // justify-content: space-between;
   z-index: 100;
+
+  &.dev-mode {
+    background-color: rgb(9, 101, 0);
+  }
+
+  & > .dev-mode-label {
+    margin-left: 10px;
+    background: #025602;
+    padding: 5px 8px;
+  }
 
   & > .drag-section {
     position: absolute;
