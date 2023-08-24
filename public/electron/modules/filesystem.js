@@ -23,6 +23,18 @@ function getUserDataPath() {
   }
 }
 
+function getAppTrayImagePath() {
+  const buildLevel = getBuildLevel();
+  const appDataPath = app.getAppPath();
+  const resourceParentKeys = ["public", "build", "../"];
+  const resourceParent = resourceParentKeys[buildLevel];
+
+  return url.format({
+    pathname: path.join(appDataPath, resourceParent, "tray.png"),
+    slashes: false,
+  });
+}
+
 function getAppResourcesPath() {
   const buildLevel = getBuildLevel();
   const appDataPath = app.getAppPath();
@@ -110,6 +122,7 @@ async function copydirRecursivelySync(source, dest) {
 module.exports = {
   rmdirRecursivelySync,
   copydirRecursivelySync,
+  getAppTrayImagePath,
   getUserDataPath,
   getAppResourcesPath,
   isDir,

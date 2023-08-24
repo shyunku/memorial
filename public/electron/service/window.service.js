@@ -20,7 +20,7 @@ class WindowService {
     /** @type {IpcService} */
     this.ipcService = null;
     this.mainWindow = null;
-    /** @type {?Tray} */
+    /** @type {Tray} */
     this.tray = null;
   }
 

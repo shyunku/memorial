@@ -10,6 +10,8 @@ const {
 } = require("electron");
 const packageJson = require("../../../package.json");
 const path = require("path");
+const url = require("url");
+const { getAppTrayImagePath } = require("../modules/filesystem");
 
 /**
  * @param s {WindowService}
@@ -25,13 +27,14 @@ module.exports = function (s) {
     s.mainWindow.focus();
   });
 
-  s.tray = new Tray("public/logo192.png");
+  const trayImagePath = getAppTrayImagePath();
+  s.tray = new Tray(trayImagePath);
   s.tray.on("click", () => {
     s.mainWindow.show();
   });
   s.tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: `Memorial Version ${packageJson.version}`, enabled: false },
+      { label: `Memorial - ${packageJson.version}`, enabled: false },
       {
         label: "종료",
         click: function () {
