@@ -56,6 +56,11 @@ console.debug(`[AppData Path] ${appDataPath}`);
 console.debug(`[UserData Path] ${userDataPath}`);
 
 /* ---------------------------------------- Main execute statements ---------------------------------------- */
+// auto start app on startup of OS
+app.setLoginItemSettings({
+  openAtLogin: true,
+});
+
 app.on("ready", async () => {
   try {
     // initialize & configure all services
