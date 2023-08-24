@@ -16,10 +16,12 @@ import "styles/index.scss";
 import Toast from "molecules/Toast";
 import Prompt from "molecules/Prompt";
 import Loading from "molecules/Loading";
+import ModalRouter from "./routers/ModalRouter";
 
 const store = configureStore({
   reducer: rootReducer,
-  middleware: (defaultMiddleware) => defaultMiddleware({ serializableCheck: false }),
+  middleware: (defaultMiddleware) =>
+    defaultMiddleware({ serializableCheck: false }),
 });
 
 const persistor = persistStore(store);
@@ -27,6 +29,7 @@ const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <Provider store={store}>
     <PersistGate loading={null} persistor={persistor}>
+      <ModalRouter />
       <Prompt.Prompt />
       <Toast.Toaster />
       <Loading.Loading />

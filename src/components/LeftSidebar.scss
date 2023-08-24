@@ -31,7 +31,7 @@ $std-text-color: rgb(128, 146, 184);
     & > .todo-menu-group {
       display: flex;
       flex-direction: column;
-      padding: 15px;
+      padding: 10px;
       box-sizing: border-box;
 
       &:not(:last-child) {
@@ -56,7 +56,7 @@ $std-text-color: rgb(128, 146, 184);
         color: rgba(105, 115, 139, 0.622);
 
         & > .title {
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 900;
           flex: 1;
         }
@@ -108,11 +108,12 @@ $std-text-color: rgb(128, 146, 184);
           align-items: center;
           font-size: 15px;
           font-weight: 300;
-          border-radius: 5px;
+          border-radius: 3px;
           color: $std-text-color;
           transition: 0.3s;
           user-select: none;
           cursor: pointer;
+          position: relative;
 
           &:not(:last-child) {
             margin-bottom: 6px;
@@ -124,10 +125,14 @@ $std-text-color: rgb(128, 146, 184);
             & > .delete-btn {
               opacity: 1;
             }
+
+            &:not(.default) > .content > .task-count {
+              opacity: 0;
+            }
           }
 
           &.selected {
-            background-color: rgb(52, 86, 154);
+            background-color: rgb(52, 88, 161);
             color: white;
 
             & > .delete-btn {
@@ -149,12 +154,13 @@ $std-text-color: rgb(128, 146, 184);
             align-items: center;
             flex: 1;
             margin-left: 10px;
+            overflow: hidden;
 
             & > .title {
               //display: flex;
               //align-items: center;
 
-              //flex: 1;
+              flex: 1;
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
@@ -165,12 +171,18 @@ $std-text-color: rgb(128, 146, 184);
             & > .task-count {
               margin-left: 5px;
               font-size: 12px;
-              color: #536680;
+              color: #4c5d75;
+              min-width: 20px;
+              text-align: right;
+              opacity: 1;
+              transition: 0.2s ease;
             }
           }
 
 
           & > .delete-btn {
+            position: absolute;
+            right: 8px;
             color: rgb(255, 77, 77);
             border-radius: 5px;
             font-size: 14px;

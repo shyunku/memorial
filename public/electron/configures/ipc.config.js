@@ -76,7 +76,14 @@ module.exports = function (s) {
 
   s.register("system/close_window", (event, reqId, param) => {
     let currentWindow = BrowserWindow.fromId(param);
-    if (currentWindow) currentWindow.close();
+    let mainWindow = s.windowService.mainWindow;
+    if (currentWindow) {
+      if (currentWindow.id === mainWindow.id) {
+        mainWindow.hide();
+        return;
+      }
+      currentWindow.close();
+    }
   });
 
   s.register("system/maximize_window", (event, reqId, param) => {

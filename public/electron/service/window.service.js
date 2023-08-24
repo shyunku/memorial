@@ -19,8 +19,9 @@ class WindowService {
   constructor(ipcService) {
     /** @type {IpcService} */
     this.ipcService = null;
-
     this.mainWindow = null;
+    /** @type {?Tray} */
+    this.tray = null;
   }
 
   /**

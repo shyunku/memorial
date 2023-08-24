@@ -198,6 +198,8 @@ class SyncerContext {
 
       if (this.socket.connected()) {
         return await this.socket.sendSync("transaction", txRequest, timeout);
+      } else {
+        throw new Error("not-connected");
       }
     } catch (err) {
       console.error(err);

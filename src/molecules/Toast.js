@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { VscCheck, VscComment, VscDebug, VscError, VscInfo, VscWarning } from "react-icons/vsc";
+import {
+  VscCheck,
+  VscComment,
+  VscDebug,
+  VscError,
+  VscInfo,
+  VscWarning,
+} from "react-icons/vsc";
 import { v4 } from "uuid";
 import "./Toast.scss";
 
@@ -20,12 +27,15 @@ const POSITION = {
   BOTTOM_LEFT: "bottom-left",
 };
 
-export const Toaster = ({ position = POSITION.TOP_RIGHT, expiresIn = 3000 }) => {
+export const Toaster = ({
+  position = POSITION.TOP_RIGHT,
+  expiresIn = 3000,
+}) => {
   const [activeToasts, setActiveToasts] = useState([]);
   const fadeOutDuration = useMemo(() => 300, []);
   const horizontalAlign = useMemo(() => {
-    const splited = position.split("-");
-    if (splited.length != 2) splited = POSITION.TOP_CENTER.split("-");
+    let splited = position.split("-");
+    if (splited.length !== 2) splited = POSITION.TOP_CENTER.split("-");
     switch (splited[1]) {
       case "left":
         return "flex-start";
@@ -37,7 +47,10 @@ export const Toaster = ({ position = POSITION.TOP_RIGHT, expiresIn = 3000 }) => 
         return "center";
     }
   }, [position]);
-  const verticalDirection = useMemo(() => (position.split("-")[0] == "top" ? 1 : -1), [position]);
+  const verticalDirection = useMemo(
+    () => (position.split("-")[0] == "top" ? 1 : -1),
+    [position]
+  );
 
   const styles = useMemo(() => {
     const splited = position.split("-");
@@ -65,13 +78,18 @@ export const Toaster = ({ position = POSITION.TOP_RIGHT, expiresIn = 3000 }) => 
   }, [position, horizontalAlign]);
 
   useEffect(() => {
-    const listener = (data) => {
-      const toastData = data.data;
+    const listener = (e) => {
+      const toastData = e.data;
       const toastId = `toast-${v4()}`;
       const maintainDuration = toastData?.options?.duration ?? expiresIn;
 
       setActiveToasts((prev) => {
-        const toast = { ...toastData, id: toastId, createdAt: Date.now(), duration: expiresIn };
+        const toast = {
+          ...toastData,
+          id: toastId,
+          createdAt: Date.now(),
+          duration: expiresIn,
+        };
         return [...prev, toast];
       });
       setTimeout(() => {
@@ -148,12 +166,22 @@ const success = (message, options = DEFAULT_OPTIONS) => {
   addToastItem(TOAST_TYPE.SUCCESS, message, null, options);
 };
 
-const promise = async (promise, successText = null, errorText = null, options = DEFAULT_OPTIONS) => {
-  addToastItem(TOAST_TYPE.SUCCESS, null, { promise, successText, errorText }, options);
+const promise = async (
+  promise,
+  successText = null,
+  errorText = null,
+  options = DEFAULT_OPTIONS
+) => {
+  addToastItem(
+    TOAST_TYPE.SUCCESS,
+    null,
+    { promise, successText, errorText },
+    options
+  );
 };
 
 const addToastItem = (type, message, extra = null, options) => {
-  console.log(message);
+  console.debug(message);
   const toastEvent = new Event("custom_toast", { bubbles: true });
   toastEvent.data = {
     type,

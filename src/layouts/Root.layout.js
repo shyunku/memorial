@@ -324,6 +324,10 @@ const RootLayout = () => {
 
     IpcSender.onAll("transaction/error", ({ success, data }, tx) => {
       console.error("transaction error", data, tx);
+      if (data === "not-connected") {
+        Toast.error("서버가 연결되어 있지 않습니다. 편집이 불가능합니다.");
+        return;
+      }
       Toast.error("서버 동기화에 실패했습니다. 잠시 후 다시 시도해주세요.");
     });
 

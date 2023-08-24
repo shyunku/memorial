@@ -1,9 +1,20 @@
 import BigNumber from "bignumber.js";
+import { v4 } from "uuid";
 
 export function fastInterval(callback, interval) {
   callback();
   let id = setInterval(callback, interval);
   return id;
+}
+
+export function sendEvent(name, data) {
+  const event = new Event(name, { bubbles: true });
+  event.data = data;
+  document.dispatchEvent(event);
+}
+
+export function uuidv4() {
+  return v4();
 }
 
 export const colorize = {
@@ -171,6 +182,5 @@ export function clone(obj) {
 export const isDevMode = () => {
   return window.env.NODE_ENV !== "production";
 };
-
 
 export default {};

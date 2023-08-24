@@ -65,7 +65,7 @@ const LeftSidebar = ({
       : accountInfo?.googleProfileImageUrl) ?? null;
 
   const [syncStatus, syncText] = useMemo(() => {
-    if (offlineMode) return ["offline", "오프라인 모드"];
+    if (offlineMode) return ["offline", "오프라인 모드 (편집 불가)"];
     if (remoteNonce == null) return ["synchronizing", "동기화 중"];
     if (localNonce === remoteNonce) return ["synchronized", "동기화 완료"];
     return ["synchronizing", `동기화 중 - ${localNonce} / ${remoteNonce}`];
@@ -218,7 +218,7 @@ const LeftSidebar = ({
             {Object.values(TODO_MENU_TYPE).map((menuType) => (
               <div
                 key={menuType}
-                className={`todo-menu ${
+                className={`todo-menu default ${
                   selectedTodoMenuType === menuType ? "selected" : ""
                 }`}
                 onClick={() => setSelectedTodoMenuType(menuType)}
@@ -231,7 +231,7 @@ const LeftSidebar = ({
                   <div className="title">{menuType}</div>
                   <div className={"task-count"}>
                     {" "}
-                    ({undoneTaskCountMap?.[menuType] ?? "?"})
+                    {undoneTaskCountMap?.[menuType] ?? "?"}
                   </div>
                 </div>
               </div>
@@ -304,7 +304,7 @@ const LeftSidebar = ({
                 <div className={"content"}>
                   <div className="title">{category.title}</div>
                   <div className={"task-count"}>
-                    ({undoneTaskCountMap?.[category.id] ?? "?"})
+                    {undoneTaskCountMap?.[category.id] ?? "?"}
                   </div>
                 </div>
                 <div
