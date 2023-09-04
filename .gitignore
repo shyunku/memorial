@@ -26,3 +26,4 @@ yarn-error.log*
 /dist
 
 .idea/
+package-lock.json
