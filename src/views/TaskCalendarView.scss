@@ -201,7 +201,8 @@
                 margin-bottom: 6px;
               }
 
-              &:hover, &.hovered {
+              &:hover,
+              &.hovered {
                 background-color: rgb(60, 67, 80);
                 color: white;
               }
@@ -223,7 +224,8 @@
                   color: #d57676;
                 }
 
-                &:hover, &.hovered {
+                &:hover,
+                &.hovered {
                   background-color: rgb(79, 39, 39);
                   color: #ff9292;
                 }
