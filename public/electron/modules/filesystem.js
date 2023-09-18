@@ -30,7 +30,7 @@ function getAppTrayImagePath() {
   const resourceParent = resourceParentKeys[buildLevel];
 
   return url.format({
-    pathname: path.join(appDataPath, resourceParent, "tray.png"),
+    pathname: path.join(appDataPath, resourceParent, "tray", "tray.png"),
     slashes: false,
   });
 }
