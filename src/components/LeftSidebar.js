@@ -65,7 +65,7 @@ const LeftSidebar = ({
       : accountInfo?.googleProfileImageUrl) ?? null;
 
   const [syncStatus, syncText] = useMemo(() => {
-    if (offlineMode) return ["offline", "오프라인 모드 (편집 불가)"];
+    if (offlineMode) return ["offline", "오프라인 (편집 불가)"];
     if (remoteNonce == null) return ["synchronizing", "동기화 중"];
     if (localNonce === remoteNonce) return ["synchronized", "동기화 완료"];
     return ["synchronizing", `동기화 중 - ${localNonce} / ${remoteNonce}`];

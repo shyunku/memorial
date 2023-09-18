@@ -4,7 +4,7 @@
     "name": "shyunku",
     "email": "whdudgns7321@gmail.com"
   },
-  "version": "0.3.1-beta.3",
+  "version": "0.3.1-beta.5",
   "description": "cross-platform desktop application for memorial service",
   "main": "public/electron/core/main.js",
   "homepage": "./",

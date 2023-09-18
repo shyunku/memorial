@@ -1,0 +1,57 @@
+.task-list-timeline-view {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+
+  @media screen and (max-width: 1800px) {
+    overflow-x: hidden;
+    overflow-y: scroll;
+    flex-direction: column-reverse;
+    .view-segment.list {
+      width: 100% !important;
+      flex: 1;
+    }
+    .view-segment.timeline {
+      margin-bottom: 30px;
+
+      .timeline-view-header {
+        margin-bottom: 15px;
+      }
+
+      .day-cell {
+        height: 120px !important;
+      }
+    }
+    .split-line {
+      display: none;
+    }
+  }
+
+  .view-segment {
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    &.list {
+      flex: 1;
+      padding-right: 5px;
+      box-sizing: border-box;
+    }
+
+    &.timeline {
+      flex: 1.7;
+      height: 100%;
+      overflow: hidden;
+
+      .time-cell-row {
+        height: 50px !important;
+      }
+    }
+  }
+
+  .split-line {
+    width: 1px;
+    margin: 0 20px;
+    background-color: #2a333d;
+  }
+}

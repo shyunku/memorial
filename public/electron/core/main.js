@@ -56,9 +56,9 @@ console.debug(`[AppData Path] ${appDataPath}`);
 console.debug(`[UserData Path] ${userDataPath}`);
 
 /* ---------------------------------------- Main execute statements ---------------------------------------- */
-// auto start app on startup of OS
+// auto start app on startup of OS (only on production mode)
 app.setLoginItemSettings({
-  openAtLogin: true,
+  openAtLogin: isProdMode,
 });
 
 app.on("ready", async () => {

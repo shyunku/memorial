@@ -50,12 +50,15 @@ import TaskListCalendarView from "../views/TaskListCalendarView";
 import { VscFoldDown, VscSymbolColor } from "react-icons/vsc";
 import ColorPicker from "../molecules/ColorPicker";
 import AutoBlurDiv from "../molecules/AutoBlurDiv";
+import TaskTimelineView from "../views/TaskTimelineView";
+import TaskListTimelineView from "../views/TaskListTimelineView";
 
 const TASK_VIEW_MODE = {
   LIST: "리스트",
   CALENDAR: "캘린더",
+  TIMELINE: "타임라인",
   LIST_CALENDAR: "리스트 | 캘린더",
-  // TIMELINE: "타임라인",
+  // LIST_TIMELINE: "리스트 | 타임라인",
   // DASHBOARD: "대시보드",
 };
 
@@ -551,6 +554,29 @@ const TodoContent = (callback, deps) => {
     };
   }, [addPromise, taskMap, categories]);
 
+  const listProps = {
+    taskMap: taskMap,
+    filteredTaskMap: filteredTaskMap,
+    categories: categories,
+    sorter: sorter,
+    selectedId: selectedTodoItemId,
+    selectTodoItemHandler: setSelectedTodoItemId,
+    onTaskDragEndHandler: onTaskDragEndHandler,
+    onTaskDelete: onTaskDelete,
+    onTaskDone: onTaskDone,
+    onTaskTitleChange: onTaskTitleChange,
+    onTaskDueDateChange: onTaskDueDateChange,
+    onTaskMemoChange: onTaskMemoChange,
+    onTaskCategoryAdd: onTaskCategoryAdd,
+    onTaskCategoryDelete: onTaskCategoryDelete,
+    onTaskRepeatChange: onTaskRepeatChange,
+    onSubtaskAdded: onSubtaskAdded,
+    onSubtaskDelete: onSubtaskDelete,
+    onSubtaskTitleChange: onSubtaskTitleChange,
+    onSubtaskDueDateChange: onSubtaskDueDateChange,
+    onSubtaskDone: onSubtaskDone,
+  };
+
   return (
     <div className="todo-content">
       <div
@@ -654,29 +680,7 @@ const TodoContent = (callback, deps) => {
       >
         {{
           [TASK_VIEW_MODE.LIST]: (
-            <TaskListView
-              key={selectedTodoMenuType}
-              taskMap={taskMap}
-              filteredTaskMap={filteredTaskMap}
-              categories={categories}
-              sorter={sorter}
-              selectedId={selectedTodoItemId}
-              selectTodoItemHandler={setSelectedTodoItemId}
-              onTaskDragEndHandler={onTaskDragEndHandler}
-              onTaskDelete={onTaskDelete}
-              onTaskDone={onTaskDone}
-              onTaskTitleChange={onTaskTitleChange}
-              onTaskDueDateChange={onTaskDueDateChange}
-              onTaskMemoChange={onTaskMemoChange}
-              onTaskCategoryAdd={onTaskCategoryAdd}
-              onTaskCategoryDelete={onTaskCategoryDelete}
-              onTaskRepeatChange={onTaskRepeatChange}
-              onSubtaskAdded={onSubtaskAdded}
-              onSubtaskDelete={onSubtaskDelete}
-              onSubtaskTitleChange={onSubtaskTitleChange}
-              onSubtaskDueDateChange={onSubtaskDueDateChange}
-              onSubtaskDone={onSubtaskDone}
-            />
+            <TaskListView key={selectedTodoMenuType} {...listProps} />
           ),
           [TASK_VIEW_MODE.CALENDAR]: (
             <TaskCalendarView
@@ -684,30 +688,14 @@ const TodoContent = (callback, deps) => {
               categories={categories}
             />
           ),
+          [TASK_VIEW_MODE.TIMELINE]: (
+            <TaskTimelineView filteredTaskMap={filteredTaskMap} />
+          ),
           [TASK_VIEW_MODE.LIST_CALENDAR]: (
-            <TaskListCalendarView
-              key={selectedTodoMenuType}
-              taskMap={taskMap}
-              filteredTaskMap={filteredTaskMap}
-              categories={categories}
-              sorter={sorter}
-              selectedId={selectedTodoItemId}
-              selectTodoItemHandler={setSelectedTodoItemId}
-              onTaskDragEndHandler={onTaskDragEndHandler}
-              onTaskDelete={onTaskDelete}
-              onTaskDone={onTaskDone}
-              onTaskTitleChange={onTaskTitleChange}
-              onTaskDueDateChange={onTaskDueDateChange}
-              onTaskMemoChange={onTaskMemoChange}
-              onTaskCategoryAdd={onTaskCategoryAdd}
-              onTaskCategoryDelete={onTaskCategoryDelete}
-              onTaskRepeatChange={onTaskRepeatChange}
-              onSubtaskAdded={onSubtaskAdded}
-              onSubtaskDelete={onSubtaskDelete}
-              onSubtaskTitleChange={onSubtaskTitleChange}
-              onSubtaskDueDateChange={onSubtaskDueDateChange}
-              onSubtaskDone={onSubtaskDone}
-            />
+            <TaskListCalendarView key={selectedTodoMenuType} {...listProps} />
+          ),
+          [TASK_VIEW_MODE.LIST_TIMELINE]: (
+            <TaskListTimelineView key={selectedTodoMenuType} {...listProps} />
           ),
         }[taskViewMode] ?? <div>Currently not supported</div>}
       </div>

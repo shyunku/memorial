@@ -90,7 +90,7 @@ const TaskCalendarView = ({
   return (
     <div className="task-view calendar">
       <div className="calendar-view">
-        <div className="calendar-view-header">
+        <div className="calendar-view-header view-header">
           <div className="current-year-month">
             {watchingMoment.format("YYYY년 M월")}
           </div>
@@ -224,7 +224,7 @@ const DayCell = ({
   }, [year, month, day]);
   const isToday = useMemo(() => {
     return cellDate.isSame(currentMoment, "day");
-  }, [cellDate]);
+  }, [cellDate, currentMoment]);
   const isSunday = useMemo(() => {
     return cellDate.day() === 0;
   }, [cellDate]);
