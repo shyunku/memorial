@@ -165,19 +165,21 @@ class TransitionContext {
       doneAt,
       memo,
       done,
+      startDate,
       dueDate,
       repeatPeriod,
       repeatStartAt,
       categories,
     } = params;
     await this.db.run(
-      "INSERT INTO tasks (tid, title, created_at, done_at, memo, done, due_date, repeat_period, repeat_start_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO tasks (tid, title, created_at, done_at, memo, done, start_date, due_date, repeat_period, repeat_start_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       tid,
       title,
       createdAt,
       doneAt,
       memo,
       done,
+      startDate,
       dueDate,
       repeatPeriod,
       dueDate

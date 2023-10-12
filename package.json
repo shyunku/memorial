@@ -12,7 +12,7 @@
   "allowMultipleExecution": false,
   "config": {
     "react_port": 9300,
-    "scheme_version": 2,
+    "scheme_version": 3,
     "root_scheme_version": 1,
     "app_server_endpoint": "https://memorial.im:4033",
     "app_server_api_version": "v1",
@@ -65,7 +65,7 @@
     "win-react": "set PORT=%npm_package_config_react_port% && set BROWSER=none&& npm start",
     "mac-react": "PORT=$npm_package_config_react_port BROWSER=none npm start",
     "win-electron": "set ELECTRON_START_URL=http://localhost:%npm_package_config_react_port% && set NODE_ENV=development && wait-on http://localhost:%npm_package_config_react_port% && electron .",
-    "mac-electron": "export ELECTRON_START_URL=http://localhost:$npm_package_config_react_port && export NODE_ENV=development && wait-on http://localhost:$npm_package_config_react_port && electron .",
+    "mac-electron": "ELECTRON_START_URL=http://localhost:$npm_package_config_react_port NODE_ENV=development electron .",
     "win-all": "concurrently \"npm run win-react\" \"npm run win-electron\"",
     "mac-all": "concurrently \"npm run mac-react\" \"npm run mac-electron\"",
     "win-pack": "npm run build && electron-builder build -c.extraMetadata.main=build/electron/core/main.js",

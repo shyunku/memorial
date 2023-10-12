@@ -8,6 +8,7 @@ class Task extends Mutatable {
     super({
       tid: "id",
       created_at: "createdAt",
+      start_date: "startDate",
       due_date: "dueDate",
       title: "title",
       memo: "memo",
@@ -21,6 +22,7 @@ class Task extends Mutatable {
     this.id = v4();
     this.createdAt = new Date();
     this.doneAt = null;
+    this.startDate = null;
     this.dueDate = dueDate;
 
     this.title = title;

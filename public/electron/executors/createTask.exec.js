@@ -11,6 +11,7 @@ class CreateTaskTxContent extends TxContent {
     doneAt,
     memo,
     done,
+    startDate,
     dueDate,
     repeatPeriod,
     repeatStartAt,
@@ -25,6 +26,7 @@ class CreateTaskTxContent extends TxContent {
     this.doneAt = doneAt;
     this.memo = memo;
     this.done = done;
+    this.startDate = startDate;
     this.dueDate = dueDate;
     this.repeatPeriod = repeatPeriod;
     this.repeatStartAt = repeatStartAt;
@@ -73,13 +75,14 @@ const createTask = async (reqId, serviceGroup, txReq) => {
   const db = await serviceGroup.databaseService.getUserDatabaseContext(userId);
 
   await db.run(
-    "INSERT INTO tasks (tid, title, created_at, done_at, memo, done, due_date, repeat_period, repeat_start_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO tasks (tid, title, created_at, done_at, memo, done, start_date, due_date, repeat_period, repeat_start_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     txReq.tid,
     txReq.title,
     txReq.createdAt,
     txReq.doneAt,
     txReq.memo,
     txReq.done,
+    txReq.startDate,
     txReq.dueDate,
     txReq.repeatPeriod,
     txReq.dueDate
