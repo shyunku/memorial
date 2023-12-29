@@ -8,7 +8,7 @@ const logger = require("./logger");
 module.exports = {
   all: (isBuildMode, appDataPath) => {
     logger.initialize(isBuildMode, appDataPath);
-    __console__(logger.module);
+    __console__();
     __array__();
     remoteMain.initialize();
     dotenv.config({ path: path.resolve(__dirname, "../.env") });

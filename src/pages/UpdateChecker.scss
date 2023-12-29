@@ -21,21 +21,21 @@
     overflow: hidden;
 
     .name {
-      font-size: 16px;
+      font-size: 20px;
       font-weight: bold;
       margin: 5px 0;
       // text-shadow: 0 0 10px $highlight-color;
     }
 
     .loading {
-      margin: 15px 0;
+      margin: 20px 0;
     }
 
     .text {
       font-size: 14px;
       color: gray;
       margin: 5px 0;
-      font-weight: lighter;
+      //font-weight: lighter;
     }
 
     .percentage {

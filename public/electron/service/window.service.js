@@ -151,7 +151,7 @@ class WindowService {
     return newWindow;
   }
 
-  createUpdaterWindow(wait = false) {
+  async createUpdaterWindow(overlapWindowProperty) {
     let windowProperty = new WindowPropertyFactory()
       .windowType(WindowType.Modeless)
       .show(false)
@@ -162,25 +162,22 @@ class WindowService {
       .resizable(false)
       .build();
 
-    if (wait) {
-      return new Promise((resolve, reject) => {
-        try {
-          this.invokeWindow(
-            "/update-checker",
-            windowProperty,
-            null,
-            (window) => {
-              resolve(window);
-            }
-          );
-        } catch (err) {
-          reject(err);
-        }
-      });
-    } else {
-      let window = this.invokeWindow("/update-checker", windowProperty);
-      return window;
-    }
+    windowProperty = lodash.merge({}, windowProperty, overlapWindowProperty);
+    return new Promise((resolve, reject) => {
+      try {
+        let window = this.invokeWindow(
+          "/update-checker",
+          windowProperty,
+          null,
+          (window) => {
+            resolve(window);
+          }
+        );
+        electronRemote.enable(window.webContents);
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 
   createAlertPopupWindow(url, windowProperty, parameter) {

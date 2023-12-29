@@ -45,7 +45,11 @@ class UpdaterService {
     const osCategory = Util.getSystemArchCategory();
     const userDataPath = FileSystem.getUserDataPath();
 
-    const window = await this.windowService.createUpdaterWindow(true);
+    const window = await this.windowService.createUpdaterWindow({
+      webPreferences: {
+        preload: path.join(__dirname, "../", "modules", "preload.js"),
+      },
+    });
     const { result: checkUpdateResult, data } = await this.checkForUpdates(
       osCategory
     );
@@ -77,6 +81,7 @@ class UpdaterService {
         return;
     }
     await Util.sleep(1000);
+
     window.close();
   }
 

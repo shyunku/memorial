@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import {
   VscChromeClose,
   VscChromeMaximize,
@@ -11,27 +11,25 @@ import {
 import IpcSender from "utils/IpcSender";
 import "./TopBar.scss";
 import PackageJson from "../../package.json";
-import { IoLogOutOutline } from "react-icons/io5";
+import {IoLogOutOutline} from "react-icons/io5";
 import Prompt from "molecules/Prompt";
-import { useDispatch, useSelector } from "react-redux";
+import {useDispatch, useSelector} from "react-redux";
 import {
   accountInfoSlice,
   removeAccount,
   removeAuth,
 } from "store/accountSlice";
-import { useNavigate, useOutletContext } from "react-router-dom";
-import Toast, { Toaster } from "molecules/Toast";
+import {useNavigate, useOutletContext} from "react-router-dom";
+import Toast, {Toaster} from "molecules/Toast";
 import JsxUtil from "utils/JsxUtil";
-import { applyEmptyState } from "../hooks/UseTransaction";
-import { openModal } from "../molecules/Modal";
-import { MODAL_TYPES } from "../routers/ModalRouter";
+import {applyEmptyState} from "../hooks/UseTransaction";
+import {openModal} from "../molecules/Modal";
+import {MODAL_TYPES} from "../routers/ModalRouter";
 
-const TopBar = ({ addPromise }) => {
+const TopBar = ({addPromise}) => {
   const accountInfo = useSelector(accountInfoSlice);
   const offlineMode = accountInfo.offlineMode;
 
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
   const [maximized, setMaximized] = useState(false);
   const isDevelopment = process.env.NODE_ENV === "development";
 
@@ -57,75 +55,14 @@ const TopBar = ({ addPromise }) => {
     });
   };
 
-  const logout = () => {
-    Prompt.float("로그아웃", "정말 로그아웃 하시겠습니까?", {
-      confirmText: "로그아웃",
-      cancelText: "취소",
-      onConfirm: async () => {
-        try {
-          await IpcSender.req.auth.deleteAuthInfoSync(accountInfo?.uid);
-          dispatch(removeAuth());
-          dispatch(removeAccount());
-          navigate("/login");
-        } catch (err) {
-          console.log(err);
-          Toast.error("인증 정보 삭제에 실패했습니다. 다시 시도해주세요.");
-        }
-      },
-      onCancel: () => {},
-    });
-  };
-
-  const initialize = () => {
-    Prompt.float(
-      "데이터 초기화",
-      "정말 초기화하시겠습니까?\n\n" +
-        "모든 데이터가 기기에서 삭제되며, 이후 서버로부터 자동 복구됩니다.\n\n" +
-        "전체 초기화를 할 경우 서버 및 로컬 환경에서의 데이터가 모두 삭제됩니다.",
-      {
-        confirmText: "초기화 및 동기화",
-        onConfirm: async () => {
-          applyEmptyState({ addPromise });
-          IpcSender.req.system.initializeState(({ success, data }) => {
-            if (success) {
-              Toast.success("데이터 자동 복구가 완료되었습니다.");
-            }
-          });
-        },
-        onCancel: () => {},
-        extraBtns: [
-          {
-            text: "전체 초기화",
-            styles: {
-              backgroundColor: "rgb(165, 66, 66)",
-              color: "white",
-            },
-            onClick: () => {
-              IpcSender.req.system.clearStatePermanently(
-                ({ success, data }) => {
-                  if (success) {
-                    Toast.success("데이터가 초기화되었습니다.");
-                    applyEmptyState({ addPromise });
-                  } else {
-                    Toast.error("데이터 초기화에 실패했습니다.");
-                  }
-                }
-              );
-            },
-          },
-        ],
-      }
-    );
-  };
-
   useEffect(() => {
-    IpcSender.system.isMaximizable(({ success, data }) => {
+    IpcSender.system.isMaximizable(({success, data}) => {
       if (success) {
         setMaximized(data);
       }
     });
 
-    IpcSender.onAll("win_state_changed", ({ success, data }) => {
+    IpcSender.onAll("win_state_changed", ({success, data}) => {
       if (success) {
         switch (data) {
           case "maximize":
@@ -158,28 +95,22 @@ const TopBar = ({ addPromise }) => {
       </div>
       <div className="menu-section">
         <div className="menu-item" onClick={openSetting}>
-          <VscSettingsGear />
-        </div>
-        <div className="menu-item" onClick={logout}>
-          <IoLogOutOutline />
-        </div>
-        <div className="menu-item" onClick={initialize}>
-          <VscSync />
+          <VscSettingsGear/>
         </div>
         {/* <div className="menu-item" onClick={null}>
           <VscGear />
         </div> */}
         <div className="menu-item" onClick={minimize}>
-          <VscChromeMinimize />
+          <VscChromeMinimize/>
         </div>
         <div
           className="menu-item"
           onClick={(e) => (maximized ? unmaximize(e) : maximize(e))}
         >
-          {maximized ? <VscChromeRestore /> : <VscChromeMaximize />}
+          {maximized ? <VscChromeRestore/> : <VscChromeMaximize/>}
         </div>
         <div className="menu-item close" onClick={close}>
-          <VscChromeClose />
+          <VscChromeClose/>
         </div>
       </div>
     </div>

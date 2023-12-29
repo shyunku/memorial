@@ -11,7 +11,7 @@ function initialize(isBuildMode, appDataPath) {
 
   console.log(`Logger Directory Path: ${loggerDirPath}`);
 
-  const currentTime = moment(Date.now()).format("YYYY/MM/DD HH:mm:ss.SSS");
+  const currentTime = moment(Date.now()).format("YYYY-MM-DD_HHmmss");
   const logFilename = `${currentTime}.log`;
   const loggerFilePath = path.resolve(loggerDirPath, logFilename);
 
@@ -25,13 +25,23 @@ function initialize(isBuildMode, appDataPath) {
     }
   }
 
+  if (!fse.existsSync(loggerFilePath)) {
+    // logger file does not exist
+    try {
+      fse.writeFileSync(loggerFilePath, "");
+      console.log(`Make file for logger`);
+    } catch (err) {
+      console.error(err);
+      process.exit(-4);
+    }
+  }
+
   console.log(`Final Logger Path: ${loggerFilePath}`);
   ElectronLogger.transports.console.level = false;
-  ElectronLogger.transports.file.level = isBuildMode;
-  ElectronLogger.transports.file.resolvePath = () => loggerFilePath;
+  ElectronLogger.transports.file.level = "debug";
+  ElectronLogger.transports.file.resolvePathFn = () => loggerFilePath;
 }
 
 module.exports = {
   initialize,
-  module: ElectronLogger,
 };

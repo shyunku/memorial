@@ -454,6 +454,12 @@ const TodoContent = (callback, deps) => {
       setLastTxUpdateTime(data);
     });
 
+    return () => {
+      IpcSender.offAll("system/lastTxUpdateTime");
+    };
+  }, []);
+
+  useEffect(() => {
     IpcSender.onAll("task/addTask", ({ success, data }) => {
       applyAddTask({ addPromise, success, data });
     });
@@ -532,7 +538,6 @@ const TodoContent = (callback, deps) => {
     }, 1000);
 
     return () => {
-      IpcSender.offAll("system/lastTxUpdateTime");
       IpcSender.offAll("task/addTask");
       IpcSender.offAll("task/deleteTask");
       IpcSender.offAll("task/updateTaskOrder");

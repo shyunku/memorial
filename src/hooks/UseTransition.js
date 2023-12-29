@@ -35,19 +35,19 @@ const TYPES = {
  */
 export const applyTransitions = (addPromise, transitions) => {
   addPromise(async (states) => {
-    let newStates = { ...states };
+    let newStates = {...states};
     for (let transition of transitions) {
-      const { operation: opcode, params } = transition;
+      const {operation: opcode, params} = transition;
       const updates = await applyTransition(newStates, opcode, params);
 
       const opName = opcodeName(opcode);
-      console.info(
+      console.debug(
         `Transition applied: ${opName} (${opcode})`,
         params,
         updates
       );
       for (let key in updates) {
-        newStates[key] = { ...updates[key] };
+        newStates[key] = {...updates[key]};
       }
     }
     return newStates;
@@ -110,8 +110,8 @@ const applyTransition = async (states, opcode, params) => {
 };
 
 const createTask = (states, params) => {
-  const { taskMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap} = states;
+  const uTaskMap = {...taskMap};
 
   const {
     categories,
@@ -138,165 +138,165 @@ const createTask = (states, params) => {
   task.id = tid;
   task.title = title;
 
-  console.log(`create task`, task);
+  console.debug(`create task`, task);
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const deleteTask = (states, params) => {
-  const { taskMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { tid } = params;
+  const {tid} = params;
 
   delete uTaskMap[tid];
-  console.log(`delete task`, tid);
-  return { taskMap: uTaskMap };
+  console.debug(`delete task`, tid);
+  return {taskMap: uTaskMap};
 };
 
 const updateTaskNext = (states, params) => {
-  const { taskMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { tid, next } = params;
+  const {tid, next} = params;
 
   const task = uTaskMap[tid];
   task.next = uTaskMap[next];
 
-  console.log(`update task next`, task, next);
+  console.debug(`update task next`, task, next);
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const updateTaskTitle = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { tid, title } = params;
+  const {tid, title} = params;
 
   const task = uTaskMap[tid];
   task.title = title;
 
-  console.log(`update task title`, task, title);
+  console.debug(`update task title`, task, title);
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const updateTaskDueDate = (states, params) => {
-  const { taskMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { tid, dueDate } = params;
+  const {tid, dueDate} = params;
 
   const task = uTaskMap[tid];
   task.dueDate = clearDate(dueDate);
 
-  console.log(`update task dueDate`, task, dueDate);
+  console.debug(`update task dueDate`, task, dueDate);
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const updateTaskMemo = (states, params) => {
-  const { taskMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { tid, memo } = params;
+  const {tid, memo} = params;
 
   const task = uTaskMap[tid];
   task.memo = memo;
 
-  console.log(`update task memo`, task, memo);
+  console.debug(`update task memo`, task, memo);
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const updateTaskDone = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { tid, done } = params;
+  const {tid, done} = params;
 
   const task = uTaskMap[tid];
   task.done = clearBool(done);
 
-  console.log(`update task done`, task, done);
+  console.debug(`update task done`, task, done);
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const updateTaskDoneAt = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { tid, doneAt } = params;
+  const {tid, doneAt} = params;
 
   const task = uTaskMap[tid];
   task.doneAt = clearDate(doneAt);
 
-  console.log(`update task doneAt`, task, doneAt);
+  console.debug(`update task doneAt`, task, doneAt);
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const updateTaskRepeatPeriod = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { tid, repeatPeriod } = params;
+  const {tid, repeatPeriod} = params;
 
   const task = uTaskMap[tid];
   task.repeatPeriod = clearConst(repeatPeriod);
 
-  console.log(`update task repeatPeriod`, task, repeatPeriod);
+  console.debug(`update task repeatPeriod`, task, repeatPeriod);
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const updateTaskRepeatStartAt = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { tid, repeatStartAt } = params;
+  const {tid, repeatStartAt} = params;
 
   const task = uTaskMap[tid];
   task.repeatStartAt = clearDate(repeatStartAt);
 
-  console.log(`update task repeatStartAt`, task, repeatStartAt);
+  console.debug(`update task repeatStartAt`, task, repeatStartAt);
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const createTaskCategory = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { tid, cid } = params;
+  const {tid, cid} = params;
 
   const task = taskMap[tid];
   task.categories[cid] = true;
 
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const deleteTaskCategory = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { tid, cid } = params;
+  const {tid, cid} = params;
 
   const task = taskMap[tid];
   delete task.categories[cid];
 
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const createSubtask = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { createdAt, done, doneAt, dueDate, sid, tid, title } = params;
+  const {createdAt, done, doneAt, dueDate, sid, tid, title} = params;
 
   const subtask = new Subtask();
   subtask.createdAt = clearDate(createdAt);
@@ -310,117 +310,117 @@ const createSubtask = (states, params) => {
   task.subtasks[sid] = subtask;
 
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const deleteSubtask = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { sid, tid } = params;
+  const {sid, tid} = params;
 
   const task = taskMap[tid];
   delete task.subtasks[sid];
 
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const updateSubtaskTitle = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { sid, tid, title } = params;
+  const {sid, tid, title} = params;
 
   const task = taskMap[tid];
   const subtask = task.subtasks[sid];
   subtask.title = title;
 
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const updateSubtaskDueDate = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { sid, tid, dueDate } = params;
+  const {sid, tid, dueDate} = params;
 
   const task = taskMap[tid];
   const subtask = task.subtasks[sid];
   subtask.dueDate = clearDate(dueDate);
 
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const updateSubtaskDone = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { sid, tid, done } = params;
+  const {sid, tid, done} = params;
 
   const task = taskMap[tid];
   const subtask = task.subtasks[sid];
   subtask.done = clearBool(done);
 
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const updateSubtaskDoneAt = (states, params) => {
-  const { taskMap, categories: categoryMap } = states;
-  const uTaskMap = { ...taskMap };
+  const {taskMap, categories: categoryMap} = states;
+  const uTaskMap = {...taskMap};
 
-  const { sid, tid, doneAt } = params;
+  const {sid, tid, doneAt} = params;
 
   const task = taskMap[tid];
   const subtask = task.subtasks[sid];
   subtask.doneAt = clearDate(doneAt);
 
   uTaskMap[tid] = task;
-  return { taskMap: uTaskMap };
+  return {taskMap: uTaskMap};
 };
 
 const createCategory = (states, params) => {
-  const { categories: categoryMap } = states;
-  const uCategoryMap = { ...categoryMap };
+  const {categories: categoryMap} = states;
+  const uCategoryMap = {...categoryMap};
 
-  const { cid, createdAt, title } = params;
+  const {cid, createdAt, title} = params;
 
   const category = new Category();
   category.id = cid;
   category.createdAt = clearDate(createdAt);
   category.title = title;
 
-  console.log(`create category`, category);
+  console.debug(`create category`, category);
   uCategoryMap[cid] = category;
-  return { categories: uCategoryMap };
+  return {categories: uCategoryMap};
 };
 
 const deleteCategory = (states, params) => {
-  const { categories: categoryMap } = states;
-  const uCategoryMap = { ...categoryMap };
+  const {categories: categoryMap} = states;
+  const uCategoryMap = {...categoryMap};
 
-  const { cid } = params;
+  const {cid} = params;
 
   delete uCategoryMap[cid];
-  console.log(`delete category`, cid);
-  return { categories: uCategoryMap };
+  console.debug(`delete category`, cid);
+  return {categories: uCategoryMap};
 };
 
 const updateCategoryColor = (states, params) => {
-  const { categories: categoryMap } = states;
-  const uCategoryMap = { ...categoryMap };
+  const {categories: categoryMap} = states;
+  const uCategoryMap = {...categoryMap};
 
-  const { cid, color } = params;
+  const {cid, color} = params;
 
   const category = uCategoryMap[cid];
   category.color = color;
 
-  console.log(`update category color`, category, color);
+  console.debug(`update category color`, category, color);
   uCategoryMap[cid] = category;
-  return { categories: uCategoryMap };
+  return {categories: uCategoryMap};
 };
 
 /* -------------------------- utils -------------------------- */

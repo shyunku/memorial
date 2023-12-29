@@ -1,0 +1,33 @@
+.sync-status .body {
+  display: flex;
+
+  .sync-bar {
+    display: flex;
+    width: 100%;
+    background: #4f4f4f;
+    height: 25px;
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+
+    .sync-text {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 12px;
+      //font-weight: bold;
+      text-shadow: 0 0 10px rgb(0, 0, 0);
+    }
+
+    .synced {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 30%;
+      height: 100%;
+      background: #008cff;
+    }
+  }
+}

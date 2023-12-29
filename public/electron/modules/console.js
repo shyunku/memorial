@@ -1,4 +1,5 @@
 const moment = require("moment");
+const ElectronLogger = require("electron-log/main");
 
 global.TRACE_MAX_LENGTH = 0;
 global.ERROR_TRACE_SIZE = 5;
@@ -7,7 +8,8 @@ global.TRACE_SEGMENT_SIZE = 3;
 const rgbANSI = (r, g, b) => `\x1b[38;2;${r};${g};${b}m`;
 
 module.exports = (loggerModule) => {
-  (console.RESET = "\x1b[0m"), (console.BRIGHT = "\x1b[1m");
+  console.RESET = "\x1b[0m";
+  console.BRIGHT = "\x1b[1m";
 
   console.BLACK = "\x1b[30m";
   console.RED = "\x1b[31m";
@@ -127,7 +129,7 @@ module.exports = (loggerModule) => {
     let callStackTraceMsg = slicedCallStack
       .reverse()
       .map((entry) => {
-        let { column, line, file } = entry;
+        let {column, line, file} = entry;
         if (file === null) return "null";
 
         let pathSegments = file.split("\\");
@@ -177,6 +179,35 @@ module.exports = (loggerModule) => {
 
     // need within stdout
     console.log(finalString);
+
+    const colorSanitizedString = finalString.replace(
+      /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
+      ""
+    );
+
+    try {
+      switch (level) {
+        case "DEBUG":
+          ElectronLogger.debug(colorSanitizedString);
+          break;
+        case "INFO":
+          ElectronLogger.info(colorSanitizedString);
+          break;
+        case "WARN":
+          ElectronLogger.warn(colorSanitizedString);
+          break;
+        case "ERROR":
+          ElectronLogger.error(colorSanitizedString);
+          break;
+        case "SYSTEM":
+          ElectronLogger.info(colorSanitizedString);
+          break;
+        default:
+          ElectronLogger.verbose(colorSanitizedString);
+          break;
+      }
+    } catch (err) {
+    }
   };
 
   console.debug = (...arg) => logger("DEBUG", ...arg);

@@ -97,23 +97,25 @@ function checkDuplicateInvoke() {
   if (!packageJson.allowMultipleExecution) {
     let getInstanceLock = app.requestSingleInstanceLock();
 
-    if (!getInstanceLock) {
-      console.log(
-        "Instance is locked by single instance lock (already running). exiting app..."
-      );
-      app.quit();
-    } else {
-      const s = serviceGroup.windowService;
-      app.on("second-instance", (event, commandLine, workingDirectory) => {
-        if (s.mainWindow) {
-          if (s.mainWindow.isMinimized()) {
-            s.mainWindow.restore();
+    if (isProdMode) {
+      if (!getInstanceLock) {
+        console.log(
+          "Instance is locked by single instance lock (already running). exiting app..."
+        );
+        app.quit();
+      } else {
+        const s = serviceGroup.windowService;
+        app.on("second-instance", (event, commandLine, workingDirectory) => {
+          if (s.mainWindow) {
+            if (s.mainWindow.isMinimized()) {
+              s.mainWindow.restore();
+            }
+            s.mainWindow.focus();
           }
-          s.mainWindow.focus();
-        }
 
-        console.log("Something trying to open already opened-program.");
-      });
+          console.log("Something trying to open already opened-program.");
+        });
+      }
     }
   }
 }

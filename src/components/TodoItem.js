@@ -270,7 +270,13 @@ const TodoItem = ({
         focused={selected}
         {...rest}
       >
-        <div className="delete-button" onClick={(e) => onTaskDelete(todo.id)}>
+        <div
+          className="delete-button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTaskDelete(todo.id);
+          }}
+        >
           <VscChromeClose />
         </div>
         <DraggableZone className="todo-item">

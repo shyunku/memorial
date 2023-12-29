@@ -2,7 +2,13 @@ import React, { useEffect } from "react";
 import "./UpdateChecker.scss";
 import IpcSender from "../utils/IpcSender";
 import { shortenSize } from "../utils/Common";
-import { FlippingSquare } from "react-cssfx-loading";
+import {
+  BarWave,
+  FadingDots,
+  FillingBottle,
+  FlippingSquare,
+  Hypnosis,
+} from "react-cssfx-loading";
 
 const STATE_LABEL = {
   initial: `업데이트 확인 중...`,
@@ -59,7 +65,7 @@ const UpdateChecker = () => {
       <div className="content-wrapper">
         <div className="name">Memorial</div>
         <div className="loading">
-          <FlippingSquare />
+          <FillingBottle />
         </div>
         <div className="text">{label}</div>
         {current && (

@@ -1,54 +1,59 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import "./Modal.scss";
 import { sendEvent, uuidv4 } from "../utils/Common";
 import { IoClose } from "react-icons/io5";
 
-const Modal = ({
-  children,
-  id,
-  active,
-  onClose,
-  onCancel,
-  className,
-  ...rest
-}) => {
-  const modalRef = useRef(null);
+const Modal = forwardRef(
+  ({ children, id, active, onClose, onCancel, className, ...rest }, ref) => {
+    const modalRef = useRef(null);
+    const closeHandler = async () => {
+      const modalElem = modalRef.current;
+      if (!modalElem) return;
+      console.log(modalElem);
+      const modalUuid = modalElem.getAttribute("data-uuid");
+      if (!modalUuid) return;
+      const modalCloseTopic = `modal_close_signal_${modalUuid}`;
+      let data = await onClose?.();
+      sendEvent(modalCloseTopic, data);
+    };
 
-  const closeHandler = async () => {
-    const modalElem = modalRef.current;
-    if (!modalElem) return;
-    const modalUuid = modalElem.getAttribute("data-uuid");
-    if (!modalUuid) return;
-    const modalCloseTopic = `modal_close_signal_${modalUuid}`;
-    let data = await onClose?.();
-    sendEvent(modalCloseTopic, data);
-  };
+    const cancelHandler = async () => {
+      const modalElem = modalRef.current;
+      if (!modalElem) return;
+      if (!onCancel) return;
+      const modalUuid = modalElem.getAttribute("data-uuid");
+      if (!modalUuid) return;
+      const modalCloseTopic = `modal_close_signal_${modalUuid}`;
+      let data = await onCancel?.();
+      sendEvent(modalCloseTopic, data);
+    };
 
-  const cancelHandler = async () => {
-    const modalElem = modalRef.current;
-    if (!modalElem) return;
-    if (!onCancel) return;
-    const modalUuid = modalElem.getAttribute("data-uuid");
-    if (!modalUuid) return;
-    const modalCloseTopic = `modal_close_signal_${modalUuid}`;
-    let data = await onCancel?.();
-    sendEvent(modalCloseTopic, data);
-  };
+    useImperativeHandle(ref, () => ({
+      close: closeHandler,
+      cancel: cancelHandler,
+    }));
 
-  return (
-    <div className={"modal"} id={`modal-${id}`} ref={modalRef} {...rest}>
-      <div className={"modal-back-panel"} onClick={cancelHandler}></div>
-      <div className={"modal-content " + className}>
-        <>
-          <div className={"close-button"} onClick={closeHandler}>
-            <IoClose />
-          </div>
-          {children}
-        </>
+    return (
+      <div className={"modal"} id={`modal-${id}`} ref={modalRef} {...rest}>
+        <div className={"modal-back-panel"} onClick={cancelHandler}></div>
+        <div className={"modal-content " + className}>
+          <>
+            <div className={"close-button"} onClick={closeHandler}>
+              <IoClose />
+            </div>
+            {children}
+          </>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
+);
 
 export const Modaler = ({ children }) => {
   const [activeModals, setActiveModals] = useState({});

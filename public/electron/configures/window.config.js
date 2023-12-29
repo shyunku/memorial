@@ -27,6 +27,8 @@ module.exports = function (s) {
     s.mainWindow.focus();
   });
 
+  const isDebugMode = process.env.NODE_ENV !== "production";
+
   const trayImagePath = getAppTrayImagePath();
   s.tray = new Tray(trayImagePath);
   s.tray.on("click", () => {
@@ -34,7 +36,12 @@ module.exports = function (s) {
   });
   s.tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: `Memorial - ${packageJson.version}`, enabled: false },
+      {
+        label: `Memorial - ${packageJson.version}${
+          isDebugMode ? " [Debug]" : ""
+        }`,
+        enabled: false,
+      },
       {
         label: "종료",
         click: function () {
