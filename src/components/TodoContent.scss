@@ -118,6 +118,12 @@
       display: flex;
       margin-top: 15px;
 
+      @media (max-width: 1000px) {
+        .sort-options {
+          display: none !important;
+        }
+      }
+
       & > .view-modes {
         display: flex;
         flex: 1;

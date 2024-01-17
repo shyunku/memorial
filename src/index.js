@@ -17,6 +17,11 @@ import Toast from "molecules/Toast";
 import Prompt from "molecules/Prompt";
 import Loading from "molecules/Loading";
 import ModalRouter from "./routers/ModalRouter";
+import { isDevMode } from "./utils/Common";
+
+if (isDevMode()) {
+  window.document.title = "Memorial (Dev)";
+}
 
 const store = configureStore({
   reducer: rootReducer,

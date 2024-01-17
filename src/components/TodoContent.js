@@ -559,6 +559,21 @@ const TodoContent = (callback, deps) => {
     };
   }, [addPromise, taskMap, categories]);
 
+  const taskListViewRef = createRef();
+
+  const onScroll = (e) => {
+    if (taskListViewRef.current == null) return;
+    const topOffset = e.target.scrollTop;
+    const bottomOffset =
+      e.target.scrollHeight - e.target.scrollTop - e.target.clientHeight;
+
+    if (bottomOffset < taskListViewRef.current.reachOffset) {
+      taskListViewRef.current.onScrollReachBottom();
+    } else if (topOffset < taskListViewRef.current.reachOffset) {
+      taskListViewRef.current.onScrollReachTop();
+    }
+  };
+
   const listProps = {
     taskMap: taskMap,
     filteredTaskMap: filteredTaskMap,
@@ -583,7 +598,7 @@ const TodoContent = (callback, deps) => {
   };
 
   return (
-    <div className="todo-content">
+    <div className="todo-content" onScroll={onScroll}>
       <div
         className={
           "sidebar-flipper" +
@@ -685,7 +700,11 @@ const TodoContent = (callback, deps) => {
       >
         {{
           [TASK_VIEW_MODE.LIST]: (
-            <TaskListView key={selectedTodoMenuType} {...listProps} />
+            <TaskListView
+              key={selectedTodoMenuType}
+              ref={taskListViewRef}
+              {...listProps}
+            />
           ),
           [TASK_VIEW_MODE.CALENDAR]: (
             <TaskCalendarView

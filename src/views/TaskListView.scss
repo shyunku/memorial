@@ -4,11 +4,12 @@
   @media screen and (max-width: 1300px) {
     .todo-item {
       .remain-time {
-        margin-right: 0 !important;
+        //margin-right: 0 !important;
+        display: none;
       }
 
       .subtask-progress-bar-wrapper {
-        display: none;
+        //display: none;
       }
     }
   }

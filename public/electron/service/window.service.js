@@ -69,7 +69,7 @@ class WindowService {
       .show(false)
       .center(true)
       .frame(false)
-      .minWidth(800)
+      .minWidth(900)
       .minHeight(600)
       .width(1440)
       .height(960)
