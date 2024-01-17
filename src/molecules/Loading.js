@@ -35,14 +35,26 @@ const Loading = () => {
   }, [loadings]);
 
   return (
-    <div className={"custom-loading-wrapper" + JsxUtil.classByCondition(visible, "visible")}>
-      <div className="custom-loading">
-        <div className="loading-wrapper">
-          <ColorRing colors={loadingColors} />
+    <div
+      className={
+        "custom-loading-wrapper" + JsxUtil.classByCondition(visible, "visible")
+      }
+    >
+      {visible && (
+        <div className="custom-loading">
+          <div className="loading-wrapper">
+            <ColorRing colors={loadingColors} />
+          </div>
+          <div className="loading-text">
+            {loadingLists?.[0]?.text ?? "작업 마무리 중..."}
+          </div>
+          {loadingLists.length > 1 && (
+            <div className="loading-multiple-tasks">
+              외 {loadingLists.length - 1}개 작업
+            </div>
+          )}
         </div>
-        <div className="loading-text">{loadingLists?.[0]?.text ?? "작업 마무리 중..."}</div>
-        {loadingLists.length > 1 && <div className="loading-multiple-tasks">외 {loadingLists.length - 1}개 작업</div>}
-      </div>
+      )}
     </div>
   );
 };
