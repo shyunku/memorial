@@ -1,4 +1,5 @@
 const TrsTypes = require("../constants/TransitionType.constants");
+const IpcService = require("../service/ipc.service");
 const { jsonMarshal } = require("../util/TxUtil");
 
 class TransitionContext {
@@ -60,11 +61,13 @@ class TransitionContext {
       );
 
       await this.db.commit();
-      await this.ipcService.sender(
-        "state/transitions",
+      this.ipcService.sender("state/transitions", null, true, transitions);
+      // send to ipc
+      this.ipcService.sender(
+        "system/lastTxUpdateTime",
         null,
         true,
-        transitions
+        tx.timestamp
       );
     } catch (err) {
       try {

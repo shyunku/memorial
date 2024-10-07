@@ -54,10 +54,10 @@ import TaskTimelineView from "../views/TaskTimelineView";
 import TaskListTimelineView from "../views/TaskListTimelineView";
 
 const TASK_VIEW_MODE = {
+  LIST_CALENDAR: "리스트 | 캘린더",
   LIST: "리스트",
   CALENDAR: "캘린더",
   TIMELINE: "타임라인",
-  LIST_CALENDAR: "리스트 | 캘린더",
   // LIST_TIMELINE: "리스트 | 타임라인",
   // DASHBOARD: "대시보드",
 };
@@ -97,7 +97,9 @@ const TodoContent = (callback, deps) => {
 
   // main objects
   const [selectedTodoItemId, setSelectedTodoItemId] = useState(null);
-  const [taskViewMode, setTaskViewMode] = useState(TASK_VIEW_MODE.LIST);
+  const [taskViewMode, setTaskViewMode] = useState(
+    TASK_VIEW_MODE.LIST_CALENDAR
+  );
 
   const isTodayCategory = useMemo(() => {
     return category?.default && category?.title === TODO_MENU_TYPE.TODAY;
